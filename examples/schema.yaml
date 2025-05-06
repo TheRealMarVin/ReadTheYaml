@@ -1,0 +1,43 @@
+name: app_config
+description: Root schema for multi-level config
+required: true
+
+subsections:
+  network:
+    description: Networking-related configuration
+    required: true
+    subsections:
+      server:
+        description: HTTP server settings
+        required: true
+        fields:
+          host:
+            description: Host address to bind to
+            required: true
+            type: str
+          port:
+            description: Port number
+            required: false
+            default: 8080
+            type: int
+            range: [1, 65535]
+
+  logging:
+    description: Logging settings (optional)
+    required: false
+    fields:
+      level:
+        description: Logging level (e.g., debug, info, warning)
+        required: false
+        default: "info"
+        type: str
+      to_file:
+        description: Whether to log to a file
+        required: false
+        default: false
+        type: bool
+      filepath:
+        description: File path for log output
+        required: false
+        default: "./logs/app.log"
+        type: str
