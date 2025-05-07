@@ -1,5 +1,4 @@
 description: HTTP server settings
-required: true
 fields:
   host:
     description: Host address to bind to

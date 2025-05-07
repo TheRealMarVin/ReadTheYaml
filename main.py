@@ -1,5 +1,6 @@
 import argparse
 import sys
+from pathlib import Path
 
 from exceptions.validation_error import ValidationError
 from structure.schema import Schema
@@ -15,7 +16,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        schema = Schema.from_yaml(args.schema)
+        schema = Schema.from_yaml(args.schema, Path("./examples"))
         validated_config = schema.validate_file(args.config)
         print("✅ Config is valid!")
     except ValidationError as e:
