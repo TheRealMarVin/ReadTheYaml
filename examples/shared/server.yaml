@@ -1,0 +1,13 @@
+description: HTTP server settings
+required: true
+fields:
+  host:
+    description: Host address to bind to
+    required: true
+    type: str
+  port:
+    description: Port number
+    required: false
+    default: 8080
+    type: int
+    range: [1, 65535]

@@ -1,0 +1,17 @@
+description: Logging settings (optional)
+fields:
+  level:
+    description: Logging level (e.g., debug, info, warning)
+    required: false
+    default: "info"
+    type: str
+  to_file:
+    description: Whether to log to a file
+    required: false
+    default: false
+    type: bool
+  filepath:
+    description: File path for log output
+    required: false
+    default: "./logs/app.log"
+    type: str
