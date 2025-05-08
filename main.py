@@ -8,7 +8,7 @@ from structure.schema import Schema
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Validate a YAML configuration file against a ReadTeYaml schema."
+        description="Validate a YAML configuration file against a ReadTheYaml schema."
     )
     parser.add_argument("--schema", required=True, help="Path to the YAML schema definition file")
     parser.add_argument("--config", required=True, help="Path to the YAML configuration file to validate")
