@@ -22,9 +22,8 @@ def main():
     except ValidationError as e:
         print(f"❌ Validation failed: {e}", file=sys.stderr)
         sys.exit(1)
-    #except Exception as e:
-    #    print(f"⚠️ Unexpected error: {e}", file=sys.stderr)
-    #    sys.exit(2)
+
+    print(validated_config)
 
 
 if __name__ == "__main__":
