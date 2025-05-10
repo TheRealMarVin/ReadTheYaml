@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 
-from exceptions.validation_error import ValidationError
-from structure.fields import Field
+from readtheyaml.exceptions.validation_error import ValidationError
+from readtheyaml.structure.fields import Field
 
 
 class Section:

@@ -2,8 +2,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from exceptions.validation_error import ValidationError
-from structure.schema import Schema
+from readtheyaml.exceptions.validation_error import ValidationError
+from readtheyaml.structure.schema import Schema
 
 
 def main():

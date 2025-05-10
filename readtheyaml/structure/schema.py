@@ -3,7 +3,7 @@ from pathlib import Path
 import yaml
 from typing import Any, Dict, Optional
 
-from exceptions.validation_error import ValidationError
+from readtheyaml.exceptions.validation_error import ValidationError
 from .fields import Field
 from .sections import Section
 
@@ -22,7 +22,7 @@ class Schema(Section):
     @classmethod
     def _from_dict(cls, data: Dict[str, Any], base_dir: Optional[Path] = None) -> "Schema":
         if base_dir is None:
-            base_dir = Path(".")
+            base_dir = Path("")
 
         name = data.get("name", "root")
         description = data.get("description", "")
