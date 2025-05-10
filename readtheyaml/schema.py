@@ -44,6 +44,8 @@ class Schema(Section):
                     default=value.get("default"),
                     value_type=eval(value.get("type", "str")),
                     value_range=tuple(value.get("range", [])) or None,
+                    element_type=eval(value.get("type", "str")),
+                    length_range=tuple(value.get("length_range", [])) or None
                 )
             elif isinstance(value, dict):
                 if "$ref" in value:

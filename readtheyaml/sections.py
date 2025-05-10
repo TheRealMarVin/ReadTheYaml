@@ -36,10 +36,17 @@ class Section:
                     raise ValidationError(f"Field '{field_name}' should be of type {field.value_type.__name__}")
                 if field.value_range:
                     min_val, max_val = field.value_range
-                    if not (min_val <= value <= max_val):
-                        raise ValidationError(
-                            f"Field '{field_name}' must be between {min_val} and {max_val}"
-                        )
+                    if field.value_type == list:
+                        for v in value:
+                            if not (min_val <= v <= max_val):
+                                raise ValidationError(f"Field '{field_name}' must be between {min_val} and {max_val}")
+                    else:
+                        if not (min_val <= value <= max_val):
+                            raise ValidationError(f"Field '{field_name}' must be between {min_val} and {max_val}")
+                if field.length_range:
+                    min_val, max_val = field.length_range
+                    if not (min_val <= len(value) <= max_val):
+                        raise ValidationError(f"Field '{field_name}' must have a length between {min_val} and {max_val}")
 
             result[field_name] = value
 

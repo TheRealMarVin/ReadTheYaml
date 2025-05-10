@@ -1,0 +1,51 @@
+description: testing all features and types
+req_bool_val:
+  description: test required bool value
+  required: true
+  type: bool
+unreq_bool_val:
+  description: test un-required bool value
+  required: false
+  default: true
+  type: bool
+req_int_val:
+  description: test required int value
+  required: true
+  type: int
+unreq_int_val:
+  description: test un-required int value
+  required: false
+  default: 123
+  type: int
+req_int_list_val:
+  description: test required int list value
+  required: true
+  range: [1, 256]
+  length_range: [0,10]
+  type: list
+  element_type: int
+unreq_int_list_val:
+  description: test un-required int list value
+  required: false
+  default: [123, 54, 128, 4]
+  range: [1,1024]
+  type: list
+  element_type: int
+req_float_val:
+  description: test required float value
+  required: true
+  type: float
+unreq_float_val:
+  description: test un-required float value
+  required: false
+  default: 1.5
+  type: float
+req_str_val:
+  description: test required str value
+  required: true
+  type: str
+unreq_str_val:
+  description: test un-required str value
+  required: false
+  default: test value
+  type: str

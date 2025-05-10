@@ -13,3 +13,7 @@ network:
 logging:
   $ref: ./shared/logging.yaml
   required: false
+
+test:
+  $ref: ./shared/test.yaml
+  required: true
