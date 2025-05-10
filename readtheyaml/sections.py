@@ -19,42 +19,55 @@ class Section:
         self.fields = fields or {}
         self.subsections = subsections or {}
 
-    def build_and_validate(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        if config is None:
-            if self.required:
-                raise ValidationError(f"Missing required section '{self.name}'")
-
-            # If the section is optional, check if we can auto-populate it
-            has_required_fields = any(field.required for field in self.fields.values())
-            has_required_subsections = any(sub.required for sub in self.subsections.values())
-            if has_required_fields or has_required_subsections:
-                # Not safe to auto-add this section
-                return {}
-
-            # All fields/subsections are optional — populate with defaults
-            config = {}
-
+    def build_and_validate(self, config: Dict[str, Any], strict: bool = True) -> Dict[str, Any]:
         result = {}
 
         # Validate fields
         for field_name, field in self.fields.items():
-            try:
-                value = config.get(field_name, None)
-                validated = field.validate(value)
-                result[field_name] = validated
-            except ValidationError as e:
-                raise ValidationError(f"In section '{self.name}': {e}")
+            if field_name in config:
+                value = config[field_name]
+            elif field.required:
+                raise ValidationError(f"Missing required field '{field_name}'")
+            else:
+                value = field.default
+
+            if value is not None:
+                if not isinstance(value, field.value_type):
+                    raise ValidationError(f"Field '{field_name}' should be of type {field.value_type.__name__}")
+                if field.value_range:
+                    min_val, max_val = field.value_range
+                    if not (min_val <= value <= max_val):
+                        raise ValidationError(
+                            f"Field '{field_name}' must be between {min_val} and {max_val}"
+                        )
+
+            result[field_name] = value
 
         # Validate subsections
-        for subsection_name, subsection in self.subsections.items():
-            subconfig = config.get(subsection_name, None)
-            try:
-                validated_sub = subsection.build_and_validate(subconfig)
-                if validated_sub or subsection.required:
-                    result[subsection_name] = validated_sub
-            except ValidationError as e:
-                prefix = f"{self.name}." if self.name else ""
-                raise ValidationError(f"In section '{prefix}{subsection_name}': {e}")
+        for section_name, subsection in self.subsections.items():
+            if section_name in config:
+                result[section_name] = subsection.build_and_validate(config[section_name], strict=strict)
+            elif subsection.required:
+                raise ValidationError(f"Missing required section '{section_name}'")
+            else:
+                # Add optional section with defaults if not present in config
+                result[section_name] = subsection.build_and_validate({}, strict=strict)
+
+        # Add unexpected keys if not in strict mode
+        if not strict:
+            allowed_keys = set(self.fields.keys()) | set(self.subsections.keys())
+            for key in config:
+                if key not in allowed_keys:
+                    result[key] = config[key]
+
+        # Check for unexpected keys in strict mode
+        if strict:
+            allowed_keys = set(self.fields.keys()) | set(self.subsections.keys())
+            unexpected_keys = set(config.keys()) - allowed_keys
+            if unexpected_keys:
+                raise ValidationError(
+                    f"Unexpected key(s) in section '{self.name or '<root>'}': {', '.join(sorted(unexpected_keys))}"
+                )
 
         return result
 

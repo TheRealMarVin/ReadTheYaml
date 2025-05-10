@@ -17,7 +17,7 @@ def main():
 
     try:
         schema = Schema.from_yaml(args.schema, Path("./examples"))
-        validated_config = schema.validate_file(args.config)
+        validated_config = schema.validate_file(args.config, strict=False)
         print("✅ Config is valid!")
     except ValidationError as e:
         print(f"❌ Validation failed: {e}", file=sys.stderr)

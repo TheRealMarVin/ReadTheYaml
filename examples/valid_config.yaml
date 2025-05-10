@@ -1,4 +1,5 @@
 app_config: test
+not_in_schema: true
 
 network:
   server:

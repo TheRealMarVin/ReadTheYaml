@@ -1,5 +1,4 @@
 from pathlib import Path
-
 import yaml
 from typing import Any, Dict, Optional, Union
 
@@ -82,11 +81,9 @@ class Schema(Section):
         with open(target, "r", encoding="utf-8") as f:
             return yaml.safe_load(f)
 
-    def validate_file(self, yaml_path: Union[str, Path]):
+    def validate_file(self, yaml_path: Union[str, Path], strict: bool = True):
         yaml_path = Path(yaml_path)
         with open(yaml_path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
 
-        return self.build_and_validate(config)
-
-
+        return self.build_and_validate(config, strict=strict)
