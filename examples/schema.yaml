@@ -1,6 +1,6 @@
-name: app_config
-description: Root schema for multi-level config
-required: true
+app_config:
+  description: Root schema for multi-level config
+  required: true
 
 subsections:
   network:

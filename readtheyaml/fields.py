@@ -1,5 +1,7 @@
 from typing import Any, Callable, Optional, Union
 
+from readtheyaml.exceptions.validation_error import ValidationError
+
 
 class Field:
     def __init__(

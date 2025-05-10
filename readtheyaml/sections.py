@@ -53,7 +53,8 @@ class Section:
                 if validated_sub or subsection.required:
                     result[subsection_name] = validated_sub
             except ValidationError as e:
-                raise ValidationError(f"In section '{self.name}.{subsection_name}': {e}")
+                prefix = f"{self.name}." if self.name else ""
+                raise ValidationError(f"In section '{prefix}{subsection_name}': {e}")
 
         return result
 

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import yaml
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from readtheyaml.exceptions.validation_error import ValidationError
 from .fields import Field
@@ -22,71 +22,43 @@ class Schema(Section):
     @classmethod
     def _from_dict(cls, data: Dict[str, Any], base_dir: Optional[Path] = None) -> "Schema":
         if base_dir is None:
-            base_dir = Path("")
+            base_dir = Path(".")
 
-        name = data.get("name", "root")
+        name = data.get("name", "")
         description = data.get("description", "")
         required = data.get("required", True)
 
-        fields = {
-            field_name: Field(
-                name=field_name,
-                description=field_data.get("description", ""),
-                required=field_data.get("required", True),
-                default=field_data.get("default"),
-                value_type=eval(field_data.get("type", "str")),
-                value_range=tuple(field_data.get("range", [])) or None,
-            )
-            for field_name, field_data in data.get("fields", {}).items()
-        }
-
+        fields = {}
         subsections = {}
-        raw_subsections = data.get("subsections", {})
 
-        if isinstance(raw_subsections, dict):
-            for section_name, section_data in raw_subsections.items():
-                if isinstance(section_data, dict) and "$ref" in section_data:
-                    ref_path = section_data["$ref"]
+        for key, value in data.items():
+            if key in {"name", "description", "required"}:
+                continue
+
+            if isinstance(value, dict) and (
+                    "type" in value or "default" in value or "range" in value
+            ):
+                fields[key] = Field(
+                    name=key,
+                    description=value.get("description", ""),
+                    required=value.get("required", True),
+                    default=value.get("default"),
+                    value_type=eval(value.get("type", "str")),
+                    value_range=tuple(value.get("range", [])) or None,
+                )
+            elif isinstance(value, dict):
+                if "$ref" in value:
+                    ref_path = value["$ref"]
                     ref_dict = cls._resolve_ref(ref_path, base_dir)
-
-                    # Merge ref_dict into section_data (ref provides defaults)
                     full_section_data = ref_dict.copy()
-                    full_section_data.update({
-                        k: v for k, v in section_data.items() if k != "$ref"
-                    })
-
+                    full_section_data.update({k: v for k, v in value.items() if k != "$ref"})
                     subsection = cls._from_dict(full_section_data, base_dir=base_dir)
                 else:
-                    subsection = cls._from_dict(section_data, base_dir=base_dir)
+                    subsection = cls._from_dict(value, base_dir=base_dir)
 
-                subsections[section_name] = subsection
-
-        elif isinstance(raw_subsections, list):
-            for item in raw_subsections:
-                if not isinstance(item, dict):
-                    raise ValidationError("Each subsection list item must be a mapping")
-
-                if "$ref" in item:
-                    ref_path = item["$ref"]
-                    ref_dict = cls._resolve_ref(ref_path, base_dir)
-
-                    full_section_data = ref_dict.copy()
-                    full_section_data.update({k: v for k, v in item.items() if k != "$ref"})
-                    subsection = cls._from_dict(full_section_data, base_dir=base_dir)
-                    section_name = subsection.name
-                else:
-                    section_name = item.get("name")
-                    if not section_name:
-                        raise ValidationError("Subsection must have a name or $ref")
-                    subsection = cls._from_dict(item, base_dir=base_dir)
-
-                if section_name in subsections:
-                    raise ValidationError(f"Duplicate subsection name: {section_name}")
-
-                subsections[section_name] = subsection
-
-        elif raw_subsections:
-            raise ValidationError("'subsections' must be a mapping or a list")
+                subsections[key] = subsection
+            else:
+                raise ValidationError(f"Cannot determine if '{key}' is a field or section.")
 
         return cls(
             name=name,
@@ -110,7 +82,11 @@ class Schema(Section):
         with open(target, "r", encoding="utf-8") as f:
             return yaml.safe_load(f)
 
-    def validate_file(self, yaml_path: str) -> Dict[str, Any]:
-        with open(yaml_path, "r") as f:
+    def validate_file(self, yaml_path: Union[str, Path]):
+        yaml_path = Path(yaml_path)
+        with open(yaml_path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
+
         return self.build_and_validate(config)
+
+

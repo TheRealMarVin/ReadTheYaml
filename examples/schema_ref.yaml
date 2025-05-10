@@ -1,16 +1,15 @@
-name: app_config
-description: Root schema for multi-level config
-required: true
+app_config:
+  description: Root schema for multi-level config
+  required: true
+  type: str
 
-subsections:
-  network:
-    description: Networking-related configuration
+network:
+  description: Networking-related configuration
+  required: true
+  server:
+    $ref: ./shared/server.yaml
     required: true
-    subsections:
-      server:
-        $ref: ./shared/server.yaml
-        required: true
 
-  logging:
-    $ref: ./shared/logging.yaml
-    required: false
+logging:
+  $ref: ./shared/logging.yaml
+  required: false
