@@ -10,7 +10,7 @@ class StringField(Field):
         self.max_length = max_length
 
         if max_length != -1 and max_length < min_length:
-            raise ValidationError(f"Field '{self.name}' max_length{max_length} smaller than min_length{min_length}")
+            raise ValidationError(f"Field '{self.name}': max_length{max_length} smaller than min_length{min_length}")
 
     def validate(self, value):
         try:

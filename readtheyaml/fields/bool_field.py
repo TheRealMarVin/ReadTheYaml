@@ -10,6 +10,6 @@ class BoolField(Field):
         try:
             value = bool(value)
         except (TypeError, ValueError):
-            raise ValidationError(f"Field '{self.name}' must be of type bool")
+            raise ValidationError(f"Field '{self.name}': Must be of type bool")
 
         return value
