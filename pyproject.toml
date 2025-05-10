@@ -1,6 +1,6 @@
 [project]
 name = "ReadTheYaml"
-version = "1.0.0"
+version = "1.1.0"
 description = "Validate and document your YAML config files — so future-you doesn't have to guess."
 readme = "README.md"
 requires-python = ">=3.10"
