@@ -3,7 +3,7 @@ from typing import Any, Callable, Optional, Union
 from readtheyaml.exceptions.validation_error import ValidationError
 
 
-class Field:
+class OldField:
     def __init__(
         self,
         name: str,

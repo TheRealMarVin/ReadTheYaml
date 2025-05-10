@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 
 from readtheyaml.exceptions.validation_error import ValidationError
-from readtheyaml.fields import Field
+from readtheyaml.fields import OldField
 
 
 class Section:
@@ -10,7 +10,7 @@ class Section:
         name: str,
         description: str = "",
         required: bool = True,
-        fields: Optional[Dict[str, Field]] = None,
+        fields: Optional[Dict[str, OldField]] = None,
         subsections: Optional[Dict[str, 'Section']] = None,
     ):
         self.name = name

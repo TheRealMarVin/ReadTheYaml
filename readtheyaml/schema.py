@@ -3,7 +3,7 @@ import yaml
 from typing import Any, Dict, Optional, Union
 
 from readtheyaml.exceptions.validation_error import ValidationError
-from .fields import Field
+from .fields import OldField
 from .sections import Section
 
 
@@ -37,7 +37,7 @@ class Schema(Section):
             if isinstance(value, dict) and (
                     "type" in value or "default" in value or "range" in value
             ):
-                fields[key] = Field(
+                fields[key] = OldField(
                     name=key,
                     description=value.get("description", ""),
                     required=value.get("required", True),
