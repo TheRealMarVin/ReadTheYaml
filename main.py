@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 from readtheyaml.exceptions.validation_error import ValidationError
-from readtheyaml.structure.schema import Schema
+from readtheyaml.schema import Schema
 
 
 def main():
