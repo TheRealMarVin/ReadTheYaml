@@ -44,9 +44,30 @@ class Section:
                         if not (min_val <= value <= max_val):
                             raise ValidationError(f"Field '{field_name}' must be between {min_val} and {max_val}")
                 if field.length_range:
-                    min_val, max_val = field.length_range
-                    if not (min_val <= len(value) <= max_val):
-                        raise ValidationError(f"Field '{field_name}' must have a length between {min_val} and {max_val}")
+                    if len(field.length_range) == 2:
+                        min_val, max_val = field.length_range
+                        if min_val < 0:
+                            raise ValidationError(
+                                f"Field '{field_name}' lower bound of length_range({min_val}) is negative")
+                        if max_val < 0:
+                            raise ValidationError(
+                                f"Field '{field_name}' upper bound of length_range({max_val}) is negative")
+                        if max_val < min_val:
+                            raise ValidationError(
+                                f"Field '{field_name}' upper bound of length_range({max_val}) is lower than lower bound({min_val})")
+                        if not (min_val <= len(value) <= max_val):
+                            raise ValidationError(
+                                f"Field '{field_name}' must have a length between {min_val} and {max_val}")
+                    elif len(field.length_range) == 1:
+                        val = field.length_range
+                        if val < 0:
+                            raise ValidationError(
+                                f"Field '{field_name}' length_range({val}) is negative")
+                        if not (len(value) == val):
+                            raise ValidationError(
+                                f"Field '{field_name}' must have a length {val}")
+                    else:
+                        raise ValidationError(f"Field '{field_name}' invalid number of element in length_range")
 
             result[field_name] = value
 
