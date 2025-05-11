@@ -14,19 +14,18 @@ class Schema(Section):
     """
 
     @classmethod
-    def from_yaml(cls, yaml_path: str, base_dir) -> "Schema":
-        # TODO rename base dir to base_schema_dir
+    def from_yaml(cls, yaml_path: str, base_schema_dir) -> "Schema":
         # TODO make path optional and if optional get the folder of the yaml
         # TODO validate yaml_path and base_dir exists
         # TODO rename yaml_path to schema_path
         with open(yaml_path, "r") as f:
             data = yaml.safe_load(f)
-        return cls._from_dict(data, base_dir)
+        return cls._from_dict(data, base_schema_dir)
 
     @classmethod
-    def _from_dict(cls, data: Dict[str, Any], base_dir: Optional[Path] = None) -> "Schema":
-        if base_dir is None:
-            base_dir = Path(".")
+    def _from_dict(cls, data: Dict[str, Any], base_schema_dir: Optional[Path] = None) -> "Schema":
+        if base_schema_dir is None:
+            base_schema_dir = Path(".")
 
         name = data.get("name", "")
         description = data.get("description", "")
@@ -41,19 +40,19 @@ class Schema(Section):
 
             if isinstance(value, dict) and "type" in value:
                 try:
-                    fields[key] = build_field(value, key, base_dir)
+                    fields[key] = build_field(value, key, base_schema_dir)
                 except Exception as e:
                     raise ValidationError(f"Failed to build field '{key}': {e}")
 
             elif isinstance(value, dict):
                 if "$ref" in value:
                     ref_path = value["$ref"]
-                    ref_dict = cls._resolve_ref(ref_path, base_dir)
+                    ref_dict = cls._resolve_ref(ref_path, base_schema_dir)
                     full_section_data = ref_dict.copy()
                     full_section_data.update({k: v for k, v in value.items() if k != "$ref"})
-                    subsection = cls._from_dict(full_section_data, base_dir=base_dir)
+                    subsection = cls._from_dict(full_section_data, base_schema_dir=base_schema_dir)
                 else:
-                    subsection = cls._from_dict(value, base_dir=base_dir)
+                    subsection = cls._from_dict(value, base_schema_dir=base_schema_dir)
 
                 subsections[key] = subsection
             else:
