@@ -22,15 +22,13 @@ req_int_list_val:
   required: true
   range: [1, 256]
   length_range: [0,10]
-  type: list
-  element_type: int
+  type: list(int)
 unreq_int_list_val:
   description: test un-required int list value
   required: false
   default: [123, 54, 128, 4]
   range: [1,1024]
-  type: list
-  element_type: int
+  type: list(int)
 req_float_val:
   description: test required float value
   required: true

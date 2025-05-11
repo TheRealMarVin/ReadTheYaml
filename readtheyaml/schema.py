@@ -2,8 +2,9 @@ from pathlib import Path
 import yaml
 from typing import Any, Dict, Optional, Union
 
-from readtheyaml.exceptions.validation_error import ValidationError
-from .fields import OldField
+from .exceptions.validation_error import ValidationError
+from .fields.field import Field
+from .fields.field_helpers import build_field
 from .sections import Section
 
 
@@ -13,10 +14,14 @@ class Schema(Section):
     """
 
     @classmethod
-    def from_yaml(self, yaml_path: str, base_dir) -> "Schema":
+    def from_yaml(cls, yaml_path: str, base_dir) -> "Schema":
+        # TODO rename base dir to base_schema_dir
+        # TODO make path optional and if optional get the folder of the yaml
+        # TODO validate yaml_path and base_dir exists
+        # TODO rename yaml_path to schema_path
         with open(yaml_path, "r") as f:
             data = yaml.safe_load(f)
-        return self._from_dict(data, base_dir)
+        return cls._from_dict(data, base_dir)
 
     @classmethod
     def _from_dict(cls, data: Dict[str, Any], base_dir: Optional[Path] = None) -> "Schema":
@@ -27,26 +32,19 @@ class Schema(Section):
         description = data.get("description", "")
         required = data.get("required", True)
 
-        fields = {}
-        subsections = {}
+        fields: Dict[str, Field] = {}
+        subsections: Dict[str, Section] = {}
 
         for key, value in data.items():
             if key in {"name", "description", "required"}:
                 continue
 
-            if isinstance(value, dict) and (
-                    "type" in value or "default" in value or "range" in value
-            ):
-                fields[key] = OldField(
-                    name=key,
-                    description=value.get("description", ""),
-                    required=value.get("required", True),
-                    default=value.get("default"),
-                    value_type=eval(value.get("type", "str")),
-                    value_range=tuple(value.get("range", [])) or None,
-                    element_type=eval(value.get("type", "str")),
-                    length_range=tuple(value.get("length_range", [])) or None
-                )
+            if isinstance(value, dict) and "type" in value:
+                try:
+                    fields[key] = build_field(value, key, base_dir)
+                except Exception as e:
+                    raise ValidationError(f"Failed to build field '{key}': {e}")
+
             elif isinstance(value, dict):
                 if "$ref" in value:
                     ref_path = value["$ref"]

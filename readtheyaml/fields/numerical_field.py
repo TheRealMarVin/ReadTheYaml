@@ -1,14 +1,21 @@
+from typing import Optional
+
+from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
+from readtheyaml.fields.field_validation_helpers import find_and_validate_bounds
 
 
 class NumericalField(Field):
-    def __init__(self, value_type=int, min_value=None, max_value=None, **kwargs):
+    def __init__(self, value_type=int, min_value=None, max_value=None, value_range=None, **kwargs):
         super().__init__(**kwargs)
 
         self.value_type = value_type
-        self.min_value = min_value
-        self.max_value = max_value
+
+        try:
+            self.min_value, self.max_value = find_and_validate_bounds(value_range, min_value, max_value)
+        except FormatError as e:
+            raise ValidationError(f"Field '{self.name}': {e}")
 
     def validate(self, value):
         if self.min_value is not None and value < self.min_value:

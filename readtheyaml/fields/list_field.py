@@ -1,7 +1,9 @@
 from typing import Optional
 
+from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
+from readtheyaml.fields.field_validation_helpers import find_and_validate_bounds
 
 
 class ListField(Field):
@@ -10,12 +12,16 @@ class ListField(Field):
         item_field: Field,                  # Field instance to validate each item
         min_length: Optional[int] = None,
         max_length: Optional[int] = None,
+        length_range: Optional[tuple[int, int]] = None,
         **kwargs
     ):
         super().__init__(**kwargs)
-        self.item_field = item_field
-        self.min_length = min_length
-        self.max_length = max_length
+        self.item_field = item_field(**kwargs)
+
+        try:
+            self.min_length, self.max_length = find_and_validate_bounds(length_range, min_length, max_length)
+        except FormatError as e:
+            raise ValidationError(f"Field '{self.name}': {e}")
 
     def validate(self, value):
         if not isinstance(value, list):
