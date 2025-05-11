@@ -1,3 +1,5 @@
+import inspect
+from functools import partial
 from typing import Optional
 
 from readtheyaml.exceptions.format_error import FormatError
@@ -5,6 +7,10 @@ from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
 from readtheyaml.fields.field_validation_helpers import find_and_validate_bounds
 
+def get_target_class(field_obj_or_partial):
+    if isinstance(field_obj_or_partial, partial):
+        return field_obj_or_partial.func
+    return type(field_obj_or_partial)
 
 class ListField(Field):
     def __init__(
@@ -15,7 +21,8 @@ class ListField(Field):
         length_range: Optional[tuple[int, int]] = None,
         **kwargs
     ):
-        super().__init__(**kwargs)
+        sig = inspect.signature(get_target_class(item_field).__init__)
+        super().__init__(additional_allowed_kwargs=set(sig.parameters), **kwargs)
         self.item_field = item_field(**kwargs)
 
         try:
