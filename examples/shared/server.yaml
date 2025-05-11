@@ -8,4 +8,4 @@ port:
   required: false
   default: 8080
   type: int
-  range: [1, 65535]
+  value_range: [1, 65535]
