@@ -14,11 +14,10 @@ class Schema(Section):
     """
 
     @classmethod
-    def from_yaml(cls, yaml_path: str, base_schema_dir) -> "Schema":
+    def from_yaml(cls, schema_file: str, base_schema_dir) -> "Schema":
         # TODO make path optional and if optional get the folder of the yaml
         # TODO validate yaml_path and base_dir exists
-        # TODO rename yaml_path to schema_path
-        with open(yaml_path, "r") as f:
+        with open(schema_file, "r") as f:
             data = yaml.safe_load(f)
         return cls._from_dict(data, base_schema_dir)
 
