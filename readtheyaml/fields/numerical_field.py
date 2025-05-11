@@ -2,7 +2,7 @@ from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
 
 
-class IntegerField(Field):
+class NumericalField(Field):
     def __init__(self, value_type=int, min_value=None, max_value=None, **kwargs):
         super().__init__(**kwargs)
 
