@@ -47,3 +47,14 @@ unreq_str_val:
   required: false
   default: test value
   type: str
+req_enum_val:
+  description: test required enum value
+  required: true
+  type: enum
+  values: [val1, val2, val3]
+unreq_enum_val:
+  description: test un-required enum value
+  required: false
+  default: val3
+  values: [val1, val2, val3]
+  type: enum

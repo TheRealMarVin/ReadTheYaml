@@ -11,3 +11,4 @@ test:
   req_int_list_val: [12, 13, 14, 15, 16]
   req_float_val: 1.55
   req_str_val: test string
+  req_enum_val: val1
