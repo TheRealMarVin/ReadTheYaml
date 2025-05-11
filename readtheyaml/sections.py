@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 
 from readtheyaml.exceptions.validation_error import ValidationError
-from readtheyaml.fields import OldField
+from readtheyaml.field import OldField
 
 
 class Section:
