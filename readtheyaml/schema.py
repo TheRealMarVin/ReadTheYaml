@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import yaml
 from typing import Any, Dict, Optional, Union
@@ -12,13 +13,21 @@ class Schema(Section):
     """
     A Schema is a top-level Section that can be constructed from Python or a YAML schema definition.
     """
-
     @classmethod
-    def from_yaml(cls, schema_file: str, base_schema_dir) -> "Schema":
-        # TODO make path optional and if optional get the folder of the yaml
-        # TODO validate yaml_path and base_dir exists
+    def from_yaml(cls, schema_file: str, base_schema_dir: str = None) -> "Schema":
+        if not os.path.isfile(schema_file):
+            raise FileNotFoundError(f"Schema file not found: {schema_file}")
+
+        # Default base dir to the folder containing the YAML file
+        if base_schema_dir is None:
+            base_schema_dir = os.path.dirname(os.path.abspath(schema_file))
+
+        if not os.path.isdir(base_schema_dir):
+            raise NotADirectoryError(f"Base schema directory does not exist: {base_schema_dir}")
+
         with open(schema_file, "r") as f:
             data = yaml.safe_load(f)
+
         return cls._from_dict(data, base_schema_dir)
 
     @classmethod
