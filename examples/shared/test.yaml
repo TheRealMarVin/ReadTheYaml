@@ -17,6 +17,11 @@ unreq_int_val:
   required: false
   default: 123
   type: int
+unreq_int_val_none:
+  description: test un-required int value
+  required: false
+  default: None
+  type: int
 req_int_list_val:
   description: test required int list value
   required: true
