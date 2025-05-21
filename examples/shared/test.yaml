@@ -26,9 +26,6 @@ req_int_list_val:
   description: test required int list value
   required: true
   value_range: [1, 256]
-
-
-
   type: list(int)
 unreq_int_list_val:
   description: test un-required int list value
