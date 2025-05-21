@@ -5,12 +5,8 @@ from typing import Optional
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
-from readtheyaml.fields.field_validation_helpers import find_and_validate_bounds
+from readtheyaml.fields.field_validation_helpers import find_and_validate_bounds, get_target_class
 
-def get_target_class(field_obj_or_partial):
-    if isinstance(field_obj_or_partial, partial):
-        return field_obj_or_partial.func
-    return type(field_obj_or_partial)
 
 class ListField(Field):
     def __init__(

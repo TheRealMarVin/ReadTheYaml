@@ -1,3 +1,5 @@
+from functools import partial
+
 from readtheyaml.exceptions.format_error import FormatError
 
 
@@ -20,3 +22,10 @@ def find_and_validate_bounds(value_range, min_value, max_value):
         max_value = value_range[1]
 
     return min_value, max_value
+
+
+def get_target_class(field_obj_or_partial):
+    if isinstance(field_obj_or_partial, partial):
+        return field_obj_or_partial.func
+    return type(field_obj_or_partial)
+

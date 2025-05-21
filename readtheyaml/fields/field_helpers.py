@@ -40,7 +40,7 @@ def build_terminal_field(definition: dict, name: str):
     return field
 
 def parse_field_type(type_str: str) -> Field:
-    list_match = re.fullmatch(r"list\((.+)\)", type_str)
+    list_match = re.fullmatch(r"list\[(.+)\]", type_str)
     if list_match:
         item_type_str = list_match.group(1)
         item_field = parse_field_type(item_type_str)
