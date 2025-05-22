@@ -28,7 +28,7 @@ class ListField(Field):
 
     def validate(self, value):
         if not isinstance(value, list):
-            raise ValidationError("Field '{self.name}': Expected a list.")
+            raise ValidationError(f"Field '{self.name}': Expected a list.")
 
         if self.min_length is not None and len(value) < self.min_length:
             raise ValidationError(f"Field '{self.name}': List must contain at least {self.min_length} items.")
