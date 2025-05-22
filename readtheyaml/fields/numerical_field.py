@@ -24,10 +24,10 @@ class NumericalField(Field):
             raise ValidationError(f"Field '{self.name}': Value must be at most {self.max_value}.")
 
         try:
-            if value == "None":
-                value = None
-            else:
-                value = self.value_type(value)
+            if str(value).lower() in {"none", "null"}:
+                raise ValidationError(f"Field '{self.name}': Must be of type {self.value_type.__name__}, contains None or null.")
+
+            value = self.value_type(value)
         except (TypeError, ValueError):
             raise ValidationError(f"Field '{self.name}': Must be of type {self.value_type.__name__}")
 

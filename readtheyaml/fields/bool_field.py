@@ -8,6 +8,9 @@ class BoolField(Field):
 
     def validate(self, value):
         try:
+            if type(value) == str and value.lower() in {"none", "null"}:
+                raise ValidationError(f"Field '{self.name}': Must be of type bool, contains None or null")
+
             value = bool(value)
         except (TypeError, ValueError):
             raise ValidationError(f"Field '{self.name}': Must be of type bool")

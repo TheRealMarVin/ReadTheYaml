@@ -3,6 +3,10 @@ req_bool_val:
   description: test required bool value
   required: true
   type: bool
+req_bool_val_or_none:
+  description: test required bool value
+  required: true
+  type: bool | None
 unreq_bool_val:
   description: test un-required bool value
   required: false
@@ -21,7 +25,7 @@ unreq_int_val_none:
   description: test un-required int value
   required: false
   default: None
-  type: int
+  type: int|None
 req_int_list_val:
   description: test required int list value
   required: true

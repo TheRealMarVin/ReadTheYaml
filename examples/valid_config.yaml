@@ -7,6 +7,7 @@ network:
 
 test:
   req_bool_val: true
+  req_bool_val_or_none: None
   req_int_val: 176
   req_int_list_val: [12, 13, 14, 15, 16]
   req_float_val: 1.55
