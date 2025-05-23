@@ -5,7 +5,7 @@ from readtheyaml.fields.field import Field
 class UnionField(Field):
     def __init__(self, options: list[Field], **kwargs):
         super().__init__(**kwargs)
-        self._options = [o(**kwargs) for o in options]
+        self._options = [curr_option(**kwargs) for curr_option in options]
 
     def validate(self, value):
         errors = []
