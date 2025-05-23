@@ -39,19 +39,7 @@ def build_terminal_field(definition: dict, name: str):
 def parse_field_type(type_str: str) -> Field:
     type_str = type_str.strip()
 
-    # ✅ Handle union types: str | int | tuple(int, int)
-    if '|' in type_str:
-        parts = _split_top_level(type_str, '|')
-        parsed_fields = []
-        for part in parts:
-            constructor = parse_field_type(part)
-            if constructor is None:
-                raise ValueError(f"Unknown field type in union: {part}")
-            parsed_fields.append(constructor)
-        return partial(UnionField, options=parsed_fields)
-
-    # ✅ Handle tuple types: tuple(int, str | None)
-    if type_str.startswith("tuple(") and type_str.endswith(")"):
+    if type_str.startswith("tuple[") and type_str.endswith("]"):
         inner = type_str[len("tuple("):-1]
         element_specs = _split_top_level(inner, ',')
         element_fields = []
@@ -62,7 +50,6 @@ def parse_field_type(type_str: str) -> Field:
             element_fields.append(constructor)
         return partial(TupleField, element_fields=element_fields)
 
-    # ✅ Handle list types: list[int], list[str | None]
     list_match = re.fullmatch(r"list\[(.+)\]", type_str)
     if list_match:
         item_type_str = list_match.group(1)
@@ -71,7 +58,16 @@ def parse_field_type(type_str: str) -> Field:
             raise ValueError(f"Unknown item type in list: {item_type_str}")
         return partial(ListField, item_field=constructor)
 
-    # ✅ Handle primitive types via registry (int, str, enum, etc.)
+    if '|' in type_str:
+        parts = _split_top_level(type_str, '|')
+        parsed_fields = []
+        for part in parts:
+            constructor = parse_field_type(part)
+            if constructor is None:
+                raise ValueError(f"Unknown field type in union: {part}")
+            parsed_fields.append(constructor)
+        return partial(UnionField, options=parsed_fields)
+
     constructor = FIELD_REGISTRY.get(type_str)
     if not constructor:
         raise ValueError(f"Unknown field type: {type_str}")

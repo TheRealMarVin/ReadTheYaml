@@ -13,3 +13,6 @@ test:
   req_float_val: 1.55
   req_str_val: test string
   req_enum_val: val1
+  req_tuple_int: (12)
+  req_tuple_int_float: (12, 11.5)
+  req_tuple_int_float_none: (12, None)

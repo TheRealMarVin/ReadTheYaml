@@ -66,3 +66,15 @@ unreq_enum_val:
   default: val3
   values: [val1, val2, val3]
   type: enum
+req_tuple_int:
+  description: test required tuple(int) value
+  required: true
+  type: tuple[int]
+req_tuple_int_float:
+  description: test required tuple(int, float) value
+  required: true
+  type: tuple[int, float]
+req_tuple_int_float_none:
+  description: test required tuple(int, float) value
+  required: true
+  type: tuple[int, float|None]

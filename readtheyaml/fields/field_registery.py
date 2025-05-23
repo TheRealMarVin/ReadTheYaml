@@ -5,6 +5,7 @@ from readtheyaml.fields.enum_field import EnumField
 from readtheyaml.fields.none_field import NoneField
 from readtheyaml.fields.numerical_field import NumericalField
 from readtheyaml.fields.string_field import StringField
+from readtheyaml.fields.tuple_field import TupleField
 
 FIELD_REGISTRY = {
     "int": partial(NumericalField, int),
@@ -13,6 +14,7 @@ FIELD_REGISTRY = {
     "bool": BoolField,
     "enum": EnumField,
     "None": NoneField,
+    "tuple": TupleField,
     # We handle 'list(...)' dynamically
 }
 
