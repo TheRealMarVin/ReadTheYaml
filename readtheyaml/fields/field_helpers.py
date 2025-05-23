@@ -32,49 +32,60 @@ def build_field(definition: dict, name: str, base_schema_dir: str) -> Field:
     )
 
 def build_terminal_field(definition: dict, name: str):
-    constructor = parse_field_type(definition["type"])
+    constructor = _parse_field_type(definition["type"])
     field = constructor(name=name, **definition)
     return field
 
-def parse_field_type(type_str: str) -> Field:
+import re
+
+def _extract_types_for_composite(type_str: str, type_name: str) -> str | None:
+    match = re.fullmatch(rf"{re.escape(type_name)}([\[\(])(.+)([\]\)])", type_str)
+    if not match:
+        return None  # Not a match at all
+
+    opening, inner, closing = match.groups()
+    if (opening == '[' and closing != ']') or (opening == '(' and closing != ')'):
+        raise ValueError(f"Mismatched brackets in type: {type_str}")
+
+    return inner
+
+def _parse_field_type(type_str: str) -> Field:
     type_str = type_str.strip()
 
-    if type_str.startswith("tuple[") and type_str.endswith("]"):
-        inner = type_str[len("tuple("):-1]
-        element_specs = _split_top_level(inner, ',')
+    tuple_inner = _extract_types_for_composite(type_str=type_str, type_name="tuple")
+    if tuple_inner:
+        element_specs = _split_top_level(tuple_inner, ',')
         element_fields = []
         for spec in element_specs:
-            constructor = parse_field_type(spec)
+            constructor = _parse_field_type(spec)
             if constructor is None:
                 raise ValueError(f"Unknown element type in tuple: {spec}")
             element_fields.append(constructor)
         return partial(TupleField, element_fields=element_fields)
 
-    list_match = re.fullmatch(r"list\[(.+)\]", type_str)
-    if list_match:
-        item_type_str = list_match.group(1)
-        constructor = parse_field_type(item_type_str)
+    list_inner = _extract_types_for_composite(type_str=type_str, type_name="list")
+    if list_inner:
+        constructor = _parse_field_type(list_inner)
         if constructor is None:
-            raise ValueError(f"Unknown item type in list: {item_type_str}")
+            raise ValueError(f"Unknown item type in list: {list_inner}")
         return partial(ListField, item_field=constructor)
 
     if '|' in type_str:
         parts = _split_top_level(type_str, '|')
         parsed_fields = []
         for part in parts:
-            constructor = parse_field_type(part)
+            constructor = _parse_field_type(part)
             if constructor is None:
                 raise ValueError(f"Unknown field type in union: {part}")
             parsed_fields.append(constructor)
         return partial(UnionField, options=parsed_fields)
 
-    union_match = re.fullmatch(r"union\[(.+)\]", type_str)
-    if union_match:
-        item_type_str = union_match.group(1)
-        parts = _split_top_level(item_type_str, ',')
+    union_inner = _extract_types_for_composite(type_str=type_str, type_name="union")
+    if union_inner:
+        parts = _split_top_level(union_inner, ',')
         parsed_fields = []
         for part in parts:
-            constructor = parse_field_type(part)
+            constructor = _parse_field_type(part)
             if constructor is None:
                 raise ValueError(f"Unknown field type in union: {part}")
             parsed_fields.append(constructor)
