@@ -68,6 +68,18 @@ def parse_field_type(type_str: str) -> Field:
             parsed_fields.append(constructor)
         return partial(UnionField, options=parsed_fields)
 
+    union_match = re.fullmatch(r"union\[(.+)\]", type_str)
+    if union_match:
+        item_type_str = union_match.group(1)
+        parts = _split_top_level(item_type_str, ',')
+        parsed_fields = []
+        for part in parts:
+            constructor = parse_field_type(part)
+            if constructor is None:
+                raise ValueError(f"Unknown field type in union: {part}")
+            parsed_fields.append(constructor)
+        return partial(UnionField, options=parsed_fields)
+
     constructor = FIELD_REGISTRY.get(type_str)
     if not constructor:
         raise ValueError(f"Unknown field type: {type_str}")

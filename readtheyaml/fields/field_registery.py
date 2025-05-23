@@ -6,6 +6,7 @@ from readtheyaml.fields.none_field import NoneField
 from readtheyaml.fields.numerical_field import NumericalField
 from readtheyaml.fields.string_field import StringField
 from readtheyaml.fields.tuple_field import TupleField
+from readtheyaml.fields.union_field import UnionField
 
 FIELD_REGISTRY = {
     "int": partial(NumericalField, int),

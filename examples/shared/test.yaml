@@ -16,13 +16,17 @@ req_int_val:
   description: test required int value
   required: true
   type: int
+req_int_val_none_union:
+  description: test required int|None value union
+  required: false
+  type: union[int,None]
 unreq_int_val:
   description: test un-required int value
   required: false
   default: 123
   type: int
 unreq_int_val_none:
-  description: test un-required int value
+  description: test un-required int|None value
   required: false
   default: None
   type: int|None
