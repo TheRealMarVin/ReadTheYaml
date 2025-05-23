@@ -10,9 +10,6 @@ from .sections import Section
 
 
 class Schema(Section):
-    """
-    A Schema is a top-level Section that can be constructed from Python or a YAML schema definition.
-    """
     @classmethod
     def from_yaml(cls, schema_file: str, base_schema_dir: str = None) -> "Schema":
         if not os.path.isfile(schema_file):
