@@ -154,6 +154,16 @@ def test_invalid_int_min_greater_than_max():
         NumericalField(name="new_field", description="My description",  required=True, default=1,
                         value_type=int, min_value=512, max_value=5, value_range=None)
 
+def test_invalid_int_float_lower_bound():
+    with pytest.raises(ValidationError, match="is not of type of the field"):
+        NumericalField(name="new_field", description="My description",  required=True, default=1,
+                        value_type=int, min_value=5.2, max_value=None, value_range=None)
+
+def test_invalid_int_float_upper_bound():
+    with pytest.raises(ValidationError, match="is not of type of the field"):
+        NumericalField(name="new_field", description="My description",  required=True, default=1,
+                        value_type=int, min_value=None, max_value=512.5, value_range=None)
+
 def test_valid_float_min_max_and_range():
     NumericalField(name="new_field", description="My description",  required=True, default=1,
                    value_type=int, min_value=5, max_value=512, value_range=(5,512))

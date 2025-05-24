@@ -12,6 +12,10 @@ class NumericalField(Field):
 
         try:
             self.min_value, self.max_value = find_and_validate_bounds(value_range, min_value, max_value)
+            if self.min_value is not None and value_type(self.min_value) != self.min_value:
+                raise FormatError(f"Min value ({type(self.min_value)}) is not of type of the field ({value_type}). This is confusing.")
+            if self.max_value is not None and value_type(self.max_value) != self.max_value:
+                raise FormatError(f"Max value ({type(self.max_value)}) is not of type of the field ({value_type}). This is confusing.")
         except FormatError as e:
             raise ValidationError(f"Field '{self.name}': {e}")
 
