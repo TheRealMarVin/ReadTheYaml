@@ -45,11 +45,15 @@ def test_valid_int():
     confirmed_value = field.validate(123)
     assert confirmed_value == 123
 
+    confirmed_value = field.validate("123")
+    assert confirmed_value == 123
+
     confirmed_value = field.validate(0)
     assert confirmed_value == 0
 
     confirmed_value = field.validate(-1093257)
     assert confirmed_value == -1093257
+
 
 def test_valid_int_min_value():
     field = NumericalField(name="new_field", description="My description",  required=True, default=1,
@@ -88,7 +92,7 @@ def test_invalid_int_empty():
                            value_type=int, min_value=None, max_value=None, value_range=None)
     assert field.name == "new_field" and field.description == "My description" and field.required
 
-    with pytest.raises(ValidationError, match="must be null/None"):
+    with pytest.raises(ValidationError, match="Must be of type int"):
         field.validate(None)
 
 def test_invalid_int_string():
@@ -96,8 +100,5 @@ def test_invalid_int_string():
                            value_type=int, min_value=None, max_value=None, value_range=None)
     assert field.name == "new_field" and field.description == "My description" and field.required
 
-    with pytest.raises(ValidationError, match="must be null/None"):
-        field.validate("123")
-
-    with pytest.raises(ValidationError, match="must be null/None"):
-        field.validate(123)
+    with pytest.raises(ValidationError, match="Must be of type int"):
+        field.validate("str")
