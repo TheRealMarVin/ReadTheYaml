@@ -2,6 +2,27 @@ import pytest
 
 from readtheyaml.fields.field_helpers import _parse_field_type
 
+# base types
+def test_valid_none():
+    field = _parse_field_type("None")
+    assert field.__name__ == "NoneField"
+
+def test_valid_bool():
+    field = _parse_field_type("bool")
+    assert field.__name__ == "BoolField"
+
+def test_valid_int():
+    field = _parse_field_type("int")
+    assert field.func.__name__ == "NumericalField"
+
+def test_valid_float():
+    field = _parse_field_type("float")
+    assert field.func.__name__ == "NumericalField"
+
+def test_valid_str():
+    field = _parse_field_type("str")
+    assert field.__name__ == "StringField"
+
 # Union
 def test_valid_union_int_str_pipe():
     field = _parse_field_type("int | str")
@@ -51,8 +72,8 @@ def test_list_unknown_type():
         _parse_field_type("list[foo]")
 
 def test_list_no_type():
-    field = _parse_field_type("list(int)")
-    assert field.func.__name__ == "ListField"
+    with pytest.raises(ValueError, match="Unknown field type: list()"):
+        field = _parse_field_type("list()")
 
 def test_list_two_type():
     with pytest.raises(ValueError, match="Unknown field type"):
