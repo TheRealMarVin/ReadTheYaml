@@ -32,7 +32,7 @@ class Field(metaclass=PostInitMeta):
             try:
                 self.validate(self.default)
             except ValidationError as e:
-                raise FormatError(f"Field {self.name} got invalid default value: {e}")
+                raise FormatError(f"Field {self.name} got invalid default value: {e}") from None
 
     def validate(self, value):
         raise NotImplementedError(f"Field '{self.name}': Each field must implement its own validate method.")
