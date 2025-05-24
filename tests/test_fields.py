@@ -1,5 +1,6 @@
 import pytest
 
+from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.none_field import NoneField
 from readtheyaml.fields.numerical_field import NumericalField
@@ -63,6 +64,14 @@ def test_valid_int_min_value():
     confirmed_value = field.validate(42)
     assert confirmed_value == 42
 
+def test_invalid_int_min_value():
+    field = NumericalField(name="new_field", description="My description",  required=True, default=1,
+                           value_type=int, min_value=10, max_value=None, value_range=None)
+    assert field.name == "new_field" and field.description == "My description" and field.required
+
+    with pytest.raises(ValidationError, match="Value must be at least"):
+        field.validate(2)
+
 def test_valid_int_max_value():
     field = NumericalField(name="new_field", description="My description",  required=True, default=1,
                            value_type=int, min_value=None, max_value=512, value_range=None)
@@ -70,6 +79,14 @@ def test_valid_int_max_value():
 
     confirmed_value = field.validate(42)
     assert confirmed_value == 42
+
+def test_invalid_int_max_value():
+    field = NumericalField(name="new_field", description="My description",  required=True, default=1,
+                           value_type=int, min_value=None, max_value=512, value_range=None)
+    assert field.name == "new_field" and field.description == "My description" and field.required
+
+    with pytest.raises(ValidationError, match="Value must be at most"):
+        field.validate(1024)
 
 def test_valid_int_ranges_value_array():
     field = NumericalField(name="new_field", description="My description",  required=True, default=1,
@@ -86,6 +103,42 @@ def test_valid_int_ranges_value_tuple():
 
     confirmed_value = field.validate(42)
     assert confirmed_value == 42
+
+def test_invalid_int_out_of_range():
+    field = NumericalField(name="new_field", description="My description",  required=True, default=1,
+                           value_type=int, min_value=None, max_value=None, value_range=(5, 512))
+    assert field.name == "new_field" and field.description == "My description" and field.required
+
+    with pytest.raises(ValidationError, match="Value must be at least"):
+        field.validate(1)
+
+    with pytest.raises(ValidationError, match="Value must be at most"):
+        field.validate(1024)
+
+def test_invalid_int_min_greater_than_max():
+    with pytest.raises(ValidationError, match="Minimal value greater than maximal value"):
+        NumericalField(name="new_field", description="My description",  required=True, default=1,
+                        value_type=int, min_value=512, max_value=5, value_range=None)
+
+def test_invalid_int_min_and_range():
+    with pytest.raises(ValidationError, match="using range and lower bound"):
+        NumericalField(name="new_field", description="My description",  required=True, default=1,
+                        value_type=int, min_value=5, max_value=None, value_range=(5,512))
+
+def test_invalid_int_max_and_range():
+    with pytest.raises(ValidationError, match="using range and upper bound"):
+        NumericalField(name="new_field", description="My description",  required=True, default=1,
+                        value_type=int, min_value=None, max_value=512, value_range=(5,512))
+
+def test_invalid_int_min_not_match_range():
+    with pytest.raises(ValidationError, match="Lower bound value is not matching"):
+        NumericalField(name="new_field", description="My description",  required=True, default=1,
+                        value_type=int, min_value=1, max_value=512, value_range=(5,512))
+
+def test_invalid_int_max_not_match_range():
+    with pytest.raises(ValidationError, match="Upper bound value is not matching"):
+        NumericalField(name="new_field", description="My description",  required=True, default=1,
+                        value_type=int, min_value=5, max_value=1024, value_range=(5,512))
 
 def test_invalid_int_empty():
     field = NumericalField(name="new_field", description="My description", required=True, default=1,
