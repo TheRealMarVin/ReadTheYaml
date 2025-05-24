@@ -18,8 +18,14 @@ def find_and_validate_bounds(value_range, min_value, max_value):
             raise FormatError(f"Upper bound value is not matching upper bound of range.")
 
     if value_range is not None:
+        if len(value_range) != 2:
+            raise FormatError(f"Range must contains 2 values. ranges contains {len(value_range)}")
         min_value = value_range[0]
         max_value = value_range[1]
+
+    if min_value is not None and max_value is not None:
+        if min_value > max_value:
+            raise FormatError(f"Minimal value greater than maximal value. ({min_value} > {max_value})")
 
     return min_value, max_value
 
