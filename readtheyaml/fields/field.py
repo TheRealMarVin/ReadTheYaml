@@ -4,8 +4,7 @@ from readtheyaml.exceptions.format_error import FormatError
 class Field:
     allowed_kwargs = {"type"}
 
-    def __init__(self, name, required=True, default=None,
-                 description="Default Definition",
+    def __init__(self, name, description, required=True, default=None,
                  additional_allowed_kwargs=set(),
                  **kwargs):
         self.name = name
