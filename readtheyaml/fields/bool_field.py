@@ -7,12 +7,15 @@ class BoolField(Field):
         super().__init__(**kwargs)
 
     def validate(self, value):
-        try:
-            if type(value) == str and value.lower() in {"none", "null"}:
-                raise ValidationError(f"Field '{self.name}': Must be of type bool, contains None or null")
+        if type(value) == str:
+            if value.lower() in {"none", "null", ""}:
+                raise ValidationError(f"Field '{self.name}': Must be of type bool, contains None or null or empty")
+            if value.lower() not in {"true", "false"}:
+                raise ValidationError(f"Field '{self.name}': Expected a boolean value.")
 
-            value = bool(value)
-        except (TypeError, ValueError):
-            raise ValidationError(f"Field '{self.name}': Must be of type bool")
+            value = True if value.lower() in {"true"} else False
+        else:
+            if not isinstance(value, bool):
+                raise ValidationError(f"Field '{self.name}': Expected a boolean value, got {type(value).__name__}")
 
         return value

@@ -1,7 +1,7 @@
 import pytest
 
-from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
+from readtheyaml.fields.bool_field import BoolField
 from readtheyaml.fields.none_field import NoneField
 from readtheyaml.fields.numerical_field import NumericalField
 
@@ -35,6 +35,40 @@ def test_invalid_none_numerical():
         field.validate("123")
 
     with pytest.raises(ValidationError, match="must be null/None"):
+        field.validate(123)
+
+# testing Bool
+def test_valid_bool():
+    field = BoolField(name="new_field", description="My description", required=True, default=True)
+    assert field.name == "new_field" and field.description == "My description" and field.required
+
+    confirmed_value = field.validate(True)
+    assert confirmed_value is True
+
+    confirmed_value = field.validate("True")
+    assert confirmed_value is True
+
+    confirmed_value = field.validate(False)
+    assert confirmed_value is False
+
+    confirmed_value = field.validate("False")
+    assert confirmed_value is False
+
+def test_invalid_bool_empty():
+    field = BoolField(name="new_field", description="My description", required=True, default=True)
+    assert field.name == "new_field" and field.description == "My description" and field.required
+
+    with pytest.raises(ValidationError, match="Must be of type bool"):
+        field.validate("")
+
+def test_invalid_bool_numerical():
+    field = BoolField(name="new_field", description="My description", required=True, default=None)
+    assert field.name == "new_field" and field.description == "My description" and field.required
+
+    with pytest.raises(ValidationError, match="Expected a boolean value"):
+        field.validate("123")
+
+    with pytest.raises(ValidationError, match="Expected a boolean value"):
         field.validate(123)
 
 # testing int
