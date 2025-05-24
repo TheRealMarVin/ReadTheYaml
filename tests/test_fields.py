@@ -5,6 +5,7 @@ from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.bool_field import BoolField
 from readtheyaml.fields.none_field import NoneField
 from readtheyaml.fields.numerical_field import NumericalField
+from readtheyaml.fields.string_field import StringField
 
 
 # testing None
@@ -500,3 +501,92 @@ def test_invalid_float_default_over_min():
     with pytest.raises(FormatError, match="invalid default value"):
         NumericalField(name="new_field", description="My description", required=False, default=2048,
                        value_type=float, min_value=None, max_value=None, value_range=[5, 1024])
+
+# testing String
+def test_valid_string():
+    field = StringField(name="new_field", description="My description", required=False, default=None,
+                        min_length=0, max_length=-1, allow_string_to_be_none=True)
+    assert field.name == "new_field" and field.description == "My description" and not field.required
+
+    confirmed_value = field.validate("")
+    assert confirmed_value == ""
+
+    confirmed_value = field.validate("None")
+    assert confirmed_value == "None"
+
+    confirmed_value = field.validate(None)
+    assert confirmed_value == "None"
+
+    confirmed_value = field.validate("123")
+    assert confirmed_value == "123"
+
+    confirmed_value = field.validate(123)
+    assert confirmed_value == "123"
+
+def test_valid_none_string():
+    field = StringField(name="new_field", description="My description", required=False, default=None,
+                        min_length=0, max_length=-1, allow_string_to_be_none=True)
+    assert field.name == "new_field" and field.description == "My description" and not field.required
+
+    confirmed_value = field.validate("")
+    assert confirmed_value == ""
+
+    confirmed_value = field.validate("None")
+    assert confirmed_value == "None"
+
+    confirmed_value = field.validate(None)
+    assert confirmed_value == "None"
+
+    confirmed_value = field.validate("123")
+    assert confirmed_value == "123"
+
+    confirmed_value = field.validate(123)
+    assert confirmed_value == "123"
+
+def test_invalid_default_string():
+    with pytest.raises(FormatError, match="invalid default value"):
+        StringField(name="new_field", description="My description", required=False, default=None,
+                    min_length=0, max_length=-1, allow_string_to_be_none=False)
+
+    with pytest.raises(FormatError, match="invalid default value"):
+        StringField(name="new_field", description="My description", required=False, default=None,
+                    min_length=0, max_length=-1, allow_string_to_be_none=False)
+
+def test_invalid_string():
+    field = StringField(name="new_field", description="My description", required=False, default="some_value",
+                    min_length=0, max_length=-1, allow_string_to_be_none=False)
+
+    with pytest.raises(ValidationError, match="Must be of type string"):
+        field.validate("None")
+
+    with pytest.raises(ValidationError, match="Must be of type string"):
+        field.validate(None)
+
+def test_invalid_default_string():
+    with pytest.raises(FormatError, match="smaller than 0"):
+        StringField(name="new_field", description="My description", required=False, default="SomeString",
+                    min_length=-1, max_length=-1, allow_string_to_be_none=True)
+
+def test_invalid_string_min_greater_max():
+    with pytest.raises(FormatError, match="smaller than min"):
+        StringField(name="new_field", description="My description", required=False, default="SomeString",
+                    min_length=10, max_length=0, allow_string_to_be_none=True)
+
+def test_invalid_string_default_smaller_than_min():
+    with pytest.raises(FormatError, match="invalid default value"):
+        StringField(name="new_field", description="My description", required=False, default="SomeString",
+                    min_length=15, max_length=100, allow_string_to_be_none=True)
+
+def test_invalid_string_smaller_than_min():
+    field = StringField(name="new_field", description="My description", required=False, default="SomeLongLongString",
+                        min_length=15, max_length=100, allow_string_to_be_none=True)
+
+    with pytest.raises(ValidationError, match="Value must be at least"):
+        field.validate("SomeString")
+
+def test_invalid_string_bigger_than_max():
+    field = StringField(name="new_field", description="My description", required=False, default="test",
+                        min_length=0, max_length=5, allow_string_to_be_none=True)
+
+    with pytest.raises(ValidationError, match="Value must be at most"):
+        field.validate("SomeString")
