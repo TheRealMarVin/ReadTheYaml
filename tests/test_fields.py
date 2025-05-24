@@ -38,6 +38,10 @@ def test_invalid_none_numerical():
     with pytest.raises(ValidationError, match="must be null/None"):
         field.validate(123)
 
+def test_valid_none_text_default():
+    field = NoneField(name="new_field", description="My description", required=False, default="None")
+    assert field.name == "new_field" and field.description == "My description" and not field.required
+
 def test_invalid_none_invalid_default():
     with pytest.raises(FormatError, match="invalid default value"):
         NoneField(name="new_field", description="My description", required=False, default=True)
@@ -46,7 +50,7 @@ def test_invalid_none_invalid_default():
         NoneField(name="new_field", description="My description", required=False, default=0)
 
     with pytest.raises(FormatError, match="invalid default value"):
-        NoneField(name="new_field", description="My description", required=False, default=12.5)
+        NoneField(name="new_field", description="My description", required=False, default="test")
 
 # testing Bool
 def test_valid_bool():
@@ -81,6 +85,26 @@ def test_invalid_bool_numerical():
 
     with pytest.raises(ValidationError, match="Expected a boolean value"):
         field.validate(123)
+
+def test_valid_bool_text_default():
+    field = BoolField(name="new_field", description="My description", required=False, default="True")
+    assert field.name == "new_field" and field.description == "My description" and not field.required
+
+    field = BoolField(name="new_field", description="My description", required=False, default="False")
+    assert field.name == "new_field" and field.description == "My description" and not field.required
+
+def test_invalid_bool_invalid_default():
+    with pytest.raises(FormatError, match="invalid default value"):
+        BoolField(name="new_field", description="My description", required=False, default=None)
+
+    with pytest.raises(FormatError, match="invalid default value"):
+        BoolField(name="new_field", description="My description", required=False, default=0)
+
+    with pytest.raises(FormatError, match="invalid default value"):
+        BoolField(name="new_field", description="My description", required=False, default=12.5)
+
+    with pytest.raises(FormatError, match="invalid default value"):
+        BoolField(name="new_field", description="My description", required=False, default="")
 
 # testing int
 def test_valid_int():
@@ -249,6 +273,44 @@ def test_invalid_int_string():
     with pytest.raises(ValidationError, match="Must be of type int"):
         field.validate("str")
 
+def test_valid_int_text_default():
+    field = NumericalField(name="new_field", description="My description", required=False, default="0")
+    assert field.name == "new_field" and field.description == "My description" and not field.required
+
+    field = NumericalField(name="new_field", description="My description", required=False, default="125")
+    assert field.name == "new_field" and field.description == "My description" and not field.required
+
+def test_invalid_int_invalid_default():
+    with pytest.raises(FormatError, match="invalid default value"):
+        NumericalField(name="new_field", description="My description", required=False, default=None)
+
+    with pytest.raises(FormatError, match="invalid default value"):
+        NumericalField(name="new_field", description="My description", required=False, default=True)
+
+    with pytest.raises(FormatError, match="invalid default value"):
+        NumericalField(name="new_field", description="My description", required=False, default=12.5)
+
+    with pytest.raises(FormatError, match="invalid default value"):
+        NumericalField(name="new_field", description="My description", required=False, default="")
+
+def test_invalid_int_default_under_min():
+    with pytest.raises(FormatError, match="invalid default value"):
+        NumericalField(name="new_field", description="My description", required=False, default=1,
+                       value_type=int, min_value=5, max_value=None, value_range=None)
+
+    with pytest.raises(FormatError, match="invalid default value"):
+        NumericalField(name="new_field", description="My description", required=False, default=1,
+                       value_type=int, min_value=None, max_value=None, value_range=[5, 1024])
+
+def test_invalid_int_default_over_min():
+    with pytest.raises(FormatError, match="invalid default value"):
+        NumericalField(name="new_field", description="My description", required=False, default=1024,
+                       value_type=int, min_value=None, max_value=512, value_range=None)
+
+    with pytest.raises(FormatError, match="invalid default value"):
+        NumericalField(name="new_field", description="My description", required=False, default=2048,
+                       value_type=int, min_value=None, max_value=None, value_range=[5, 1024])
+
 # testing float
 def test_valid_float():
     field = NumericalField(name="new_field", description="My description",  required=False, default=1,
@@ -410,3 +472,31 @@ def test_invalid_float_string():
 
     with pytest.raises(ValidationError, match="Must be of type float"):
         field.validate("str")
+
+def test_invalid_float_invalid_default():
+    with pytest.raises(FormatError, match="invalid default value"):
+        NumericalField(value_type=float, name="new_field", description="My description", required=False, default=None)
+
+    with pytest.raises(FormatError, match="invalid default value"):
+        NumericalField(value_type=float, name="new_field", description="My description", required=False, default=True)
+
+    with pytest.raises(FormatError, match="invalid default value"):
+        NumericalField(value_type=float, name="new_field", description="My description", required=False, default="")
+
+def test_invalid_float_default_under_min():
+    with pytest.raises(FormatError, match="invalid default value"):
+        NumericalField(name="new_field", description="My description", required=False, default=1,
+                       value_type=float, min_value=5, max_value=None, value_range=None)
+
+    with pytest.raises(FormatError, match="invalid default value"):
+        NumericalField(name="new_field", description="My description", required=False, default=1,
+                       value_type=float, min_value=None, max_value=None, value_range=[5, 1024])
+
+def test_invalid_float_default_over_min():
+    with pytest.raises(FormatError, match="invalid default value"):
+        NumericalField(name="new_field", description="My description", required=False, default=1024,
+                       value_type=float, min_value=None, max_value=512, value_range=None)
+
+    with pytest.raises(FormatError, match="invalid default value"):
+        NumericalField(name="new_field", description="My description", required=False, default=2048,
+                       value_type=float, min_value=None, max_value=None, value_range=[5, 1024])
