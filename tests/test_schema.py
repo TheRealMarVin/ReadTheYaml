@@ -41,7 +41,14 @@ def test_invalid_union_bracket_mix():
         _parse_field_type("union[int, None)")
 
     with pytest.raises(ValueError, match="Mismatched brackets"):
-        _parse_field_type("list(str, int]")
+        _parse_field_type("union(str, int]")
+
+def test_invalid_union_one_side():
+    with pytest.raises(ValueError, match="Unknown field type"):
+        _parse_field_type("int|")
+
+    with pytest.raises(ValueError, match="Unknown field type"):
+        _parse_field_type("|int")
 
 # List
 def test_valid_list_int_square_brackets():
