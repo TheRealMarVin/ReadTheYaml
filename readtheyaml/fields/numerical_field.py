@@ -31,10 +31,12 @@ class NumericalField(Field):
             if str(value).lower() in {"true", "false"}:
                 raise ValidationError(f"Field '{self.name}': Must be of type {self.value_type.__name__}, contains True or False.")
 
-            if value != self.value_type(value):
-                raise ValidationError(f"Max value ({type(value)}) is not of type of the field ({self.value_type}). Not good.")
+            new_value = self.value_type(value)
+            if isinstance(value, float) and self.value_type is int:
+                if not value.is_integer():
+                    raise ValidationError(f"Value ({type(value)}) is not of type of the field ({self.value_type}). Not good.")
 
-            value = self.value_type(value)
+            value = new_value
         except (TypeError, ValueError):
             raise ValidationError(f"Field '{self.name}': Must be of type {self.value_type.__name__}")
 
