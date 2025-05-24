@@ -2,7 +2,47 @@ import pytest
 
 from readtheyaml.fields.field_helpers import _parse_field_type
 
+# List
+def test_valid_list_int_square_brackets():
+    field = _parse_field_type("list[int]")
+    assert field.func.__name__ == "ListField"
 
+def test_valid_list_float_square_brackets():
+    field = _parse_field_type("list[float]")
+    assert field.func.__name__ == "ListField"
+
+def test_valid_list_str_square_brackets():
+    field = _parse_field_type("list[str]")
+    assert field.func.__name__ == "ListField"
+
+def test_valid_tuple_round_brackets():
+    field = _parse_field_type("list(int)")
+    assert field.func.__name__ == "ListField"
+
+def test_invalid_list_bracket_mix():
+    with pytest.raises(ValueError, match="Mismatched brackets"):
+        _parse_field_type("list[int)")
+
+    with pytest.raises(ValueError, match="Mismatched brackets"):
+        _parse_field_type("list(str]")
+
+def test_list_unknown_type():
+    with pytest.raises(ValueError, match="Unknown field type: foo"):
+        _parse_field_type("list[foo]")
+
+def test_list_no_type():
+    field = _parse_field_type("list(int)")
+    assert field.func.__name__ == "ListField"
+
+def test_list_two_type():
+    with pytest.raises(ValueError, match="Unknown field type"):
+        _parse_field_type("list(int, float)")
+
+def test_list_union_type():
+    field = _parse_field_type("list(int | float)")
+    assert field.func.__name__ == "ListField"
+
+# Tuples
 def test_valid_tuple_square_brackets():
     field = _parse_field_type("tuple[int, str]")
     assert field.func.__name__ == "TupleField"
