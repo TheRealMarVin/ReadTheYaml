@@ -2,6 +2,7 @@ import pytest
 
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.none_field import NoneField
+from readtheyaml.fields.numerical_field import NumericalField
 
 
 # testing None
@@ -9,14 +10,14 @@ def test_valid_none():
     field = NoneField(name="new_field", description="My description", required=True, default=None)
     assert field.name == "new_field" and field.description == "My description" and field.required
 
-    validated_val = field.validate("None")
-    assert validated_val is None
+    confirmed_value = field.validate("None")
+    assert confirmed_value is None
 
-    validated_val = field.validate("none")
-    assert validated_val is None
+    confirmed_value = field.validate("none")
+    assert confirmed_value is None
 
-    validated_val = field.validate(None)
-    assert validated_val is None
+    confirmed_value = field.validate(None)
+    assert confirmed_value is None
 
 def test_invalid_none_empty():
     field = NoneField(name="new_field", description="My description", required=True, default=None)
@@ -27,6 +28,72 @@ def test_invalid_none_empty():
 
 def test_invalid_none_numerical():
     field = NoneField(name="new_field", description="My description", required=True, default=None)
+    assert field.name == "new_field" and field.description == "My description" and field.required
+
+    with pytest.raises(ValidationError, match="must be null/None"):
+        field.validate("123")
+
+    with pytest.raises(ValidationError, match="must be null/None"):
+        field.validate(123)
+
+# testing int
+def test_valid_int():
+    field = NumericalField(name="new_field", description="My description",  required=True, default=1, 
+                           value_type=int, min_value=None, max_value=None, value_range=None)
+    assert field.name == "new_field" and field.description == "My description" and field.required
+
+    confirmed_value = field.validate(123)
+    assert confirmed_value == 123
+
+    confirmed_value = field.validate(0)
+    assert confirmed_value == 0
+
+    confirmed_value = field.validate(-1093257)
+    assert confirmed_value == -1093257
+
+def test_valid_int_min_value():
+    field = NumericalField(name="new_field", description="My description",  required=True, default=1,
+                           value_type=int, min_value=10, max_value=None, value_range=None)
+    assert field.name == "new_field" and field.description == "My description" and field.required
+
+    confirmed_value = field.validate(42)
+    assert confirmed_value == 42
+
+def test_valid_int_max_value():
+    field = NumericalField(name="new_field", description="My description",  required=True, default=1,
+                           value_type=int, min_value=None, max_value=512, value_range=None)
+    assert field.name == "new_field" and field.description == "My description" and field.required
+
+    confirmed_value = field.validate(42)
+    assert confirmed_value == 42
+
+def test_valid_int_ranges_value_array():
+    field = NumericalField(name="new_field", description="My description",  required=True, default=1,
+                           value_type=int, min_value=None, max_value=None, value_range=[5, 512])
+    assert field.name == "new_field" and field.description == "My description" and field.required
+
+    confirmed_value = field.validate(42)
+    assert confirmed_value == 42
+
+def test_valid_int_ranges_value_tuple():
+    field = NumericalField(name="new_field", description="My description",  required=True, default=1,
+                           value_type=int, min_value=None, max_value=None, value_range=(5, 512))
+    assert field.name == "new_field" and field.description == "My description" and field.required
+
+    confirmed_value = field.validate(42)
+    assert confirmed_value == 42
+
+def test_invalid_int_empty():
+    field = NumericalField(name="new_field", description="My description", required=True, default=1,
+                           value_type=int, min_value=None, max_value=None, value_range=None)
+    assert field.name == "new_field" and field.description == "My description" and field.required
+
+    with pytest.raises(ValidationError, match="must be null/None"):
+        field.validate(None)
+
+def test_invalid_int_string():
+    field = NumericalField(name="new_field", description="My description", required=True, default=1,
+                           value_type=int, min_value=None, max_value=None, value_range=None)
     assert field.name == "new_field" and field.description == "My description" and field.required
 
     with pytest.raises(ValidationError, match="must be null/None"):
