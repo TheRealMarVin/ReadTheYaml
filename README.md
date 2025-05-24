@@ -2,7 +2,7 @@
 
 > A lightweight YAML schema validator with just enough structure to stop future-you from asking: "Why the heck did I set this to 42?"
 
-## 🧭 What is this?
+## What is this?
 
 **ReadTheYaml** is a Python library that helps you define, validate, and document your YAML configuration files. It was built by someone (me) who got tired of forgetting:
 
@@ -32,7 +32,7 @@ pip install -e .
 
 ---
 
-## ✅ What can it do?
+## What can it do?
 
 ### 🔹 Validate YAML config files
 It ensures all required fields are present, types are correct, and defaults are filled in where needed.
@@ -56,8 +56,142 @@ You can restrict values to a fixed set of strings using `EnumField` or `type: en
 Schemas can include and reuse other schemas stored in separate files.
 
 ---
+## Supported Schema Types
 
-## 📄 Example schema.yaml
+ReadTheYAML provides a flexible and expressive way to define and validate data structures using YAML. Below is an overview of the supported types, their syntax, and usage examples. I tried to follow the standard of type hints in Python, but I relaxed some constraints.
+
+### 🔹 Basic Types
+
+* `None`: Represents None.
+* `int`: Represents integer values.
+* `float`: Represents floating-point numbers.
+* `str`: Represents string values.
+* `bool`: Represents boolean values (`true` or `false`).
+
+**Example:**
+
+```yaml
+type: int
+```
+
+### 🔹 Composite Types
+
+#### List
+
+Defines a list of elements of a specified type.
+
+**Syntax:**
+
+```yaml
+type: list[<element_type>]
+```
+
+**Example:**
+
+```yaml
+type: list[int]
+```
+
+#### Tuple
+
+Defines a fixed-size sequence of elements, each with a specified type.
+
+**Syntax:**
+
+```yaml
+type: tuple[<type1>, <type2>, ...]
+```
+
+**Example:**
+
+```yaml
+type: tuple[int, str]
+```
+
+#### Union
+
+Specifies that a value can be of one of several types.
+
+**Syntax:**
+
+```yaml
+type: union[<type1>, <type2>, ...]
+```
+
+**Example:**
+
+```yaml
+type: union[int, str]
+```
+
+### 🔹 Optional Types
+
+To indicate that a field is optional (i.e., it can be `null`), include `None` in a `union`.
+
+**Example:**
+
+```yaml
+type: union[int, None]
+```
+
+Alternatively, you can use the shorthand:
+
+```yaml
+type: int | None
+```
+
+### 🔹 Syntax Variations
+
+ReadTheYAML supports both square brackets `[]` and parentheses `()` for defining composite types. However, the opening and closing brackets must match.
+
+**Valid:**
+
+```yaml
+type: tuple[int, str]
+type: tuple(int, str)
+```
+
+**Invalid:**
+
+```yaml
+type: tuple[int, str)
+type: tuple(int, str]
+```
+
+### 🔹 Nested Types
+
+You can nest composite types to define complex structures.
+
+**Example:**
+
+```yaml
+type: list[tuple[int, str]]
+```
+
+This defines a list where each element is a tuple containing an integer and a string.
+
+### 🔹 Field Options
+
+Fields can have additional options to control validation and behavior:
+
+* `description`: Provides a human-readable description of the field. This one is mandatory
+* `required`: Indicates whether the field is mandatory. By default, the value is false (the field is not required).
+* `default`: Specifies a default value if the field is omitted. This is mandatory when required is set to false.
+
+
+**Example:**
+
+```yaml
+name:
+  type: str
+  required: true
+  default: Unnamed
+  description: The name of the entity.
+```
+
+---
+
+## Example schema.yaml
 
 ```yaml
 name: app_config
@@ -94,7 +228,7 @@ Server:
 
 ---
 
-## 🛠️ How to Use
+## How to Use
 
 ### 1. Validate a file with CLI
 ```bash
@@ -123,5 +257,5 @@ except Exception as e:
     print(f"⚠️ Failed to load or validate config: {e}")
 ```
 ---
-## 📬 Contributions
+## Contributions
 If you try this out and find something confusing or missing — feel free to open an issue or suggestion. This project is a work-in-progress, but built with love and frustration.
