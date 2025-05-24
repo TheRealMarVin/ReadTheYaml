@@ -2,6 +2,26 @@ import pytest
 
 from readtheyaml.fields.field_helpers import _parse_field_type
 
+# Union
+def test_valid_union_int_str_pipe():
+    field = _parse_field_type("int | str")
+    assert field.func.__name__ == "UnionField"
+
+def test_valid_union_int_str_fct_round_bracket():
+    field = _parse_field_type("union(int, str)")
+    assert field.func.__name__ == "UnionField"
+
+def test_valid_union_int_str_fct_square_bracket():
+    field = _parse_field_type("union[int, str]")
+    assert field.func.__name__ == "UnionField"
+
+def test_invalid_union_bracket_mix():
+    with pytest.raises(ValueError, match="Mismatched brackets"):
+        _parse_field_type("union[int, None)")
+
+    with pytest.raises(ValueError, match="Mismatched brackets"):
+        _parse_field_type("list(str, int]")
+
 # List
 def test_valid_list_int_square_brackets():
     field = _parse_field_type("list[int]")
