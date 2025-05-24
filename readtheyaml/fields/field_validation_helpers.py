@@ -5,7 +5,7 @@ from readtheyaml.exceptions.format_error import FormatError
 
 def find_and_validate_bounds(value_range, min_value, max_value):
     if value_range is not None and len(value_range) != 2:
-        raise FormatError(f"Range  must have 2 values, {len(value_range)} provided.")
+        raise FormatError(f"Range must have 2 values, {len(value_range)} provided.")
 
     if value_range is not None and (min_value is not None or max_value is not None):
         if min_value is None:
