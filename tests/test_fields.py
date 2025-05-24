@@ -104,6 +104,41 @@ def test_valid_int_ranges_value_tuple():
     confirmed_value = field.validate(42)
     assert confirmed_value == 42
 
+def test_valid_int_none_in_range():
+    field = NumericalField(name="new_field", description="My description",  required=True, default=1,
+                           value_type=int, min_value=None, max_value=None, value_range=[None, None])
+    assert field.name == "new_field" and field.description == "My description" and field.required
+
+    confirmed_value = field.validate(42)
+    assert confirmed_value == 42
+
+def test_valid_int_min_and_none_in_range():
+    field = NumericalField(name="new_field", description="My description",  required=True, default=1,
+                           value_type=int, min_value=None, max_value=None, value_range=[5, None])
+    assert field.name == "new_field" and field.description == "My description" and field.required
+
+    confirmed_value = field.validate(42)
+    assert confirmed_value == 42
+
+def test_valid_int_none_and_max_in_range():
+    field = NumericalField(name="new_field", description="My description",  required=True, default=1,
+                           value_type=int, min_value=None, max_value=None, value_range=[None, 512])
+    assert field.name == "new_field" and field.description == "My description" and field.required
+
+    confirmed_value = field.validate(42)
+    assert confirmed_value == 42
+
+def test_invalid_int_range_not_enough_values():
+    with pytest.raises(ValidationError, match="Range must have 2 values, 1 provided."):
+        NumericalField(name="new_field", description="My description",  required=True, default=1,
+                       value_type=int, min_value=None, max_value=None, value_range=[None])
+
+
+def test_invalid_int_range_too_many_values():
+    with pytest.raises(ValidationError, match="Range must have 2 values, 3 provided."):
+        NumericalField(name="new_field", description="My description", required=True, default=1,
+                       value_type=int, min_value=None, max_value=None, value_range=[None, None, None])
+
 def test_invalid_int_out_of_range():
     field = NumericalField(name="new_field", description="My description",  required=True, default=1,
                            value_type=int, min_value=None, max_value=None, value_range=(5, 512))
