@@ -1,5 +1,6 @@
 import pytest
 
+from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.bool_field import BoolField
 from readtheyaml.fields.none_field import NoneField
@@ -36,6 +37,16 @@ def test_invalid_none_numerical():
 
     with pytest.raises(ValidationError, match="must be null/None"):
         field.validate(123)
+
+def test_invalid_none_invalid_default():
+    with pytest.raises(FormatError, match="invalid default value"):
+        NoneField(name="new_field", description="My description", required=False, default=True)
+
+    with pytest.raises(FormatError, match="invalid default value"):
+        NoneField(name="new_field", description="My description", required=False, default=0)
+
+    with pytest.raises(FormatError, match="invalid default value"):
+        NoneField(name="new_field", description="My description", required=False, default=12.5)
 
 # testing Bool
 def test_valid_bool():
