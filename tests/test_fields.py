@@ -154,6 +154,10 @@ def test_invalid_int_min_greater_than_max():
         NumericalField(name="new_field", description="My description",  required=True, default=1,
                         value_type=int, min_value=512, max_value=5, value_range=None)
 
+def test_valid_float_min_max_and_range():
+    NumericalField(name="new_field", description="My description",  required=True, default=1,
+                   value_type=int, min_value=5, max_value=512, value_range=(5,512))
+
 def test_invalid_int_min_and_range():
     with pytest.raises(ValidationError, match="using range and lower bound"):
         NumericalField(name="new_field", description="My description",  required=True, default=1,
