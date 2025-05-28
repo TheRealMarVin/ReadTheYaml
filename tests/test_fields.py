@@ -9,16 +9,28 @@ from readtheyaml.fields.string_field import StringField
 
 
 # testing None
-def test_valid_none():
+def test_none_field_initialization():
+    """Test that NoneField is properly initialized with given parameters."""
     field = NoneField(name="new_field", description="My description", required=False, default=None)
-    assert field.name == "new_field" and field.description == "My description" and not field.required
+    assert field.name == "new_field"
+    assert field.description == "My description"
+    assert not field.required
 
+def test_none_field_validate_string_uppercase_none():
+    """Test that NoneField validates string "None" as None."""
+    field = NoneField(name="new_field", description="My description")
     confirmed_value = field.validate("None")
     assert confirmed_value is None
 
+def test_none_field_validate_string_lowercase_none():
+    """Test that NoneField validates string "none" as None."""
+    field = NoneField(name="new_field", description="My description")
     confirmed_value = field.validate("none")
     assert confirmed_value is None
 
+def test_none_field_validate_none():
+    """Test that NoneField validates None as None."""
+    field = NoneField(name="new_field", description="My description")
     confirmed_value = field.validate(None)
     assert confirmed_value is None
 
