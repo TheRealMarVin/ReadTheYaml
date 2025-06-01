@@ -8,60 +8,66 @@ from readtheyaml.fields.numerical_field import NumericalField
 from readtheyaml.fields.string_field import StringField
 
 
-# testing None
+# -------------------
+# Tests for NoneField
+# -------------------
 def test_none_field_initialization():
-    """Test that NoneField is properly initialized with given parameters."""
+    """Test that NoneField is properly initialized."""
     field = NoneField(name="new_field", description="My description", required=False, default=None)
     assert field.name == "new_field"
     assert field.description == "My description"
     assert not field.required
 
-def test_none_field_validate_string_uppercase_none():
-    """Test that NoneField validates string "None" as None."""
-    field = NoneField(name="new_field", description="My description")
-    confirmed_value = field.validate("None")
-    assert confirmed_value is None
-
-def test_none_field_validate_string_lowercase_none():
-    """Test that NoneField validates string "none" as None."""
-    field = NoneField(name="new_field", description="My description")
-    confirmed_value = field.validate("none")
-    assert confirmed_value is None
-
-def test_none_field_validate_none():
-    """Test that NoneField validates None as None."""
-    field = NoneField(name="new_field", description="My description")
-    confirmed_value = field.validate(None)
-    assert confirmed_value is None
-
-def test_invalid_none_empty():
+def test_none_field_validate_uppercase_none():
+    """Test validation of string 'None' as None."""
     field = NoneField(name="new_field", description="My description", required=False, default=None)
-    assert field.name == "new_field" and field.description == "My description" and not field.required
+    assert field.validate("None") is None
 
+def test_none_field_validate_lowercase_none():
+    """Test validation of string 'none' as None."""
+    field = NoneField(name="new_field", description="My description", required=False, default=None)
+    assert field.validate("none") is None
+
+def test_none_field_validate_actual_none():
+    """Test validation of actual None value."""
+    field = NoneField(name="new_field", description="My description", required=False, default=None)
+    assert field.validate(None) is None
+
+def test_none_field_rejects_empty_string():
+    """Test rejection of empty string input."""
+    field = NoneField(name="new_field", description="My description", required=False, default=None)
     with pytest.raises(ValidationError, match="must be null/None"):
         field.validate("")
 
-def test_invalid_none_numerical():
+def test_none_field_rejects_numeric_string():
+    """Test rejection of numeric string input."""
     field = NoneField(name="new_field", description="My description", required=False, default=None)
-    assert field.name == "new_field" and field.description == "My description" and not field.required
-
     with pytest.raises(ValidationError, match="must be null/None"):
         field.validate("123")
 
+def test_none_field_rejects_integer():
+    """Test rejection of integer input."""
+    field = NoneField(name="new_field", description="My description", required=False, default=None)
     with pytest.raises(ValidationError, match="must be null/None"):
         field.validate(123)
 
-def test_valid_none_text_default():
+def test_none_field_accepts_string_default():
+    """Test field initialization with string 'None' as default."""
     field = NoneField(name="new_field", description="My description", required=False, default="None")
-    assert field.name == "new_field" and field.description == "My description" and not field.required
+    assert field.default == "None"
 
-def test_invalid_none_invalid_default():
+def test_none_field_rejects_bool_default():
+    """Test that boolean default value raises FormatError."""
     with pytest.raises(FormatError, match="invalid default value"):
         NoneField(name="new_field", description="My description", required=False, default=True)
 
+def test_none_field_rejects_zero_default():
+    """Test that integer zero default value raises FormatError."""
     with pytest.raises(FormatError, match="invalid default value"):
         NoneField(name="new_field", description="My description", required=False, default=0)
 
+def test_none_field_rejects_string_default():
+    """Test that arbitrary string default value raises FormatError."""
     with pytest.raises(FormatError, match="invalid default value"):
         NoneField(name="new_field", description="My description", required=False, default="test")
 
