@@ -13,6 +13,32 @@ class Section:
         fields: Optional[Dict[str, Field]] = None,
         subsections: Optional[Dict[str, 'Section']] = None,
     ):
+        """
+        Create a new Section object, representing a logical grouping of configuration settings.
+        
+        A Section is a fundamental building block for defining configuration schemas. It can contain:
+        - Fields: Individual configuration parameters with specific types and validation rules
+        - Subsections: Nested sections for hierarchical configuration structures
+        
+        Sections are used to validate and process configuration data, ensuring it matches the
+        expected structure and constraints defined in the schema.
+
+        Parameters
+        ----------
+        name : str
+            Unique name of the section. This will be used as the key in the configuration.
+        description : str, optional
+            A human-readable description of what this section represents (default: "").
+        required : bool, optional
+            Whether this section must be present in the configuration (default: True).
+            If True and the section is missing, a ValidationError will be raised.
+        fields : dict of str to `Field`, optional
+            A mapping of field names to their respective Field objects.
+            Fields represent individual configuration parameters within this section.
+        subsections : dict of str to `Section`, optional
+            A mapping of subsection names to their respective Section objects.
+            This allows for nested configuration structures.
+        """
         self.name = name
         self.description = description
         self.required = required
