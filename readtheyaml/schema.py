@@ -27,6 +27,13 @@ class Schema(Section):
 
         return cls._from_dict(data, base_schema_dir)
 
+    def validate_file(self, yaml_path: Union[str, Path], strict: bool = True):
+        yaml_path = Path(yaml_path)
+        with open(yaml_path, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+
+        return self.build_and_validate(config, strict=strict)
+
     @classmethod
     def _from_dict(cls, data: Dict[str, Any], base_schema_dir: Optional[Path] = None) -> "Schema":
         if base_schema_dir is None:
@@ -84,10 +91,3 @@ class Schema(Section):
             raise FileNotFoundError(f"Referenced schema file not found: {target}")
         with open(target, "r", encoding="utf-8") as f:
             return yaml.safe_load(f)
-
-    def validate_file(self, yaml_path: Union[str, Path], strict: bool = True):
-        yaml_path = Path(yaml_path)
-        with open(yaml_path, "r", encoding="utf-8") as f:
-            config = yaml.safe_load(f)
-
-        return self.build_and_validate(config, strict=strict)
