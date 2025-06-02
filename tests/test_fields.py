@@ -72,56 +72,77 @@ def test_none_field_rejects_string_default():
         NoneField(name="new_field", description="My description", required=False, default="test")
 
 # testing Bool
-def test_valid_bool():
+def test_validate_bool_true():
+    """Test that boolean True values are validated correctly."""
     field = BoolField(name="new_field", description="My description", required=False, default=True)
     assert field.name == "new_field" and field.description == "My description" and not field.required
-
+    
     confirmed_value = field.validate(True)
     assert confirmed_value is True
 
+def test_validate_bool_true_string():
+    """Test that string 'True' is converted to boolean True."""
+    field = BoolField(name="new_field", description="My description", required=False, default=True)
     confirmed_value = field.validate("True")
     assert confirmed_value is True
 
+def test_validate_bool_false():
+    """Test that boolean False values are validated correctly."""
+    field = BoolField(name="new_field", description="My description", required=False, default=True)
     confirmed_value = field.validate(False)
     assert confirmed_value is False
 
+def test_validate_bool_false_string():
+    """Test that string 'False' is converted to boolean False."""
+    field = BoolField(name="new_field", description="My description", required=False, default=True)
     confirmed_value = field.validate("False")
     assert confirmed_value is False
 
-def test_invalid_bool_empty():
+def test_validate_bool_empty_string():
+    """Test that empty string raises ValidationError."""
     field = BoolField(name="new_field", description="My description", required=False, default=True)
-    assert field.name == "new_field" and field.description == "My description" and not field.required
-
     with pytest.raises(ValidationError, match="Must be of type bool"):
         field.validate("")
 
-def test_invalid_bool_numerical():
+def test_validate_bool_numerical_string():
+    """Test that numerical string raises ValidationError."""
     field = BoolField(name="new_field", description="My description", required=False, default=True)
-    assert field.name == "new_field" and field.description == "My description" and not field.required
-
     with pytest.raises(ValidationError, match="Expected a boolean value"):
         field.validate("123")
 
+def test_validate_bool_integer():
+    """Test that integer raises ValidationError."""
+    field = BoolField(name="new_field", description="My description", required=False, default=True)
     with pytest.raises(ValidationError, match="Expected a boolean value"):
         field.validate(123)
 
-def test_valid_bool_text_default():
+def test_bool_field_with_text_default_true():
+    """Test that default can be set as string 'True'."""
     field = BoolField(name="new_field", description="My description", required=False, default="True")
-    assert field.name == "new_field" and field.description == "My description" and not field.required
+    assert field.default is True
 
+def test_bool_field_with_text_default_false():
+    """Test that default can be set as string 'False'."""
     field = BoolField(name="new_field", description="My description", required=False, default="False")
-    assert field.name == "new_field" and field.description == "My description" and not field.required
+    assert field.default is False
 
-def test_invalid_bool_invalid_default():
+def test_bool_field_invalid_default_none():
+    """Test that None as default raises FormatError."""
     with pytest.raises(FormatError, match="invalid default value"):
         BoolField(name="new_field", description="My description", required=False, default=None)
 
+def test_bool_field_invalid_default_zero():
+    """Test that 0 as default raises FormatError."""
     with pytest.raises(FormatError, match="invalid default value"):
         BoolField(name="new_field", description="My description", required=False, default=0)
 
+def test_bool_field_invalid_default_float():
+    """Test that float as default raises FormatError."""
     with pytest.raises(FormatError, match="invalid default value"):
         BoolField(name="new_field", description="My description", required=False, default=12.5)
 
+def test_bool_field_invalid_default_empty_string():
+    """Test that empty string as default raises FormatError."""
     with pytest.raises(FormatError, match="invalid default value"):
         BoolField(name="new_field", description="My description", required=False, default="")
 
