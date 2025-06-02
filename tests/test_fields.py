@@ -116,6 +116,93 @@ def test_validate_bool_integer():
     with pytest.raises(ValidationError, match="Expected a boolean value"):
         field.validate(123)
 
+def test_validate_bool_case_insensitive_true():
+    """Test that 'true' boolean strings are case-insensitive."""
+    field = BoolField(name="new_field", description="Case insensitive true test")
+    
+    true_variations = [
+        "TRUE",  # All uppercase
+        "True",  # Title case
+        "tRuE",  # Mixed case
+        "true"   # All lowercase
+    ]
+    
+    for value in true_variations:
+        assert field.validate(value) is True, f"Failed for value: {repr(value)}"
+
+def test_validate_bool_case_insensitive_false():
+    """Test that 'false' boolean strings are case-insensitive."""
+    field = BoolField(name="new_field", description="Case insensitive false test")
+    
+    false_variations = [
+        "FALSE",  # All uppercase
+        "False",  # Title case
+        "fAlSe",  # Mixed case
+        "false"   # All lowercase
+    ]
+    
+    for value in false_variations:
+        assert field.validate(value) is False, f"Failed for value: {repr(value)}"
+
+def test_validate_bool_rejects_leading_trailing_whitespace():
+    """Test that boolean strings with leading/trailing whitespace are rejected."""
+    field = BoolField(name="new_field", description="Leading/trailing whitespace test")
+    
+    test_cases = [
+        " true ",    # Spaces around
+        "\ttrue\n",  # Tabs and newlines
+        "  false  "  # Multiple spaces
+    ]
+    
+    for value in test_cases:
+        with pytest.raises(ValidationError, match="Expected a boolean value"):
+            field.validate(value)
+
+def test_validate_bool_rejects_multiple_whitespace():
+    """Test that boolean strings with multiple whitespace characters are rejected."""
+    field = BoolField(name="new_field", description="Multiple whitespace test")
+    
+    test_cases = [
+        "  true  ",  # Multiple leading/trailing spaces
+        "false  ",    # Trailing spaces
+        "  true",     # Leading spaces
+        "false\t"     # Trailing tab
+    ]
+    
+    for value in test_cases:
+        with pytest.raises(ValidationError, match="Expected a boolean value"):
+            field.validate(value)
+
+def test_validate_bool_rejects_alternative_boolean_strings():
+    """Test that common alternative boolean strings are rejected."""
+    field = BoolField(name="new_field", description="Alternative boolean strings test")
+    
+    alternative_booleans = ["yes", "no", "on", "off", "1", "0", "y", "n"]
+    for value in alternative_booleans:
+        with pytest.raises(ValidationError, match="Expected a boolean value"):
+            field.validate(value)
+
+def test_validate_bool_rejects_none():
+    """Test that None is rejected with the correct error message."""
+    field = BoolField(name="new_field", description="None value test")
+    with pytest.raises(ValidationError, match="Expected a boolean value, got NoneType"):
+        field.validate(None)
+
+def test_validate_bool_none_strings():
+    """Test that strings that might be interpreted as None are handled correctly."""
+    field = BoolField(name="new_field", description="None string test")
+    
+    # Test that 'none' and 'null' strings are rejected with appropriate message
+    for value in ["none", "None", "NONE", "null", "Null", "NULL"]:
+        with pytest.raises(ValidationError, match="contains None or null or empty"):
+            field.validate(value)
+
+def test_validate_bool_empty_string():
+    """Test that empty string raises ValidationError."""
+    field = BoolField(name="new_field", description="Empty string test")
+    with pytest.raises(ValidationError, match="Must be of type bool"):
+        field.validate("")
+
 def test_bool_field_with_text_default_true():
     """Test that default can be set as string 'True'."""
     field = BoolField(name="new_field", description="My description", required=False, default="True")
