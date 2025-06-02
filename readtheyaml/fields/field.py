@@ -17,18 +17,19 @@ class Field(metaclass=PostInitMeta):
     allowed_kwargs = {"type"}
 
     def __init__(self, name, description, required=True, default=None,
-                 additional_allowed_kwargs=set(),
-                 **kwargs):
+                 additional_allowed_kwargs=set(), ignore_post=False, **kwargs):
         self.name = name
         self.required = required
         self.default = default
         self.description = description
+        self.ignore_post = ignore_post
+
         unknown = set(kwargs) - self.allowed_kwargs - additional_allowed_kwargs
         if unknown:
             raise FormatError(f"{self.__class__.__name__} got unknown parameters: {unknown}")
 
     def post_init(self):
-        if not self.required:
+        if not self.required and not self.ignore_post:
             try:
                 self.validate(self.default)
             except ValidationError as e:
