@@ -1,4 +1,7 @@
+import sys
 import pytest
+from decimal import Decimal
+from fractions import Fraction
 
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
@@ -717,6 +720,246 @@ def test_validate_string_rejects_invalid_default():
     with pytest.raises(FormatError, match="invalid default value"):
         StringField(name="new_field", description="My description", required=False, default=None,
                    min_length=0, max_length=-1, allow_string_to_be_none=False)
+
+def test_validate_large_positive_int():
+    """Test that very large positive integers are handled correctly."""
+    large_int = sys.maxsize - 1
+    field = NumericalField(name="large_int", description="Test large positive integer",
+                         required=False, default=0, value_type=int)
+    assert field.validate(large_int) == large_int
+
+
+def test_validate_large_negative_int():
+    """Test that very large negative integers are handled correctly."""
+    small_int = -sys.maxsize + 1
+    field = NumericalField(name="small_int", description="Test large negative integer",
+                         required=False, default=0, value_type=int)
+    assert field.validate(small_int) == small_int
+
+
+def test_validate_int_string_representation():
+    """Test that string representations of large integers are converted correctly."""
+    large_int = sys.maxsize - 1
+    small_int = -sys.maxsize + 1
+    field = NumericalField(name="int_strings", description="Test int string conversion",
+                         required=False, default=0, value_type=int)
+    
+    assert field.validate(str(large_int)) == large_int
+    assert field.validate(str(small_int)) == small_int
+
+
+def test_bounded_int_validation():
+    """Test that bounded integer validation works with large values."""
+    large_int = sys.maxsize - 1
+    small_int = -sys.maxsize + 1
+    
+    bounded_field = NumericalField(name="bounded_int", description="Bounded large int",
+                                  required=False, default=0, value_type=int,
+                                  min_value=small_int, max_value=large_int)
+    
+    # Test valid bounds
+    assert bounded_field.validate(large_int) == large_int
+    assert bounded_field.validate(small_int) == small_int
+
+
+def test_int_upper_boundary_violation():
+    """Test that values above maximum bound raise ValidationError."""
+    large_int = sys.maxsize - 1
+    bounded_field = NumericalField(name="bounded_int", description="Test upper bound",
+                                 required=False, default=0, value_type=int,
+                                 max_value=large_int)
+    
+    with pytest.raises(ValidationError, match="Value must be at most"):
+        bounded_field.validate(sys.maxsize + 1)
+
+
+def test_int_lower_boundary_violation():
+    """Test that values below minimum bound raise ValidationError."""
+    small_int = -sys.maxsize + 1
+    bounded_field = NumericalField(name="bounded_int", description="Test lower bound",
+                                 required=False, default=0, value_type=int,
+                                 min_value=small_int)
+    
+    with pytest.raises(ValidationError, match="Value must be at least"):
+        bounded_field.validate(-sys.maxsize - 2)
+
+
+def test_validate_positive_scientific_notation():
+    """Test that positive scientific notation is properly parsed."""
+    field = NumericalField(name="sci_float", description="Positive scientific notation",
+                         required=False, default=0.0, value_type=float)
+    
+    assert field.validate("1.23e-4") == 0.000123
+    assert field.validate("1.23e4") == 12300.0
+
+
+def test_validate_negative_scientific_notation():
+    """Test that negative numbers in scientific notation are properly parsed."""
+    field = NumericalField(name="sci_float_neg", description="Negative scientific notation",
+                         required=False, default=0.0, value_type=float)
+    
+    assert field.validate("-1.23e-4") == -0.000123
+
+
+def test_validate_case_insensitive_scientific_notation():
+    """Test that scientific notation is case-insensitive."""
+    field = NumericalField(name="sci_float_case", description="Case-insensitive scientific notation",
+                         required=False, default=0.0, value_type=float)
+    
+    assert field.validate("1.23E-4") == 0.000123
+    assert field.validate("1.23E4") == 12300.0
+
+
+def test_validate_simple_scientific_notation():
+    """Test simple scientific notation without decimal places."""
+    field = NumericalField(name="sci_float_simple", description="Simple scientific notation",
+                         required=False, default=0.0, value_type=float)
+    
+    assert field.validate("1e6") == 1000000.0
+    assert field.validate("1e-6") == 0.000001
+
+
+def test_validate_float_limits_scientific_notation():
+    """Test scientific notation near float limits."""
+    field = NumericalField(name="sci_float_limits", description="Float limits in scientific notation",
+                         required=False, default=0.0, value_type=float)
+    
+    # Near max float
+    assert field.validate("1.7976931348623157e+308") == 1.7976931348623157e+308
+    # Near min positive float
+    assert field.validate("2.2250738585072014e-308") == 2.2250738585072014e-308
+
+
+def test_validate_invalid_scientific_notation_missing_exponent():
+    """Test that scientific notation with missing exponent raises ValidationError."""
+    field = NumericalField(name="sci_float_invalid1", description="Invalid scientific notation - missing exponent",
+                         required=False, default=0.0, value_type=float)
+    
+    with pytest.raises(ValidationError, match="Must be of type float"):
+        field.validate("1.23e")
+
+
+def test_validate_invalid_scientific_notation_missing_number():
+    """Test that scientific notation with missing number raises ValidationError."""
+    field = NumericalField(name="sci_float_invalid2", description="Invalid scientific notation - missing number",
+                         required=False, default=0.0, value_type=float)
+    
+    with pytest.raises(ValidationError, match="Must be of type float"):
+        field.validate("e123")
+
+
+def test_validate_invalid_scientific_notation_multiple_decimals():
+    """Test that scientific notation with multiple decimals raises ValidationError."""
+    field = NumericalField(name="sci_float_invalid3", description="Invalid scientific notation - multiple decimals",
+                         required=False, default=0.0, value_type=float)
+    
+    with pytest.raises(ValidationError, match="Must be of type float"):
+        field.validate("1.2.3e4")
+
+
+def test_validate_decimal_objects():
+    """Test that Decimal objects are properly converted to float."""
+    field = NumericalField(name="decimal_objects", description="Decimal to float conversion",
+                         required=False, default=0.0, value_type=float)
+    
+    test_cases = [
+        (Decimal("123.456"), 123.456),
+        (Decimal("-123.456"), -123.456),
+        (Decimal("1e-6"), 1e-6),
+        (Decimal("1e6"), 1e6)
+    ]
+    
+    for decimal_val, expected_float in test_cases:
+        assert field.validate(decimal_val) == expected_float, f"Failed for {decimal_val}"
+
+
+def test_validate_decimal_strings():
+    """Test that Decimal-format strings are properly parsed and converted."""
+    field = NumericalField(name="decimal_strings", description="Decimal string parsing",
+                         required=False, default=0.0, value_type=float)
+    
+    test_cases = [
+        ("123.456", 123.456),
+        ("-123.456", -123.456),
+        ("1e-6", 1e-6),
+        ("1e6", 1e6)
+    ]
+    
+    for decimal_str, expected_float in test_cases:
+        assert field.validate(Decimal(decimal_str)) == expected_float, f"Failed for {decimal_str}"
+
+
+def test_validate_fraction_objects():
+    """Test that Fraction objects are properly converted to float."""
+    field = NumericalField(name="fraction_objects", description="Fraction to float conversion",
+                         required=False, default=0.0, value_type=float)
+    
+    test_cases = [
+        (Fraction(1, 2), 0.5),
+        (Fraction(3, 4), 0.75),
+        (Fraction(-2, 3), -2/3),
+        (Fraction(10, 2), 5.0)
+    ]
+    
+    for fraction, expected_float in test_cases:
+        assert abs(field.validate(fraction) - expected_float) < 1e-10, f"Failed for {fraction}"
+
+
+def test_validate_fraction_strings():
+    """Test that Fraction-format strings are properly parsed and converted."""
+    field = NumericalField(name="fraction_strings", description="Fraction string parsing",
+                         required=False, default=0.0, value_type=float)
+    
+    test_cases = [
+        ("1/2", 0.5),
+        ("3/4", 0.75),
+        ("-2/3", -2/3),
+        ("10/2", 5.0)
+    ]
+    
+    for fraction_str, expected_float in test_cases:
+        result = field.validate(Fraction(fraction_str))
+        assert abs(result - expected_float) < 1e-10, f"Failed for {fraction_str}"
+
+
+def test_validate_fraction_within_bounds():
+    """Test that Fraction values within bounds are accepted."""
+    bounded_field = NumericalField(name="bounded_fraction", 
+                                 description="Bounded fraction validation",
+                                 required=False,
+                                 default=0.5,
+                                 value_type=float, 
+                                 min_value=0.1, 
+                                 max_value=0.9)
+    
+    assert bounded_field.validate(Fraction(1, 2)) == 0.5
+
+
+def test_validate_fraction_below_min_bound():
+    """Test that Fraction values below minimum bound raise ValidationError."""
+    bounded_field = NumericalField(name="min_bounded_fraction", 
+                                 description="Minimum bound fraction validation",
+                                 required=False,
+                                 default=0.5,
+                                 value_type=float, 
+                                 min_value=0.1)
+    
+    with pytest.raises(ValidationError, match="Value must be at least"):
+        bounded_field.validate(Fraction(1, 10))
+
+
+def test_validate_fraction_above_max_bound():
+    """Test that Fraction values above maximum bound raise ValidationError."""
+    bounded_field = NumericalField(name="max_bounded_fraction", 
+                                 description="Maximum bound fraction validation",
+                                 required=False,
+                                 default=0.5,
+                                 value_type=float, 
+                                 max_value=0.9)
+    
+    with pytest.raises(ValidationError, match="Value must be at most"):
+        bounded_field.validate(Fraction(1, 1))
+
 
 def test_validate_string_rejects_none_string_when_disabled():
     """Test that StringField rejects 'None' string when allow_string_to_be_none is False."""
