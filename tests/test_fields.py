@@ -678,3 +678,147 @@ def test_validate_string_rejects_value_longer_than_max():
                        allow_string_to_be_none=True)
     with pytest.raises(ValidationError, match="Value must be at most"):
         field.validate("SomeString")
+
+def test_validate_string_preserves_leading_trailing_whitespace():
+    """Test that leading and trailing whitespace is preserved in string values."""
+    field = StringField(name="new_field", description="Leading/trailing whitespace test", 
+                       required=False, default="default", min_length=0, max_length=20, 
+                       allow_string_to_be_none=False)
+    assert field.validate("  test  ") == "  test  "
+
+
+def test_validate_string_preserves_internal_whitespace():
+    """Test that internal whitespace is preserved in string values."""
+    field = StringField(name="new_field", description="Internal whitespace test", 
+                       required=False, default="default", min_length=0, max_length=20, 
+                       allow_string_to_be_none=False)
+    assert field.validate("test string") == "test string"
+
+
+def test_validate_string_handles_only_whitespace():
+    """Test that strings containing only whitespace are handled correctly."""
+    field = StringField(name="new_field", description="Whitespace-only test", 
+                       required=False, default="default", min_length=0, max_length=20, 
+                       allow_string_to_be_none=False)
+    assert field.validate("   ") == "   "
+
+def test_validate_string_unicode_characters():
+    """Test that Unicode characters are handled correctly."""
+    field = StringField(name="new_field", description="Handles Unicode", required=False,
+                       default="default", min_length=0, max_length=-1, allow_string_to_be_none=False)
+    
+    # Test various Unicode characters
+    test_strings = [
+        "こんにちは",  # Japanese
+        "Привет",     # Russian
+        "مرحبا",      # Arabic
+        "😊👍🌟"       # Emojis
+    ]
+    
+    for s in test_strings:
+        assert field.validate(s) == s
+
+def test_validate_string_empty_string():
+    """Test that an empty string is accepted when min_length is 0."""
+    field = StringField(name="new_field", description="Empty string test", required=False,
+                       default="", min_length=0, max_length=100, allow_string_to_be_none=True)
+    assert field.validate("") == ""
+
+
+def test_validate_string_long_string_rejected():
+    """Test that a string longer than max_length raises ValidationError."""
+    field = StringField(name="new_field", description="Long string test", required=False,
+                       default="", min_length=0, max_length=100, allow_string_to_be_none=True)
+    long_string = "x" * 1000
+    with pytest.raises(ValidationError, match="at most 100 characters"):
+        field.validate(long_string)
+
+
+def test_validate_string_control_characters():
+    """Test that strings with control characters are handled correctly."""
+    field = StringField(name="new_field", description="Control chars test", required=False,
+                       default="", min_length=0, max_length=100, allow_string_to_be_none=True)
+    assert field.validate("line1\nline2\r\nline3") == "line1\nline2\r\nline3"
+
+def test_validate_string_allows_none_strings_when_enabled():
+    """Test that string 'None' variations are allowed when allow_string_to_be_none is True."""
+    field = StringField(name="new_field", description="None handling", required=False, 
+                       default="default", min_length=0, max_length=100, allow_string_to_be_none=True)
+    
+    assert field.validate("None") == "None"
+    assert field.validate("none") == "none"
+    assert field.validate("NONE") == "NONE"
+
+
+def test_validate_string_allows_none_value_when_enabled():
+    """Test that None value is converted to 'None' when allow_string_to_be_none is True."""
+    field = StringField(name="new_field", description="None handling", required=False, 
+                       default="default", min_length=0, max_length=100, allow_string_to_be_none=True)
+    
+    assert field.validate(None) == "None"
+
+
+def test_validate_string_rejects_none_strings_when_disabled():
+    """Test that string 'None' variations are rejected when allow_string_to_be_none is False."""
+    field = StringField(name="new_field", description="None handling", required=False, 
+                       default="default", min_length=0, max_length=100, allow_string_to_be_none=False)
+    
+    with pytest.raises(ValidationError, match="Must be of type string"):
+        field.validate("None")
+    with pytest.raises(ValidationError, match="Must be of type string"):
+        field.validate("none")
+    with pytest.raises(ValidationError, match="Must be of type string"):
+        field.validate("NONE")
+
+
+def test_validate_string_rejects_none_value_when_disabled():
+    """Test that None value is rejected when allow_string_to_be_none is False."""
+    field = StringField(name="new_field", description="None handling", required=False, 
+                       default="default", min_length=0, max_length=100, allow_string_to_be_none=False)
+    
+    with pytest.raises(ValidationError, match="Must be of type string"):
+        field.validate(None)
+
+def test_validate_string_exact_min_length():
+    """Test that a string with exact min_length is accepted."""
+    field = StringField(name="new_field", description="Min length test", required=False,
+                       default="123", min_length=3, max_length=5, allow_string_to_be_none=False)
+    assert field.validate("123") == "123"
+
+
+def test_validate_string_exact_max_length():
+    """Test that a string with exact max_length is accepted."""
+    field = StringField(name="new_field", description="Max length test", required=False,
+                       default="123", min_length=3, max_length=5, allow_string_to_be_none=False)
+    assert field.validate("12345") == "12345"
+
+
+def test_validate_string_below_min_length():
+    """Test that a string below min_length raises ValidationError."""
+    field = StringField(name="new_field", description="Below min test", required=False,
+                       default="123", min_length=3, max_length=5, allow_string_to_be_none=False)
+    with pytest.raises(ValidationError, match="at least 3 characters"):
+        field.validate("12")
+
+
+def test_validate_string_above_max_length():
+    """Test that a string above max_length raises ValidationError."""
+    field = StringField(name="new_field", description="Above max test", required=False,
+                       default="123", min_length=3, max_length=5, allow_string_to_be_none=False)
+    with pytest.raises(ValidationError, match="at most 5 characters"):
+        field.validate("123456")
+
+def test_validate_string_special_characters():
+    """Test that special characters are handled correctly."""
+    field = StringField(name="new_field", description="Special chars", required=False,
+                       default="default", min_length=0, max_length=100, allow_string_to_be_none=False)
+    
+    special_strings = [
+        "!@#$%^&*()_+-=[]{}|;':\",./<>?",  # Special chars
+        "\t\n\r\f\v",                      # Whitespace chars
+        "\x00\x01\x02\x03\x04\x05",        # Control chars
+        "'\""                               # Quotes
+    ]
+    
+    for s in special_strings:
+        assert field.validate(s) == s
