@@ -374,281 +374,307 @@ def test_invalid_default_above_range():
         NumericalField(name="new_field", description="My description", required=False, default=2048,
                      value_type=int, min_value=None, max_value=None, value_range=[5, 1024])
 
-# testing float
-def test_valid_float():
-    field = NumericalField(name="new_field", description="My description",  required=False, default=1,
-                           value_type=float, min_value=None, max_value=None, value_range=None)
-    assert field.name == "new_field" and field.description == "My description" and not field.required
+def test_validate_float_positive():
+    """Test that positive float values are validated correctly."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                          value_type=float, min_value=None, max_value=None, value_range=None)
+    assert field.validate(123.0) == 123.0
 
-    confirmed_value = field.validate(123.0)
-    assert confirmed_value == 123.0
+def test_validate_float_from_string():
+    """Test that string representations of floats are converted and validated."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                          value_type=float)
+    assert field.validate("123.5") == 123.5
 
-    confirmed_value = field.validate("123.5")
-    assert confirmed_value == 123.5
+def test_validate_float_zero():
+    """Test that zero values are handled correctly."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                          value_type=float)
+    assert field.validate(0.0) == 0.0
+    assert field.validate(0) == 0.0  # Integer zero should be converted to float
 
-    confirmed_value = field.validate(0.0)
-    assert confirmed_value == 0.0
+def test_validate_float_negative():
+    """Test that negative float values are validated correctly."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                          value_type=float)
+    assert field.validate(-1093257.2) == -1093257.2
 
-    confirmed_value = field.validate(0)
-    assert confirmed_value == 0.0
+def test_validate_float_above_min():
+    """Test that values above minimum are accepted."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=15.0,
+                          value_type=float, min_value=10.0)
+    assert field.validate(42.0) == 42.0
+    assert field.validate(10.01) == 10.01  # Just above minimum
 
-    confirmed_value = field.validate(-1093257.2)
-    assert confirmed_value == -1093257.2
+def test_validate_float_at_min_boundary():
+    """Test that values at minimum boundary are accepted."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=10.0,
+                          value_type=float, min_value=10.0)
+    assert field.validate(10.0) == 10.0
 
-def test_valid_float_min_value():
-    field = NumericalField(name="new_field", description="My description",  required=False, default=15.0,
-                           value_type=float, min_value=10.0, max_value=None, value_range=None)
-    assert field.name == "new_field" and field.description == "My description" and not field.required
-
-    confirmed_value = field.validate(42.0)
-    assert confirmed_value == 42.0
-
-    confirmed_value = field.validate(10.01)
-    assert confirmed_value == 10.01
-
-def test_invalid_float_min_value():
-    field = NumericalField(name="new_field", description="My description",  required=False, default=15.0,
-                           value_type=float, min_value=10.0, max_value=None, value_range=None)
-    assert field.name == "new_field" and field.description == "My description" and not field.required
-
+def test_validate_float_below_min():
+    """Test that values below minimum raise ValidationError."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=15.0,
+                          value_type=float, min_value=10.0)
     with pytest.raises(ValidationError, match="Value must be at least"):
         field.validate(2.2)
 
-def test_valid_float_max_value():
-    field = NumericalField(name="new_field", description="My description",  required=False, default=1,
-                           value_type=float, min_value=None, max_value=512, value_range=None)
-    assert field.name == "new_field" and field.description == "My description" and not field.required
+def test_validate_float_below_max():
+    """Test that values below maximum are accepted."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                          value_type=float, max_value=512.0)
+    assert field.validate(42.1) == 42.1
 
-    confirmed_value = field.validate(42.1)
-    assert confirmed_value == 42.1
-
-def test_invalid_float_max_value():
-    field = NumericalField(name="new_field", description="My description",  required=False, default=1,
-                           value_type=float, min_value=None, max_value=512, value_range=None)
-    assert field.name == "new_field" and field.description == "My description" and not field.required
-
+def test_validate_float_above_max():
+    """Test that values above maximum raise ValidationError."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                          value_type=float, max_value=512.0)
     with pytest.raises(ValidationError, match="Value must be at most"):
         field.validate(1024.5)
 
-def test_valid_float_ranges_value_array():
-    field = NumericalField(name="new_field", description="My description",  required=False, default=15.0,
-                           value_type=float, min_value=None, max_value=None, value_range=[5.0, 512.0])
-    assert field.name == "new_field" and field.description == "My description" and not field.required
+def test_validate_float_with_array_range():
+    """Test that values within array range are accepted."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=15.0,
+                          value_type=float, value_range=[5.0, 512.0])
+    assert field.validate(42.0) == 42.0
 
-    confirmed_value = field.validate(42.0)
-    assert confirmed_value == 42.0
+def test_validate_float_with_tuple_range():
+    """Test that values within tuple range are accepted."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=15.0,
+                          value_type=float, value_range=(5.0, 512.0))
+    assert field.validate(42.0) == 42.0
 
-def test_valid_float_ranges_value_tuple():
-    field = NumericalField(name="new_field", description="My description",  required=False, default=15.0,
-                           value_type=float, min_value=None, max_value=None, value_range=(5.0, 512.0))
-    assert field.name == "new_field" and field.description == "My description" and not field.required
+def test_validate_float_with_unbounded_range():
+    """Test that any value is accepted when range has no bounds."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                          value_type=float, value_range=[None, None])
+    assert field.validate(42.1) == 42.1
 
-    confirmed_value = field.validate(42.0)
-    assert confirmed_value == 42.0
+def test_validate_float_with_min_only_range():
+    """Test that values above minimum are accepted when only min is specified in range."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=15.0,
+                          value_type=float, value_range=[5, None])
+    assert field.validate(42.2) == 42.2
 
-def test_valid_float_none_in_range():
-    field = NumericalField(name="new_field", description="My description",  required=False, default=1,
-                           value_type=float, min_value=None, max_value=None, value_range=[None, None])
-    assert field.name == "new_field" and field.description == "My description" and not field.required
+def test_validate_float_with_max_only_range():
+    """Test that values below maximum are accepted when only max is specified in range."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                          value_type=float, value_range=[None, 512.2])
+    assert field.validate(42.2) == 42.2
 
-    confirmed_value = field.validate(42.1)
-    assert confirmed_value == 42.1
+def test_validate_float_with_insufficient_range_values():
+    """Test that range with insufficient values raises ValidationError."""
+    with pytest.raises(ValidationError, match="Range must have 2 values, 1 provided"):
+        NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                     value_type=float, value_range=[None])
 
-def test_valid_float_min_and_none_in_range():
-    field = NumericalField(name="new_field", description="My description",  required=False, default=15.0,
-                           value_type=float, min_value=None, max_value=None, value_range=[5, None])
-    assert field.name == "new_field" and field.description == "My description" and not field.required
+def test_validate_float_with_excess_range_values():
+    """Test that range with too many values raises ValidationError."""
+    with pytest.raises(ValidationError, match="Range must have 2 values, 3 provided"):
+        NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                     value_type=float, value_range=[None, None, None])
 
-    confirmed_value = field.validate(42.2)
-    assert confirmed_value == 42.2
-
-def test_valid_float_none_and_max_in_range():
-    field = NumericalField(name="new_field", description="My description",  required=False, default=1,
-                           value_type=float, min_value=None, max_value=None, value_range=[None, 512.2])
-    assert field.name == "new_field" and field.description == "My description" and not field.required
-
-    confirmed_value = field.validate(42.2)
-    assert confirmed_value == 42.2
-
-def test_invalid_float_range_not_enough_values():
-    with pytest.raises(ValidationError, match="Range must have 2 values, 1 provided."):
-        NumericalField(name="new_field", description="My description",  required=False, default=1,
-                       value_type=float, min_value=None, max_value=None, value_range=[None])
-
-def test_invalid_float_range_too_many_values():
-    with pytest.raises(ValidationError, match="Range must have 2 values, 3 provided."):
-        NumericalField(name="new_field", description="My description", required=False, default=1,
-                       value_type=float, min_value=None, max_value=None, value_range=[None, None, None])
-
-def test_invalid_float_out_of_range():
-    field = NumericalField(name="new_field", description="My description",  required=False, default=15.0,
-                           value_type=float, min_value=None, max_value=None, value_range=(5.0, 512.0))
-    assert field.name == "new_field" and field.description == "My description" and not field.required
-
+def test_validate_float_below_min_range():
+    """Test that values below range minimum raise ValidationError."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=15.0,
+                          value_type=float, value_range=(5.0, 512.0))
     with pytest.raises(ValidationError, match="Value must be at least"):
         field.validate(1.0)
 
+def test_validate_float_above_max_range():
+    """Test that values above range maximum raise ValidationError."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=15.0,
+                          value_type=float, value_range=(5.0, 512.0))
     with pytest.raises(ValidationError, match="Value must be at most"):
         field.validate(1024.0)
 
-def test_invalid_float_min_greater_than_max():
+def test_validate_float_invalid_min_max_order():
+    """Test that min_value greater than max_value raises ValidationError."""
     with pytest.raises(ValidationError, match="Minimal value greater than maximal value"):
-        NumericalField(name="new_field", description="My description",  required=False, default=1,
-                        value_type=float, min_value=512.1, max_value=5.2, value_range=None)
+        NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                     value_type=float, min_value=512.1, max_value=5.2)
 
-def test_valid_float_min_max_and_range():
-    NumericalField(name="new_field", description="My description",  required=False, default=15.0,
-                   value_type=float, min_value=5.2, max_value=512.3, value_range=(5.2,512.3))
+def test_validate_float_consistent_bounds():
+    """Test that consistent min_value, max_value, and value_range are accepted."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=15.0,
+                          value_type=float, min_value=5.2, max_value=512.3, value_range=(5.2, 512.3))
+    assert field.validate(42.0) == 42.0
 
-def test_invalid_float_min_and_range():
+def test_validate_float_invalid_min_and_range_combination():
+    """Test that min_value and value_range together raise ValidationError."""
     with pytest.raises(ValidationError, match="using range and lower bound"):
-        NumericalField(name="new_field", description="My description",  required=False, default=1,
-                        value_type=float, min_value=5.2, max_value=None, value_range=(5.1,512.3))
+        NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                     value_type=float, min_value=5.2, value_range=(5.1, 512.3))
 
-def test_invalid_float_max_and_range():
+def test_validate_float_invalid_max_and_range_combination():
+    """Test that max_value and value_range together raise ValidationError."""
     with pytest.raises(ValidationError, match="using range and upper bound"):
-        NumericalField(name="new_field", description="My description",  required=False, default=1,
-                        value_type=float, min_value=None, max_value=512.4, value_range=(5.5,512.6))
+        NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                     value_type=float, max_value=512.4, value_range=(5.5, 512.6))
 
-def test_invalid_float_min_not_match_range():
+def test_validate_float_min_not_matching_range():
+    """Test that min_value must match range lower bound when both are provided."""
     with pytest.raises(ValidationError, match="Lower bound value is not matching"):
-        NumericalField(name="new_field", description="My description",  required=False, default=1,
-                        value_type=float, min_value=1.1, max_value=512.2, value_range=(5.3,512.4))
+        NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                     value_type=float, min_value=1.1, max_value=512.2, value_range=(5.3, 512.4))
 
-def test_invalid_float_max_not_match_range():
+def test_validate_float_max_not_matching_range():
+    """Test that max_value must match range upper bound when both are provided."""
     with pytest.raises(ValidationError, match="Upper bound value is not matching"):
-        NumericalField(name="new_field", description="My description",  required=False, default=1,
-                        value_type=float, min_value=5.1, max_value=1024.2, value_range=(5.1,512.3))
+        NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                     value_type=float, min_value=5.1, max_value=1024.2, value_range=(5.1, 512.3))
 
-def test_invalid_float_empty():
-    field = NumericalField(name="new_field", description="My description", required=False, default=1,
-                           value_type=float, min_value=None, max_value=None, value_range=None)
-    assert field.name == "new_field" and field.description == "My description" and not field.required
-
+def test_validate_float_rejects_none():
+    """Test that None is rejected for non-required float fields."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                          value_type=float)
     with pytest.raises(ValidationError, match="Must be of type float"):
         field.validate(None)
 
-def test_invalid_float_string():
-    field = NumericalField(name="new_field", description="My description", required=False, default=1,
-                           value_type=float, min_value=None, max_value=None, value_range=None)
-    assert field.name == "new_field" and field.description == "My description" and not field.required
-
+def test_validate_float_rejects_non_numeric_string():
+    """Test that non-numeric strings are rejected for float fields."""
+    field = NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                          value_type=float)
     with pytest.raises(ValidationError, match="Must be of type float"):
         field.validate("str")
 
-def test_invalid_float_invalid_default():
+def test_validate_float_rejects_none_default():
+    """Test that None as default value raises FormatError."""
     with pytest.raises(FormatError, match="invalid default value"):
-        NumericalField(value_type=float, name="new_field", description="My description", required=False, default=None)
+        NumericalField(value_type=float, name="new_field", description="My description",
+                     required=False, default=None)
 
+def test_validate_float_rejects_boolean_default():
+    """Test that boolean as default value raises FormatError."""
     with pytest.raises(FormatError, match="invalid default value"):
-        NumericalField(value_type=float, name="new_field", description="My description", required=False, default=True)
+        NumericalField(value_type=float, name="new_field", description="My description",
+                     required=False, default=True)
 
+def test_validate_float_rejects_string_default():
+    """Test that empty string as default value raises FormatError."""
     with pytest.raises(FormatError, match="invalid default value"):
-        NumericalField(value_type=float, name="new_field", description="My description", required=False, default="")
+        NumericalField(value_type=float, name="new_field", description="My description",
+                     required=False, default="")
 
-def test_invalid_float_default_under_min():
+def test_validate_float_rejects_default_below_min_value():
+    """Test that default value below min_value raises FormatError."""
     with pytest.raises(FormatError, match="invalid default value"):
-        NumericalField(name="new_field", description="My description", required=False, default=1,
-                       value_type=float, min_value=5, max_value=None, value_range=None)
+        NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                     value_type=float, min_value=5.0)
 
+def test_validate_float_rejects_default_below_range():
+    """Test that default value below value_range raises FormatError."""
     with pytest.raises(FormatError, match="invalid default value"):
-        NumericalField(name="new_field", description="My description", required=False, default=1,
-                       value_type=float, min_value=None, max_value=None, value_range=[5, 1024])
+        NumericalField(name="new_field", description="My description", required=False, default=1.0,
+                     value_type=float, value_range=[5.0, 1024.0])
 
-def test_invalid_float_default_over_min():
+def test_validate_float_rejects_default_above_max_value():
+    """Test that default value above max_value raises FormatError."""
     with pytest.raises(FormatError, match="invalid default value"):
-        NumericalField(name="new_field", description="My description", required=False, default=1024,
-                       value_type=float, min_value=None, max_value=512, value_range=None)
+        NumericalField(name="new_field", description="My description", required=False, default=1024.0,
+                     value_type=float, max_value=512.0)
 
+def test_validate_float_rejects_default_above_range():
+    """Test that default value above value_range raises FormatError."""
     with pytest.raises(FormatError, match="invalid default value"):
-        NumericalField(name="new_field", description="My description", required=False, default=2048,
-                       value_type=float, min_value=None, max_value=None, value_range=[5, 1024])
+        NumericalField(name="new_field", description="My description", required=False, default=2048.0,
+                     value_type=float, value_range=[5.0, 1024.0])
 
-# testing String
-def test_valid_string():
+def test_validate_string_converts_empty_string():
+    """Test that StringField converts empty string correctly."""
     field = StringField(name="new_field", description="My description", required=False, default=None,
-                        min_length=0, max_length=-1, allow_string_to_be_none=True)
-    assert field.name == "new_field" and field.description == "My description" and not field.required
+                       min_length=0, max_length=-1, allow_string_to_be_none=True)
+    assert field.validate("") == ""
 
-    confirmed_value = field.validate("")
-    assert confirmed_value == ""
-
-    confirmed_value = field.validate("None")
-    assert confirmed_value == "None"
-
-    confirmed_value = field.validate(None)
-    assert confirmed_value == "None"
-
-    confirmed_value = field.validate("123")
-    assert confirmed_value == "123"
-
-    confirmed_value = field.validate(123)
-    assert confirmed_value == "123"
-
-def test_valid_none_string():
+def test_validate_string_converts_none_string():
+    """Test that StringField converts 'None' string correctly."""
     field = StringField(name="new_field", description="My description", required=False, default=None,
-                        min_length=0, max_length=-1, allow_string_to_be_none=True)
-    assert field.name == "new_field" and field.description == "My description" and not field.required
+                       min_length=0, max_length=-1, allow_string_to_be_none=True)
+    assert field.validate("None") == "None"
 
-    confirmed_value = field.validate("")
-    assert confirmed_value == ""
+def test_validate_string_converts_none_to_none_string():
+    """Test that StringField converts None to 'None' string when allowed."""
+    field = StringField(name="new_field", description="My description", required=False, default=None,
+                       min_length=0, max_length=-1, allow_string_to_be_none=True)
+    assert field.validate(None) == "None"
 
-    confirmed_value = field.validate("None")
-    assert confirmed_value == "None"
+def test_validate_string_converts_number_string():
+    """Test that StringField converts number string correctly."""
+    field = StringField(name="new_field", description="My description", required=False, default=None,
+                       min_length=0, max_length=-1, allow_string_to_be_none=True)
+    assert field.validate("123") == "123"
 
-    confirmed_value = field.validate(None)
-    assert confirmed_value == "None"
+def test_validate_string_converts_integer():
+    """Test that StringField converts integer to string."""
+    field = StringField(name="new_field", description="My description", required=False, default=None,
+                       min_length=0, max_length=-1, allow_string_to_be_none=True)
+    assert field.validate(123) == "123"
 
-    confirmed_value = field.validate("123")
-    assert confirmed_value == "123"
+def test_validate_string_handles_none():
+    """Test that StringField handles None values when allowed."""
+    # Test with allow_string_to_be_none=True
+    field = StringField(name="new_field", description="My description", required=False, default=None,
+                       min_length=0, max_length=-1, allow_string_to_be_none=True)
+    assert field.validate(None) == "None"
 
-    confirmed_value = field.validate(123)
-    assert confirmed_value == "123"
-
-def test_invalid_default_string():
-    with pytest.raises(FormatError, match="invalid default value"):
-        StringField(name="new_field", description="My description", required=False, default=None,
-                    min_length=0, max_length=-1, allow_string_to_be_none=False)
-
-    with pytest.raises(FormatError, match="invalid default value"):
-        StringField(name="new_field", description="My description", required=False, default=None,
-                    min_length=0, max_length=-1, allow_string_to_be_none=False)
-
-def test_invalid_string():
-    field = StringField(name="new_field", description="My description", required=False, default="some_value",
-                    min_length=0, max_length=-1, allow_string_to_be_none=False)
-
-    with pytest.raises(ValidationError, match="Must be of type string"):
-        field.validate("None")
-
+def test_validate_string_rejects_none_when_disabled():
+    """Test that StringField rejects None when allow_string_to_be_none is False."""
+    # Provide a valid default value that will pass validation
+    field = StringField(name="new_field", description="My description", required=False, default="default",
+                       min_length=0, max_length=-1, allow_string_to_be_none=False)
     with pytest.raises(ValidationError, match="Must be of type string"):
         field.validate(None)
 
-def test_invalid_default_string():
+def test_validate_string_rejects_invalid_default():
+    """Test that invalid default values raise FormatError."""
+    with pytest.raises(FormatError, match="invalid default value"):
+        StringField(name="new_field", description="My description", required=False, default=None,
+                   min_length=0, max_length=-1, allow_string_to_be_none=False)
+
+def test_validate_string_rejects_none_string_when_disabled():
+    """Test that StringField rejects 'None' string when allow_string_to_be_none is False."""
+    field = StringField(name="new_field", description="My description", required=False, default="some_value",
+                      min_length=0, max_length=-1, allow_string_to_be_none=False)
+    with pytest.raises(ValidationError, match="Must be of type string"):
+        field.validate("None")
+
+def test_validate_string_rejects_none_when_disabled():
+    """Test that StringField rejects None when allow_string_to_be_none is False."""
+    field = StringField(name="new_field", description="My description", required=False, default="some_value",
+                      min_length=0, max_length=-1, allow_string_to_be_none=False)
+    with pytest.raises(ValidationError, match="Must be of type string"):
+        field.validate(None)
+
+def test_validate_string_rejects_negative_min_length():
+    """Test that StringField rejects negative min_length."""
     with pytest.raises(FormatError, match="smaller than 0"):
         StringField(name="new_field", description="My description", required=False, default="SomeString",
-                    min_length=-1, max_length=-1, allow_string_to_be_none=True)
+                   min_length=-1, max_length=-1, allow_string_to_be_none=True)
 
-def test_invalid_string_min_greater_max():
+def test_validate_string_rejects_max_less_than_min():
+    """Test that StringField rejects max_length less than min_length."""
     with pytest.raises(FormatError, match="smaller than min"):
         StringField(name="new_field", description="My description", required=False, default="SomeString",
-                    min_length=10, max_length=0, allow_string_to_be_none=True)
+                   min_length=10, max_length=0, allow_string_to_be_none=True)
 
-def test_invalid_string_default_smaller_than_min():
+def test_validate_string_rejects_default_shorter_than_min():
+    """Test that StringField rejects default value shorter than min_length."""
     with pytest.raises(FormatError, match="invalid default value"):
         StringField(name="new_field", description="My description", required=False, default="SomeString",
-                    min_length=15, max_length=100, allow_string_to_be_none=True)
+                   min_length=15, max_length=100, allow_string_to_be_none=True)
 
-def test_invalid_string_smaller_than_min():
-    field = StringField(name="new_field", description="My description", required=False, default="SomeLongLongString",
-                        min_length=15, max_length=100, allow_string_to_be_none=True)
-
+def test_validate_string_rejects_value_shorter_than_min():
+    """Test that StringField rejects value shorter than min_length."""
+    field = StringField(name="new_field", description="My description", required=False, 
+                       default="SomeLongLongString", min_length=15, max_length=100, 
+                       allow_string_to_be_none=True)
     with pytest.raises(ValidationError, match="Value must be at least"):
         field.validate("SomeString")
 
-def test_invalid_string_bigger_than_max():
-    field = StringField(name="new_field", description="My description", required=False, default="test",
-                        min_length=0, max_length=5, allow_string_to_be_none=True)
-
+def test_validate_string_rejects_value_longer_than_max():
+    """Test that StringField rejects value longer than max_length."""
+    field = StringField(name="new_field", description="My description", required=False, 
+                       default="test", min_length=0, max_length=5, 
+                       allow_string_to_be_none=True)
     with pytest.raises(ValidationError, match="Value must be at most"):
         field.validate("SomeString")
