@@ -8,7 +8,7 @@ from readtheyaml.fields.field import Field
 class TupleField(Field):
     def __init__(self, element_fields: Sequence[Field], **kwargs):
         super().__init__(**kwargs)
-        self._slots = tuple([curr_field(**kwargs) for curr_field in element_fields])
+        self._slots = tuple([curr_field(ignore_post=True, **kwargs) for curr_field in element_fields])
 
     def validate(self, value):
         if type(value) != tuple:
