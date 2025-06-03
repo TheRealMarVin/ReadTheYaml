@@ -8,7 +8,7 @@ from readtheyaml.fields.field import Field
 class TupleField(Field):
     def __init__(self, element_fields: Sequence[Field], **kwargs):
         super().__init__(**kwargs)
-        if 'ignore_post' not in kwargs:
+        if "ignore_post" not in kwargs:
             kwargs["ignore_post"] = True
         self._slots = tuple([curr_field(**kwargs) for curr_field in element_fields])
 

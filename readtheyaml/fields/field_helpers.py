@@ -44,7 +44,7 @@ def _extract_types_for_composite(type_str: str, type_name: str) -> str | None:
         return None  # Not a match at all
 
     opening, inner, closing = match.groups()
-    if (opening == '[' and closing != ']') or (opening == '(' and closing != ')'):
+    if (opening == "[" and closing != "]") or (opening == "(" and closing != ")"):
         raise ValueError(f"Mismatched brackets in type: {type_str}")
 
     return inner

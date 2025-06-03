@@ -8,7 +8,7 @@ class PostInitMeta(type):
     def __call__(cls, *args, **kwargs):
         # This runs __new__, __init__, then our post_init hook
         obj = super().__call__(*args, **kwargs)
-        if hasattr(obj, 'post_init'):
+        if hasattr(obj, "post_init"):
             obj.post_init()
         return obj
 

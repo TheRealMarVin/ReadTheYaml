@@ -16,6 +16,6 @@ FIELD_REGISTRY = {
     "enum": EnumField,
     "None": NoneField,
     "tuple": TupleField,
-    # We handle 'list(...)' dynamically
+    # We handle "list(...)" dynamically
 }
 

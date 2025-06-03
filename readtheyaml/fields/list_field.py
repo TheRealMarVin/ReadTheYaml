@@ -19,7 +19,7 @@ class ListField(Field):
     ):
         sig = inspect.signature(get_target_class(item_field).__init__)
         super().__init__(additional_allowed_kwargs=set(sig.parameters), **kwargs)
-        if 'ignore_post' not in kwargs:
+        if "ignore_post" not in kwargs:
             kwargs["ignore_post"] = True
         self.item_field = item_field(**kwargs)
 
