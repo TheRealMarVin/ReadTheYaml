@@ -20,11 +20,6 @@ class NumericalField(Field):
             raise ValidationError(f"Field '{self.name}': {e}")
 
     def validate(self, value):
-        if self.min_value is not None and value < self.min_value:
-            raise ValidationError(f"Field '{self.name}': Value must be at least {self.min_value}.")
-        if self.max_value is not None and value > self.max_value:
-            raise ValidationError(f"Field '{self.name}': Value must be at most {self.max_value}.")
-
         try:
             if str(value).lower() in {"true", "false"}:
                 raise ValidationError(f"Field '{self.name}': Must be of type {self.value_type.__name__}, contains True or False.")
@@ -37,5 +32,10 @@ class NumericalField(Field):
             value = new_value
         except (TypeError, ValueError):
             raise ValidationError(f"Field '{self.name}': Must be of type {self.value_type.__name__}")
+
+        if self.min_value is not None and value < self.min_value:
+            raise ValidationError(f"Field '{self.name}': Value must be at least {self.min_value}.")
+        if self.max_value is not None and value > self.max_value:
+            raise ValidationError(f"Field '{self.name}': Value must be at most {self.max_value}.")
 
         return value
