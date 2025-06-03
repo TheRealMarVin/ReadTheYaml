@@ -19,7 +19,9 @@ class ListField(Field):
     ):
         sig = inspect.signature(get_target_class(item_field).__init__)
         super().__init__(additional_allowed_kwargs=set(sig.parameters), **kwargs)
-        self.item_field = item_field(ignore_post=True, **kwargs)
+        if 'ignore_post' not in kwargs:
+            kwargs["ignore_post"] = True
+        self.item_field = item_field(**kwargs)
 
         try:
             self.min_length, self.max_length = find_and_validate_bounds(length_range, min_length, max_length)

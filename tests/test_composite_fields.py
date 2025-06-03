@@ -423,3 +423,108 @@ def test_list_field_rejects_none():
     )
     with pytest.raises(ValidationError, match="Expected a list"):
         field.validate(None)
+
+
+def test_nested_list_of_integers():
+    """Test that ListField can validate a list of lists of integers."""
+    # Create the inner field (list of integers)
+    inner_field = partial(
+        ListField,
+        name="inner_list",
+        description="Inner list of integers",
+        item_field=partial(NumericalField, name="num", description="Number", value_type=int)
+    )
+    
+    # Create the outer field (list of lists)
+    field = ListField(
+        name="nested_lists",
+        description="List of lists of integers",
+        item_field=inner_field,
+        default=[[0]]
+    )
+    
+    # Test valid nested lists
+    assert field.validate([[1, 2], [3, 4, 5]]) == [[1, 2], [3, 4, 5]]
+    assert field.validate([[], [1], [1, 2]]) == [[], [1], [1, 2]]
+
+
+def create_constrained_nested_list_field():
+    """Helper function to create a ListField with constrained inner lists."""
+    return ListField(
+        name="constrained_nested_lists",
+        description="List of constrained lists",
+        item_field=partial(
+            ListField,
+            name="inner_list",
+            description="Inner list with constraints",
+            item_field=partial(NumericalField, name="num", description="Number", value_type=int),
+            min_length=1,
+            max_length=3
+        ),
+        default=[[1]]
+    )
+
+
+def test_nested_list_with_constraints_valid():
+    """Test that ListField accepts valid nested lists within constraints."""
+    field = create_constrained_nested_list_field()
+    assert field.validate([[1], [1, 2], [1, 2, 3]]) == [[1], [1, 2], [1, 2, 3]]
+
+
+def test_nested_list_with_min_length_constraint():
+    """Test that ListField enforces minimum length on inner lists."""
+    field = create_constrained_nested_list_field()
+    with pytest.raises(ValidationError, match="must contain at least 1 item"):
+        field.validate([[]])
+
+
+def test_nested_list_with_max_length_constraint():
+    """Test that ListField enforces maximum length on inner lists."""
+    field = create_constrained_nested_list_field()
+    with pytest.raises(ValidationError, match="must contain at most 3 items"):
+        field.validate([[1, 2, 3, 4]])
+
+
+def test_nested_list_with_various_valid_lengths():
+    """Test that ListField accepts inner lists at different valid lengths."""
+    field = create_constrained_nested_list_field()
+    assert field.validate([[1], [2, 2], [3, 3, 3]]) == [[1], [2, 2], [3, 3, 3]]
+
+
+def test_nested_list_rejects_mixed_valid_and_invalid():
+    """Test that ListField rejects lists containing both valid and invalid inner lists."""
+    field = create_constrained_nested_list_field()
+    with pytest.raises(ValidationError):
+        field.validate([[], [1], [1, 2, 3, 4]])
+
+
+def test_deeply_nested_lists():
+    """Test that ListField can handle deeply nested lists."""
+    # Create a field for a list of lists of lists of integers
+    innermost_field = partial(NumericalField, name="num", description="Number", value_type=int)
+    
+    middle_field = partial(ListField,
+        name="middle_list",
+        description="Middle list",
+        item_field=innermost_field
+    )
+    
+    outer_field = partial(ListField,
+        name="outer_list",
+        description="Outer list",
+        item_field=middle_field
+    )
+    
+    field = ListField(
+        name="deeply_nested",
+        description="Deeply nested lists",
+        item_field=outer_field,
+        default=[[[1]]]
+    )
+    
+    # Test valid deeply nested lists
+    assert field.validate([[[1], [2, 3]], [[4, 5, 6]]]) == [[[1], [2, 3]], [[4, 5, 6]]]
+    
+    # Test invalid type in deepest level
+    with pytest.raises(ValidationError):
+        field.validate([[["not_a_number"]]])
