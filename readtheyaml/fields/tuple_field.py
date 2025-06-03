@@ -13,6 +13,9 @@ class TupleField(Field):
         self._slots = tuple([curr_field(**kwargs) for curr_field in element_fields])
 
     def validate(self, value):
+        if value is None:
+            raise ValidationError(f"Field '{self.name}': None is not a valid tuple")
+
         if type(value) != tuple:
             if not (value.startswith("(") and value.endswith(")")):
                 raise ValidationError(f"Field '{self.name}': Not a valid tuple")
@@ -21,8 +24,6 @@ class TupleField(Field):
 
             if type(value) != tuple:
                 value = (value,)
-        if value is None:
-            raise ValidationError(f"Field '{self.name}': None is not a valid tuple")
 
         if not isinstance(value, tuple):
             raise ValidationError(f"Field '{self.name}': Expected tuple, got {type(value).__name__}")
