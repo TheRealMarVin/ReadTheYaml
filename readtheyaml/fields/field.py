@@ -24,6 +24,9 @@ class Field(metaclass=PostInitMeta):
         self.description = description
         self.ignore_post = ignore_post
 
+        if default is not None and required:
+            raise FormatError(f"Field {self.name} you are providing default value for a required field. This is useless.")
+
         unknown = set(kwargs) - self.allowed_kwargs - additional_allowed_kwargs
         if unknown:
             raise FormatError(f"{self.__class__.__name__} got unknown parameters: {unknown}")

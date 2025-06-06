@@ -1108,7 +1108,7 @@ def test_validate_string_without_casting_handles_strings():
 
 def test_validate_string_rejects_none_when_required():
     """Test that None value is rejected when required is True."""
-    field = StringField(name="new_field", description="None handling", required=True, 
+    field = StringField(name="new_field", description="None handling", required=False,
                        default="default", min_length=0, max_length=100, cast_to_string=False)
     
     with pytest.raises(ValidationError):

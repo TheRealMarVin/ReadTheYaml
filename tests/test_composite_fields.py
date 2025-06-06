@@ -403,6 +403,7 @@ def test_validate_list_of_integers():
         name="int_list",
         description="List of integers",
         item_field=partial(NumericalField, value_type=int, name="num", description="Number"),
+        required=False,
         default=[0]  # Valid default
     )
     
@@ -416,6 +417,7 @@ def test_validate_list_converts_string_numbers():
         name="int_list",
         description="List of integers",
         item_field=partial(NumericalField, value_type=int, name="num", description="Number"),
+        required=False,
         default=[0]
     )
     
@@ -430,6 +432,7 @@ def test_validate_list_rejects_non_numeric_strings():
         name="int_list",
         description="List of integers",
         item_field=partial(NumericalField, value_type=int, name="num", description="Number"),
+        required=False,
         default=[0]
     )
     with pytest.raises(ValidationError, match="Invalid item at index 0"):
@@ -442,6 +445,7 @@ def test_validate_list_rejects_mixed_types():
         name="int_list",
         description="List of integers",
         item_field=partial(NumericalField, value_type=int, name="num", description="Number"),
+        required=False,
         default=[0]
     )
     with pytest.raises(ValidationError, match="Invalid item at index 1"):
@@ -454,6 +458,7 @@ def test_validate_list_rejects_floats():
         name="int_list",
         description="List of integers",
         item_field=partial(NumericalField, value_type=int, name="num", description="Number"),
+        required=False,
         default=[0]
     )
     with pytest.raises(ValidationError):
@@ -468,6 +473,7 @@ def test_validate_list_accepts_min_length():
         item_field=partial(StringField, name="item", description="String item"),
         min_length=2,
         max_length=4,
+        required=False,
         default=["a", "b"]
     )
     assert field.validate(["a", "b"]) == ["a", "b"]
@@ -481,6 +487,7 @@ def test_validate_list_accepts_max_length():
         item_field=partial(StringField, name="item", description="String item"),
         min_length=2,
         max_length=4,
+        required=False,
         default=["a", "b"]
     )
     assert field.validate(["a", "b", "c", "d"]) == ["a", "b", "c", "d"]
@@ -494,6 +501,7 @@ def test_validate_list_rejects_below_min_length():
         item_field=partial(StringField, name="item", description="String item"),
         min_length=2,
         max_length=4,
+        required=False,
         default=["a", "b"]
     )
     with pytest.raises(ValidationError, match="must contain at least 2 items"):
@@ -508,6 +516,7 @@ def test_validate_list_rejects_above_max_length():
         item_field=partial(StringField, name="item", description="String item"),
         min_length=2,
         max_length=4,
+        required=False,
         default=["a", "b"]
     )
     with pytest.raises(ValidationError, match="must contain at most 4 items"):
@@ -520,6 +529,7 @@ def test_validate_list_with_boolean_values():
         name="bool_list",
         description="List of booleans",
         item_field=partial(BoolField, name="flag", description="Boolean flag"),
+        required=False,
         default=[True]
     )
     assert field.validate([True, False, True]) == [True, False, True]
@@ -531,6 +541,7 @@ def test_validate_list_converts_boolean_strings():
         name="bool_list",
         description="List of booleans",
         item_field=partial(BoolField, name="flag", description="Boolean flag"),
+        required=False,
         default=[True]
     )
     assert field.validate(["true", "false", "True", "False"]) == [True, False, True, False]
@@ -542,6 +553,7 @@ def test_validate_list_rejects_mixed_invalid_boolean():
         name="bool_list",
         description="List of booleans",
         item_field=partial(BoolField, name="flag", description="Boolean flag"),
+        required=False,
         default=[True]
     )
     with pytest.raises(ValidationError, match="Invalid item at index 1"):
@@ -554,6 +566,7 @@ def test_validate_list_rejects_single_invalid_boolean():
         name="bool_list",
         description="List of booleans",
         item_field=partial(BoolField, name="flag", description="Boolean flag"),
+        required=False,
         default=[True]
     )
     with pytest.raises(ValidationError, match="Invalid item at index 0"):
@@ -566,6 +579,7 @@ def test_validate_list_with_mixed_boolean_types():
         name="bool_list",
         description="List of booleans",
         item_field=partial(BoolField, name="flag", description="Boolean flag"),
+        required=False,
         default=[True]
     )
     # Test with Python bools and string representations
@@ -584,6 +598,7 @@ def test_validate_list_accepts_valid_strings():
             min_length=2,
             max_length=5
         ),
+        required=False,
         default=["abc"]
     )
     assert field.validate(["ab", "abc", "abcd"]) == ["ab", "abc", "abcd"]
@@ -601,6 +616,7 @@ def test_validate_list_rejects_short_strings():
             min_length=2,
             max_length=5
         ),
+        required=False,
         default=["abc"]
     )
     with pytest.raises(ValidationError, match="must be at least 2 characters"):
@@ -619,6 +635,7 @@ def test_validate_list_rejects_long_strings():
             min_length=2,
             max_length=5
         ),
+        required=False,
         default=["abc"]
     )
     with pytest.raises(ValidationError, match="must be at most 5 characters"):
@@ -637,6 +654,7 @@ def test_validate_list_with_exact_length_strings():
             min_length=2,
             max_length=5
         ),
+        required=False,
         default=["abc"]
     )
     # Test strings with exact min and max lengths
@@ -649,6 +667,7 @@ def test_validate_empty_list_default_min_length():
         name="empty_ok_list",
         description="List that can be empty",
         item_field=partial(StringField, name="item", description="String item"),
+        required=False,
         default=[]
     )
     assert field.validate([]) == []
@@ -661,6 +680,7 @@ def test_validate_empty_list_explicit_min_length_zero():
         description="List that can be empty",
         item_field=partial(StringField, name="item", description="String item"),
         min_length=0,
+        required=False,
         default=[]
     )
     assert field.validate([]) == []
@@ -673,6 +693,7 @@ def test_validate_empty_list_rejects_when_min_length_one():
         description="List that cannot be empty",
         item_field=partial(StringField, name="item", description="String item"),
         min_length=1,
+        required=False,
         default=["valid"]
     )
     with pytest.raises(ValidationError, match="must contain at least 1 item"):
@@ -686,6 +707,7 @@ def test_validate_empty_list_with_non_empty_default():
         description="List that cannot be empty",
         item_field=partial(StringField, name="item", description="String item"),
         min_length=1,
+        required=False,
         default=["valid"]
     )
     assert field.validate(["single_item"]) == ["single_item"]
@@ -698,6 +720,7 @@ def test_list_field_accepts_min_length_range():
         description="List with length range",
         item_field=partial(NumericalField, name="num", description="Number", value_type=int),
         length_range=(2, 4),
+        required=False,
         default=[1, 2]
     )
     assert field.validate([1, 2]) == [1, 2]
@@ -710,6 +733,7 @@ def test_list_field_accepts_max_length_range():
         description="List with length range",
         item_field=partial(NumericalField, name="num", description="Number", value_type=int),
         length_range=(2, 4),
+        required=False,
         default=[1, 2, 3, 4]
     )
     assert field.validate([1, 2, 3, 4]) == [1, 2, 3, 4]
@@ -722,6 +746,7 @@ def test_list_field_rejects_below_min_length_range():
         description="List with length range",
         item_field=partial(NumericalField, name="num", description="Number", value_type=int),
         length_range=(2, 4),
+        required=False,
         default=[1, 2]
     )
     with pytest.raises(ValidationError, match="must contain at least 2 items"):
@@ -735,6 +760,7 @@ def test_list_field_rejects_above_max_length_range():
         description="List with length range",
         item_field=partial(NumericalField, name="num", description="Number", value_type=int),
         length_range=(2, 4),
+        required=False,
         default=[1, 2, 3, 4]
     )
     with pytest.raises(ValidationError, match="must contain at most 4 items"):
@@ -748,6 +774,7 @@ def test_list_field_with_length_range_accepts_middle_length():
         description="List with length range",
         item_field=partial(NumericalField, name="num", description="Number", value_type=int),
         length_range=(2, 4),
+        required=False,
         default=[1, 2, 3]
     )
     assert field.validate([1, 2, 3]) == [1, 2, 3]
@@ -758,6 +785,7 @@ def test_list_field_uses_default_when_no_value_provided():
         name="default_list",
         description="List with default value",
         item_field=partial(StringField, name="item", description="String item"),
+        required=False,
         default=["default1", "default2"]
     )
     # The default is used when accessing the field's value before validation
@@ -772,6 +800,7 @@ def test_list_field_validates_provided_values():
         name="test_list",
         description="Test list",
         item_field=partial(StringField, name="item", description="String item"),
+        required=False,
         default=["default"]
     )
     # Validate with custom values
@@ -786,6 +815,7 @@ def test_list_field_rejects_none():
         name="test_list",
         description="Test list",
         item_field=partial(StringField, name="item", description="String item"),
+        required=False,
         default=[]
     )
     with pytest.raises(ValidationError, match="Expected a list"):
@@ -807,6 +837,7 @@ def test_nested_list_of_integers():
         name="nested_lists",
         description="List of lists of integers",
         item_field=inner_field,
+        required=False,
         default=[[0]]
     )
     
@@ -828,6 +859,7 @@ def create_constrained_nested_list_field():
             min_length=1,
             max_length=3
         ),
+        required=False,
         default=[[1]]
     )
 
@@ -886,6 +918,7 @@ def test_deeply_nested_lists():
         name="deeply_nested",
         description="Deeply nested lists",
         item_field=outer_field,
+        required=False,
         default=[[[1]]]
     )
     
