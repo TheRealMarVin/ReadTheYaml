@@ -1,6 +1,9 @@
 import pytest
 
-from readtheyaml.fields.field_helpers import _parse_field_type
+from readtheyaml.exceptions.format_error import FormatError
+from readtheyaml.fields.field_helpers import _parse_field_type, get_reserved_keywords_by_loaded_fields
+from readtheyaml.schema import Schema
+
 
 # base types
 def test_valid_none():
@@ -109,3 +112,20 @@ def test_invalid_tuple_bracket_mix():
 def test_tuple_unknown_type():
     with pytest.raises(ValueError, match="Unknown field type: foo"):
         _parse_field_type("tuple[foo, str]")
+
+# -------------------
+# Tests Other
+# -------------------
+@pytest.mark.parametrize("reserved_keyword", sorted(set().union(*get_reserved_keywords_by_loaded_fields().values())))
+def test_reserved_keyword_as_field_name(reserved_keyword):
+    """Test that reserved names are handled correctly and raise FormatError."""
+    bad_schema = {
+        reserved_keyword: {
+            "type": "int",
+            "default": 3,
+            "description": "some field"
+        }
+    }
+
+    with pytest.raises(FormatError, match="reserved"):
+        Schema._from_dict(bad_schema)
