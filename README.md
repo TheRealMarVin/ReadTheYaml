@@ -259,3 +259,6 @@ except Exception as e:
 ---
 ## Contributions
 If you try this out and find something confusing or missing — feel free to open an issue or suggestion. This project is a work-in-progress, but built with love and frustration.
+
+## Status
+[![Run Unit Tests](https://github.com/TheRealMarVin/ReadTheYaml/actions/workflows/test.yml/badge.svg)](https://github.com/TheRealMarVin/ReadTheYaml/actions/workflows/test.yml)
