@@ -3,9 +3,10 @@ from pathlib import Path
 import yaml
 from typing import Any, Dict, Optional, Union
 
+from .exceptions.format_error import FormatError
 from .exceptions.validation_error import ValidationError
 from .fields.field import Field
-from .fields.field_helpers import build_field
+from .fields.field_helpers import build_field, get_reserved_keywords_by_loaded_fields
 from .sections import Section
 
 
@@ -36,6 +37,9 @@ class Schema(Section):
 
     @classmethod
     def _from_dict(cls, data: Dict[str, Any], base_schema_dir: Optional[Path] = None) -> "Schema":
+        reserved_map = get_reserved_keywords_by_loaded_fields()
+        all_reserved_keywords = set().union(*reserved_map.values())
+
         if base_schema_dir is None:
             base_schema_dir = Path(".")
 
@@ -47,26 +51,27 @@ class Schema(Section):
         subsections: Dict[str, Section] = {}
 
         for key, value in data.items():
-            if key in {"name", "description", "required"}:
-                continue
+            if isinstance(value, dict):
+                if key in all_reserved_keywords:
+                    raise FormatError(f"The field name '{key}' is reserved by one or more Field classes (e.g., used as constructor argument). Please choose a different name.")
 
-            if isinstance(value, dict) and "type" in value:
-                try:
-                    fields[key] = build_field(value, key, base_schema_dir)
-                except Exception as e:
-                    raise ValidationError(f"Failed to build field '{key}': {e}")
+                if "type" in value:
+                    try:
+                        fields[key] = build_field(value, key, base_schema_dir)
+                    except Exception as e:
+                        raise ValidationError(f"Failed to build field '{key}': {e}")
 
-            elif isinstance(value, dict):
-                if "$ref" in value:
-                    ref_path = value["$ref"]
-                    ref_dict = cls._resolve_ref(ref_path, base_schema_dir)
-                    full_section_data = ref_dict.copy()
-                    full_section_data.update({k: v for k, v in value.items() if k != "$ref"})
-                    subsection = cls._from_dict(full_section_data, base_schema_dir=base_schema_dir)
                 else:
-                    subsection = cls._from_dict(value, base_schema_dir=base_schema_dir)
+                    if "$ref" in value:
+                        ref_path = value["$ref"]
+                        ref_dict = cls._resolve_ref(ref_path, base_schema_dir)
+                        full_section_data = ref_dict.copy()
+                        full_section_data.update({k: v for k, v in value.items() if k != "$ref"})
+                        subsection = cls._from_dict(full_section_data, base_schema_dir=base_schema_dir)
+                    else:
+                        subsection = cls._from_dict(value, base_schema_dir=base_schema_dir)
 
-                subsections[key] = subsection
+                    subsections[key] = subsection
             else:
                 raise ValidationError(f"Cannot determine if '{key}' is a field or section.")
 
