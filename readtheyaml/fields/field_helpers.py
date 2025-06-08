@@ -1,3 +1,4 @@
+import inspect
 import re
 from functools import partial
 
@@ -36,7 +37,28 @@ def build_terminal_field(definition: dict, name: str):
     field = constructor(name=name, **definition)
     return field
 
-import re
+def get_reserved_keywords_by_loaded_fields():
+    reserved_by_class = {}
+
+    for cls in Field.__subclasses__():
+        keywords = set()
+
+        # Traverse the method resolution order (MRO)
+        for base in inspect.getmro(cls):
+            if not issubclass(base, Field):
+                break  # don't go past the base Field class
+
+            try:
+                sig = inspect.signature(base.__init__)
+                params = set(sig.parameters) - {"self", "args", "kwargs"}
+                keywords.update(params)
+            except (ValueError, TypeError):
+                continue
+
+        if keywords:
+            reserved_by_class[cls.__name__] = keywords
+
+    return reserved_by_class
 
 def _extract_types_for_composite(type_str: str, type_name: str) -> str | None:
     match = re.fullmatch(rf"{re.escape(type_name)}([\[\(])(.+)([\]\)])", type_str)
