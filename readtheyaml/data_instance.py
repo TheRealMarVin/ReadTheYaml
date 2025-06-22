@@ -3,12 +3,12 @@ import sys
 import yaml
 
 class DataInstance:
-    def __init__(self, data: dict, schema, build_now=True):
+    def __init__(self, data: dict, schema, build_now=True, strict=True):
         self.schema = schema
         self.raw = data
         self.built = None
 
-        tata = self.schema.build_and_validate(self.raw, strict=False)
+        tata = self.schema.build_and_validate(self.raw, strict=strict)
 
         # if build_now:
         #     self.built = self._build()
