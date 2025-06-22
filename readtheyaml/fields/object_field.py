@@ -14,28 +14,43 @@ class ObjectField(Field):
 
     def validate(self, value):
         if not isinstance(value, dict):
-            raise ValidationError("Field '{self.name}': Expected a dictionary to instantiate object")
+            # If it's not a dict but we have a class_path, try to pass the value directly
+            if self.class_path:
+                try:
+                    cls = self._import(self.class_path)
+                    return cls(value)
+                except Exception as e:
+                    raise ValidationError(f"Field '{self.name}': Failed to create '{self.class_path}': {e}") from e
+            raise ValidationError(f"Field '{self.name}': Expected a dictionary to instantiate object")
 
         cls = self._resolve_class(value)
-        sig = inspect.signature(cls.__init__)
+        
+        # For built-in types or when we have a direct class path, try to pass the value directly
+        if self.class_path or not hasattr(cls, '__init__') or not inspect.isfunction(cls.__init__):
+            try:
+                return cls(**self._clear_sentinel(value))
+            except Exception as e:
+                raise ValidationError(f"Field '{self.name}': Failed to create '{cls.__name__}': {e}") from e
 
-        required = {
-            p.name for p in sig.parameters.values()
-            if p.name != "self" and p.default is inspect._empty
-        }
-
-        missing = required - value.keys()
-        if missing:
-            raise ValidationError(f"Field '{self.name}': Missing required keys: {sorted(missing)}")
-
-        extras = set(value) - required - {self._sentinel}
-        if extras and not self.meta.get("allow_extra", False):
-            raise ValidationError(f"Field '{self.name}': Unexpected keys: {sorted(extras)}")
-
+        # Handle custom classes with explicit __init__
         try:
+            sig = inspect.signature(cls.__init__)
+            required = {
+                p.name for p in sig.parameters.values()
+                if p.name != "self" and p.default is inspect._empty
+            }
+
+            missing = required - value.keys()
+            if missing:
+                raise ValidationError(f"Field '{self.name}': Missing required keys: {sorted(missing)}")
+
+            extras = set(value) - required - {self._sentinel}
+            if extras and not self.meta.get("allow_extra", False):
+                raise ValidationError(f"Field '{self.name}': Unexpected keys: {sorted(extras)}")
+
             result = cls(**self._clear_sentinel(value))
         except Exception as e:
-            raise ValidationError(f"Field '{self.name}': Failed to create '{cls.__name__}': {e}")
+            raise ValidationError(f"Field '{self.name}': Failed to create '{cls.__name__}': {e}") from e
 
         return result
 

@@ -77,7 +77,8 @@ def _parse_field_type(type_str: str) -> Field:
 
     object_inner = _extract_types_for_composite(type_str=type_str, type_name="object")
     if object_inner:
-        return partial(ObjectField, element_fields=object_inner)
+        # For object[type] syntax, use the inner type as class_path
+        return partial(ObjectField, class_path=object_inner)
 
     tuple_inner = _extract_types_for_composite(type_str=type_str, type_name="tuple")
     if tuple_inner:
