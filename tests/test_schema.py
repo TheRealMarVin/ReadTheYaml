@@ -114,6 +114,13 @@ def test_tuple_unknown_type():
         _parse_field_type("tuple[foo, str]")
 
 # -------------------
+# Tests Objects
+# -------------------
+def test_valid_object_int_square_brackets():
+    field = _parse_field_type("object[*]")
+    assert field.func.__name__ == "ObjectField"
+
+# -------------------
 # Tests Other
 # -------------------
 @pytest.mark.parametrize("reserved_keyword", sorted(set().union(*get_reserved_keywords_by_loaded_fields().values())))
