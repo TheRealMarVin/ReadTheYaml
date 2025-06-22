@@ -8,6 +8,7 @@ from readtheyaml.fields.composite_field import CompositeField
 from readtheyaml.fields.field import Field
 from readtheyaml.fields.field_registery import FIELD_REGISTRY
 from readtheyaml.fields.list_field import ListField
+from readtheyaml.fields.object_field import ObjectField
 from readtheyaml.fields.union_field import UnionField
 from readtheyaml.fields.tuple_field import TupleField
 
@@ -73,6 +74,10 @@ def _extract_types_for_composite(type_str: str, type_name: str) -> str | None:
 
 def _parse_field_type(type_str: str) -> Field:
     type_str = type_str.strip()
+
+    object_inner = _extract_types_for_composite(type_str=type_str, type_name="object")
+    if object_inner:
+        return partial(ObjectField, element_fields=object_inner)
 
     tuple_inner = _extract_types_for_composite(type_str=type_str, type_name="tuple")
     if tuple_inner:
