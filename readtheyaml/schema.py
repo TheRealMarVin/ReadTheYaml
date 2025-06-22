@@ -51,16 +51,12 @@ class Schema(Section):
         subsections: Dict[str, Section] = {}
 
         for key, value in data.items():
-            # Skip internal fields for top-level schema
-            if key in ['name', 'description', 'required'] and data is data.get('_original_data', data):
-                continue
-                
             if isinstance(value, dict):
-                # Check for reserved keywords for field names in field definitions
-                if key in all_reserved_keywords and 'type' in value:
-                    raise FormatError(f"The field name '{key}' is reserved by one or more Field classes (e.g., used as constructor argument). Please choose a different name.")
-
                 if "type" in value:
+                    if key in all_reserved_keywords:
+                        raise FormatError(
+                            f"The field name '{key}' is reserved by one or more Field classes (e.g., used as constructor argument). Please choose a different name.")
+
                     try:
                         fields[key] = build_field(value, key, base_schema_dir)
                     except Exception as e:
@@ -76,15 +72,6 @@ class Schema(Section):
                     # Handle nested sections
                     subsection = cls._from_dict(value, base_schema_dir=base_schema_dir)
                     subsections[key] = subsection
-            else:
-                # Handle simple fields (strings, numbers, booleans, etc.)
-                from .fields.string_field import StringField
-                fields[key] = StringField(
-                    name=key,
-                    description=f"Auto-generated field for {key}",
-                    default=value,
-                    required=False
-                )
 
         return cls(
             name=name,
