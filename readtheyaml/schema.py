@@ -51,15 +51,14 @@ class Schema(Section):
         subsections: Dict[str, Section] = {}
 
         for key, value in data.items():
-            # Check for reserved keywords for field names first
-            if key in all_reserved_keywords:
-                raise FormatError(f"The field name '{key}' is reserved by one or more Field classes (e.g., used as constructor argument). Please choose a different name.")
-                
-            # Skip internal fields only for top-level schema
+            # Skip internal fields for top-level schema
             if key in ['name', 'description', 'required'] and data is data.get('_original_data', data):
                 continue
                 
             if isinstance(value, dict):
+                # Check for reserved keywords for field names in field definitions
+                if key in all_reserved_keywords and 'type' in value:
+                    raise FormatError(f"The field name '{key}' is reserved by one or more Field classes (e.g., used as constructor argument). Please choose a different name.")
 
                 if "type" in value:
                     try:
