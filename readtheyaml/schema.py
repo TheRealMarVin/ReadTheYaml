@@ -1,3 +1,4 @@
+import copy
 import os
 from pathlib import Path
 import yaml
@@ -24,7 +25,8 @@ class Schema:
         self.subsections = subsections or {}
 
     def build_and_validate(self, data: Dict[str, Any], strict: bool = True) -> Dict[str, Any]:
-        result = {}
+        built_data = {}
+        data_with_default = copy.deepcopy(data)
 
         for field_name, field in self.fields.items():
             if field_name in data:
@@ -33,20 +35,21 @@ class Schema:
                 raise ValidationError(f"Missing required field '{field_name}'")
             else:
                 value = field.default
+                data_with_default[field_name] = value
 
             if value is not None:
                 value = field.validate(value)
 
-            result[field_name] = value
+            built_data[field_name] = value
 
         # Validate subsections
         for section_name, subsection in self.subsections.items():
             if section_name in data:
-                result[section_name] = subsection.build_and_validate(data[section_name], strict=strict)
+                built_data[section_name], data_with_default[section_name] = subsection.build_and_validate(data[section_name], strict=strict)
             elif subsection.required:
                 raise ValidationError(f"Missing required section '{section_name}'")
             else:
-                result[section_name] = subsection.build_and_validate({}, strict=strict)
+                built_data[section_name], data_with_default[section_name] = subsection.build_and_validate({}, strict=strict)
 
         # Handle extra keys
         allowed_keys = set(self.fields.keys()) | set(self.subsections.keys())
@@ -59,9 +62,9 @@ class Schema:
         else:
             for key in data:
                 if key not in allowed_keys:
-                    result[key] = data[key]
+                    built_data[key] = data[key]
 
-        return result
+        return built_data, data_with_default
 
     def to_dict(self) -> dict:
         return {

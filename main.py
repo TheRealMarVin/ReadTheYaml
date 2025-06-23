@@ -24,7 +24,7 @@ def main():
             yaml_data = yaml.safe_load(f)
 
         schema = Schema.from_yaml(args.schema, Path("./examples"))
-        data_instance = DataInstance(data=yaml_data, schema=schema, build_now=True, strict=False)
+        data_instance = DataInstance(data=yaml_data, schema=schema, strict=False)
         print("✅ Config is valid!")
     except ValidationError as e:
         print(f"❌ Validation failed: {e}", file=sys.stderr)

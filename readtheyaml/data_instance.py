@@ -3,21 +3,11 @@ import sys
 import yaml
 
 class DataInstance:
-    def __init__(self, data: dict, schema, build_now=True, strict=True):
+    def __init__(self, data: dict, schema, strict=True):
         self.schema = schema
         self.raw = data
-        self.built = None
 
-        tata = self.schema.build_and_validate(self.raw, strict=strict)
-
-        # if build_now:
-        #     self.built = self._build()
-
-    def _build(self):
-        result = {}
-        for key, field in self.schema.fields.items():
-            result[key] = field.build(self.raw.get(key))
-        return result
+        self.built, self.data_with_default = self.schema.build_and_validate(self.raw, strict=strict)
 
     def __getitem__(self, key):
         if self.built is None:
@@ -25,4 +15,4 @@ class DataInstance:
         return self.built[key]
 
     def dump(self, file=None):
-        yaml.safe_dump(self.raw, file or sys.stdout)
+        yaml.safe_dump(self.data_with_default, file or sys.stdout)
