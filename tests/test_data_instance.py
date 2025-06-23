@@ -79,12 +79,12 @@ def test_data_instance_dump_without_defaults():
 
 
 def test_data_instance_dump_with_defaults():
-    """Test that default values are added and included in the dump."""
+    """Test that default values are added, included in the dump, and still schema-valid."""
     schema_dict = {
         "foo": {
             "type": "str",
             "default": "bar",
-            "required": False,  # ✅ required=False fixes the issue
+            "required": False,
             "description": "optional string"
         },
         "x": {
@@ -103,7 +103,8 @@ def test_data_instance_dump_with_defaults():
     assert dumped_data["foo"] == "bar"
     assert instance["foo"] == "bar"
 
-
+    # New: validate the dumped result against the schema
+    schema.build_and_validate(dumped_data, strict=True)
 
 def test_data_instance_getitem_empty_key_raises():
     """Test that accessing an empty key raises a KeyError."""
