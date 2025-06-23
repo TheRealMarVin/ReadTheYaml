@@ -44,11 +44,11 @@ class UnionField(Field):
 
         self._options = [curr_option(**kwargs) for curr_option in options]
 
-    def validate(self, value):
+    def validate_and_build(self, value):
         errors = []
         for field in self._options:
             try:
-                validated_value = field.validate(value)
+                validated_value = field.validate_and_build(value)
                 return validated_value
             except ValidationError as e:
                 errors.append(str(e))

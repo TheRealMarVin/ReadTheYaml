@@ -38,7 +38,7 @@ class Schema:
                 data_with_default[field_name] = value
 
             if value is not None:
-                value = field.validate(value)
+                value = field.validate_and_build(value)
 
             built_data[field_name] = value
 

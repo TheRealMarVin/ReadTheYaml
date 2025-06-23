@@ -12,7 +12,7 @@ class ObjectField(Field):
         super().__init__(**kwargs)
         self.class_path = class_path
 
-    def validate(self, value):
+    def validate_and_build(self, value):
         if not isinstance(value, dict):
             # If it's not a dict but we have a class_path, try to pass the value directly
             if self.class_path:

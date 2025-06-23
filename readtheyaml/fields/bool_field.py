@@ -6,7 +6,7 @@ class BoolField(Field):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def validate(self, value):
+    def validate_and_build(self, value):
         if type(value) == str:
             if value.lower() in {"none", "null", ""}:
                 raise ValidationError(f"Field '{self.name}': Must be of type bool, contains None or null or empty")

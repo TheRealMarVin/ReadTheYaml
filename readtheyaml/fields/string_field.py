@@ -24,7 +24,7 @@ class StringField(Field):
         if max_length != -1 and max_length < min_length:
             raise FormatError(f"Field '{self.name}': max_length {max_length} smaller than min_length {min_length}")
 
-    def validate(self, value):
+    def validate_and_build(self, value):
         # Convert to string if casting is enabled
         if self.cast_to_string:
             try:

@@ -10,7 +10,7 @@ class EnumField(Field):
             raise FormatError(f"Field '{self.name}': EnumField requires a list of choices.")
         self.choices = values
 
-    def validate(self, value):
+    def validate_and_build(self, value):
         if value not in self.choices:
             raise ValidationError(f"Field '{self.name}': Invalid value '{value}', expected one of: {self.choices}")
         return value

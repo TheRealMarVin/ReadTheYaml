@@ -28,7 +28,7 @@ class ListField(Field):
         except FormatError as e:
             raise ValidationError(f"Field '{self.name}': {e}")
 
-    def validate(self, value):
+    def validate_and_build(self, value):
         if not isinstance(value, list):
             raise ValidationError(f"Field '{self.name}': Expected a list.")
 
@@ -41,7 +41,7 @@ class ListField(Field):
         validated = []
         for i, item in enumerate(value):
             try:
-                validated.append(self.item_field.validate(item))
+                validated.append(self.item_field.validate_and_build(item))
             except ValidationError as e:
                 raise ValidationError(f"Field '{self.name}': Invalid item at index {i}: {e}")
 

@@ -101,19 +101,19 @@ def create_simple_union_field():
 def test_union_field_validates_string_option():
     """Test that UnionField validates string values when StringField is an option."""
     field = create_simple_union_field()
-    assert field.validate("test") == "test"
+    assert field.validate_and_build("test") == "test"
 
 
 def test_union_field_validates_int_option():
     """Test that UnionField validates integer values when NumericalField is an option."""
     field = create_simple_union_field()
-    assert field.validate(42) == 42
+    assert field.validate_and_build(42) == 42
 
 
 def test_union_field_handles_numeric_strings_as_strings():
     """Test that UnionField treats numeric strings as strings when StringField is first option."""
     field = create_simple_union_field()
-    assert field.validate("123") == "123"  # Should be treated as string, not converted to int
+    assert field.validate_and_build("123") == "123"  # Should be treated as string, not converted to int
 
 
 def create_test_union_field():
@@ -134,21 +134,21 @@ def test_union_field_rejects_short_string():
     """Test that UnionField rejects strings that are too short for StringField."""
     field = create_test_union_field()
     with pytest.raises(ValidationError):
-        field.validate("ab")
+        field.validate_and_build("ab")
 
 
 def test_union_field_rejects_negative_number():
     """Test that UnionField rejects numbers below the minimum value for NumericalField."""
     field = create_test_union_field()
     with pytest.raises(ValidationError, match="does not match any allowed type"):
-        field.validate(-1)
+        field.validate_and_build(-1)
 
 
 def test_union_field_rejects_incompatible_type():
     """Test that UnionField rejects values of incompatible types."""
     field = create_test_union_field()
     with pytest.raises(ValidationError, match="does not match any allowed type"):
-        field.validate([1, 2, 3])
+        field.validate_and_build([1, 2, 3])
 
 
 def create_complex_union_field():
@@ -171,19 +171,19 @@ def create_complex_union_field():
 def test_union_field_accepts_list_of_numbers():
     """Test that UnionField accepts a list of numbers when ListField is an option."""
     field = create_complex_union_field()
-    assert field.validate([1, 2, 3]) == [1, 2, 3]
+    assert field.validate_and_build([1, 2, 3]) == [1, 2, 3]
 
 
 def test_union_field_accepts_tuple_of_mixed_types():
     """Test that UnionField accepts a tuple of mixed types when TupleField is an option."""
     field = create_complex_union_field()
-    assert field.validate(("John", 30)) == ("John", 30)
+    assert field.validate_and_build(("John", 30)) == ("John", 30)
 
 
 def test_union_field_parses_string_representation_of_tuple():
     """Test that UnionField parses string representation of a tuple when TupleField is an option."""
     field = create_complex_union_field()
-    assert field.validate("('Alice', 25)") == ("Alice", 25)
+    assert field.validate_and_build("('Alice', 25)") == ("Alice", 25)
 
 
 def test_union_field_required_rejects_none():
@@ -197,7 +197,7 @@ def test_union_field_required_rejects_none():
         ]
     )
     with pytest.raises(ValidationError):
-        field.validate(None)
+        field.validate_and_build(None)
 
 
 def test_union_field_optional_rejects_none_without_default():
@@ -212,7 +212,7 @@ def test_union_field_optional_rejects_none_without_default():
         ]
     )
     with pytest.raises(ValidationError):
-        field.validate(None)
+        field.validate_and_build(None)
 
 
 def test_union_field_error_messages():
@@ -227,7 +227,7 @@ def test_union_field_error_messages():
     )
 
     with pytest.raises(ValidationError):
-        field.validate(False)
+        field.validate_and_build(False)
 
 
 # -------------------
@@ -285,7 +285,7 @@ def test_validate_tuple_with_correct_types():
     )
     
     # Test valid tuple
-    result = field.validate(("John Doe", 30, True))
+    result = field.validate_and_build(("John Doe", 30, True))
     assert result == ("John Doe", 30, True)
 
 
@@ -301,7 +301,7 @@ def test_validate_tuple_with_string_representation():
     )
     
     # Test with string representation
-    result = field.validate("(3.14, 2.71)")
+    result = field.validate_and_build("(3.14, 2.71)")
     assert result == (3.14, 2.71)
 
 
@@ -318,11 +318,11 @@ def test_validate_tuple_rejects_wrong_length():
     
     # Test with too few elements
     with pytest.raises(ValidationError, match="must contain exactly 2 elements"):
-        field.validate((1.0,))
+        field.validate_and_build((1.0,))
     
     # Test with too many elements
     with pytest.raises(ValidationError, match="must contain exactly 2 elements"):
-        field.validate((1.0, 2.0, 3.0))
+        field.validate_and_build((1.0, 2.0, 3.0))
 
 
 def test_validate_tuple_rejects_invalid_types():
@@ -338,7 +338,7 @@ def test_validate_tuple_rejects_invalid_types():
     
     # Test with invalid type in second element
     with pytest.raises(ValidationError, match="Tuple element 1 invalid"):
-        field.validate(("John Doe", "thirty"))  # Age should be an int
+        field.validate_and_build(("John Doe", "thirty"))  # Age should be an int
 
 
 def test_validate_tuple_with_nested_structures():
@@ -353,12 +353,12 @@ def test_validate_tuple_with_nested_structures():
     )
     
     # Test with valid nested structure
-    result = field.validate(([1, 2, 3], "test"))
+    result = field.validate_and_build(([1, 2, 3], "test"))
     assert result == ([1, 2, 3], "test")
     
     # Test with invalid nested structure
     with pytest.raises(ValidationError, match="Tuple element 0 invalid"):
-        field.validate(([1, "two", 3], "test"))  # Non-int in list
+        field.validate_and_build(([1, "two", 3], "test"))  # Non-int in list
 
 
 def test_validate_tuple_rejects_none():
@@ -372,7 +372,7 @@ def test_validate_tuple_rejects_none():
     )
     
     with pytest.raises(ValidationError, match="None is not a valid tuple"):
-        field.validate(None)
+        field.validate_and_build(None)
 
 
 # -------------------
@@ -408,7 +408,7 @@ def test_validate_list_of_integers():
     )
     
     # Test valid integer list
-    assert field.validate([1, 2, 3]) == [1, 2, 3]
+    assert field.validate_and_build([1, 2, 3]) == [1, 2, 3]
 
 
 def test_validate_list_converts_string_numbers():
@@ -422,8 +422,8 @@ def test_validate_list_converts_string_numbers():
     )
     
     # Test string numbers are converted to integers
-    assert field.validate(["1", "2", "3"]) == [1, 2, 3]
-    assert field.validate(["0", "-42", "999"]) == [0, -42, 999]
+    assert field.validate_and_build(["1", "2", "3"]) == [1, 2, 3]
+    assert field.validate_and_build(["0", "-42", "999"]) == [0, -42, 999]
 
 
 def test_validate_list_rejects_non_numeric_strings():
@@ -436,7 +436,7 @@ def test_validate_list_rejects_non_numeric_strings():
         default=[0]
     )
     with pytest.raises(ValidationError, match="Invalid item at index 0"):
-        field.validate(["not_an_int"])
+        field.validate_and_build(["not_an_int"])
 
 
 def test_validate_list_rejects_mixed_types():
@@ -449,7 +449,7 @@ def test_validate_list_rejects_mixed_types():
         default=[0]
     )
     with pytest.raises(ValidationError, match="Invalid item at index 1"):
-        field.validate([1, "not_an_int", 3])
+        field.validate_and_build([1, "not_an_int", 3])
 
 
 def test_validate_list_rejects_floats():
@@ -462,7 +462,7 @@ def test_validate_list_rejects_floats():
         default=[0]
     )
     with pytest.raises(ValidationError):
-        field.validate([1.5])  # Floats should be rejected when expecting ints
+        field.validate_and_build([1.5])  # Floats should be rejected when expecting ints
 
 
 def test_validate_list_accepts_min_length():
@@ -476,7 +476,7 @@ def test_validate_list_accepts_min_length():
         required=False,
         default=["a", "b"]
     )
-    assert field.validate(["a", "b"]) == ["a", "b"]
+    assert field.validate_and_build(["a", "b"]) == ["a", "b"]
 
 
 def test_validate_list_accepts_max_length():
@@ -490,7 +490,7 @@ def test_validate_list_accepts_max_length():
         required=False,
         default=["a", "b"]
     )
-    assert field.validate(["a", "b", "c", "d"]) == ["a", "b", "c", "d"]
+    assert field.validate_and_build(["a", "b", "c", "d"]) == ["a", "b", "c", "d"]
 
 
 def test_validate_list_rejects_below_min_length():
@@ -505,7 +505,7 @@ def test_validate_list_rejects_below_min_length():
         default=["a", "b"]
     )
     with pytest.raises(ValidationError, match="must contain at least 2 items"):
-        field.validate(["a"])
+        field.validate_and_build(["a"])
 
 
 def test_validate_list_rejects_above_max_length():
@@ -520,7 +520,7 @@ def test_validate_list_rejects_above_max_length():
         default=["a", "b"]
     )
     with pytest.raises(ValidationError, match="must contain at most 4 items"):
-        field.validate(["a", "b", "c", "d", "e"])
+        field.validate_and_build(["a", "b", "c", "d", "e"])
 
 
 def test_validate_list_with_boolean_values():
@@ -532,7 +532,7 @@ def test_validate_list_with_boolean_values():
         required=False,
         default=[True]
     )
-    assert field.validate([True, False, True]) == [True, False, True]
+    assert field.validate_and_build([True, False, True]) == [True, False, True]
 
 
 def test_validate_list_converts_boolean_strings():
@@ -544,7 +544,7 @@ def test_validate_list_converts_boolean_strings():
         required=False,
         default=[True]
     )
-    assert field.validate(["true", "false", "True", "False"]) == [True, False, True, False]
+    assert field.validate_and_build(["true", "false", "True", "False"]) == [True, False, True, False]
 
 
 def test_validate_list_rejects_mixed_invalid_boolean():
@@ -557,7 +557,7 @@ def test_validate_list_rejects_mixed_invalid_boolean():
         default=[True]
     )
     with pytest.raises(ValidationError, match="Invalid item at index 1"):
-        field.validate([True, "not_a_boolean", False])
+        field.validate_and_build([True, "not_a_boolean", False])
 
 
 def test_validate_list_rejects_single_invalid_boolean():
@@ -570,7 +570,7 @@ def test_validate_list_rejects_single_invalid_boolean():
         default=[True]
     )
     with pytest.raises(ValidationError, match="Invalid item at index 0"):
-        field.validate(["not_a_boolean"])
+        field.validate_and_build(["not_a_boolean"])
 
 
 def test_validate_list_with_mixed_boolean_types():
@@ -583,7 +583,7 @@ def test_validate_list_with_mixed_boolean_types():
         default=[True]
     )
     # Test with Python bools and string representations
-    assert field.validate([True, False, "true", "false"]) == [True, False, True, False]
+    assert field.validate_and_build([True, False, "true", "false"]) == [True, False, True, False]
 
 
 def test_validate_list_accepts_valid_strings():
@@ -601,7 +601,7 @@ def test_validate_list_accepts_valid_strings():
         required=False,
         default=["abc"]
     )
-    assert field.validate(["ab", "abc", "abcd"]) == ["ab", "abc", "abcd"]
+    assert field.validate_and_build(["ab", "abc", "abcd"]) == ["ab", "abc", "abcd"]
 
 
 def test_validate_list_rejects_short_strings():
@@ -620,7 +620,7 @@ def test_validate_list_rejects_short_strings():
         default=["abc"]
     )
     with pytest.raises(ValidationError, match="must be at least 2 characters"):
-        field.validate(["a", "bc", "def"])
+        field.validate_and_build(["a", "bc", "def"])
 
 
 def test_validate_list_rejects_long_strings():
@@ -639,7 +639,7 @@ def test_validate_list_rejects_long_strings():
         default=["abc"]
     )
     with pytest.raises(ValidationError, match="must be at most 5 characters"):
-        field.validate(["abcde", "abcdef"])
+        field.validate_and_build(["abcde", "abcdef"])
 
 
 def test_validate_list_with_exact_length_strings():
@@ -658,7 +658,7 @@ def test_validate_list_with_exact_length_strings():
         default=["abc"]
     )
     # Test strings with exact min and max lengths
-    assert field.validate(["ab", "abcde"]) == ["ab", "abcde"]
+    assert field.validate_and_build(["ab", "abcde"]) == ["ab", "abcde"]
 
 
 def test_validate_empty_list_default_min_length():
@@ -670,7 +670,7 @@ def test_validate_empty_list_default_min_length():
         required=False,
         default=[]
     )
-    assert field.validate([]) == []
+    assert field.validate_and_build([]) == []
 
 
 def test_validate_empty_list_explicit_min_length_zero():
@@ -683,7 +683,7 @@ def test_validate_empty_list_explicit_min_length_zero():
         required=False,
         default=[]
     )
-    assert field.validate([]) == []
+    assert field.validate_and_build([]) == []
 
 
 def test_validate_empty_list_rejects_when_min_length_one():
@@ -697,7 +697,7 @@ def test_validate_empty_list_rejects_when_min_length_one():
         default=["valid"]
     )
     with pytest.raises(ValidationError, match="must contain at least 1 item"):
-        field.validate([])
+        field.validate_and_build([])
 
 
 def test_validate_empty_list_with_non_empty_default():
@@ -710,7 +710,7 @@ def test_validate_empty_list_with_non_empty_default():
         required=False,
         default=["valid"]
     )
-    assert field.validate(["single_item"]) == ["single_item"]
+    assert field.validate_and_build(["single_item"]) == ["single_item"]
 
 
 def test_list_field_accepts_min_length_range():
@@ -723,7 +723,7 @@ def test_list_field_accepts_min_length_range():
         required=False,
         default=[1, 2]
     )
-    assert field.validate([1, 2]) == [1, 2]
+    assert field.validate_and_build([1, 2]) == [1, 2]
 
 
 def test_list_field_accepts_max_length_range():
@@ -736,7 +736,7 @@ def test_list_field_accepts_max_length_range():
         required=False,
         default=[1, 2, 3, 4]
     )
-    assert field.validate([1, 2, 3, 4]) == [1, 2, 3, 4]
+    assert field.validate_and_build([1, 2, 3, 4]) == [1, 2, 3, 4]
 
 
 def test_list_field_rejects_below_min_length_range():
@@ -750,7 +750,7 @@ def test_list_field_rejects_below_min_length_range():
         default=[1, 2]
     )
     with pytest.raises(ValidationError, match="must contain at least 2 items"):
-        field.validate([1])
+        field.validate_and_build([1])
 
 
 def test_list_field_rejects_above_max_length_range():
@@ -764,7 +764,7 @@ def test_list_field_rejects_above_max_length_range():
         default=[1, 2, 3, 4]
     )
     with pytest.raises(ValidationError, match="must contain at most 4 items"):
-        field.validate([1, 2, 3, 4, 5])
+        field.validate_and_build([1, 2, 3, 4, 5])
 
 
 def test_list_field_with_length_range_accepts_middle_length():
@@ -777,7 +777,7 @@ def test_list_field_with_length_range_accepts_middle_length():
         required=False,
         default=[1, 2, 3]
     )
-    assert field.validate([1, 2, 3]) == [1, 2, 3]
+    assert field.validate_and_build([1, 2, 3]) == [1, 2, 3]
 
 def test_list_field_uses_default_when_no_value_provided():
     """Test that ListField uses default value when no value is provided to validate()."""
@@ -791,7 +791,7 @@ def test_list_field_uses_default_when_no_value_provided():
     # The default is used when accessing the field's value before validation
     assert field.default == ["default1", "default2"]
     # Empty list is still a valid input
-    assert field.validate([]) == []
+    assert field.validate_and_build([]) == []
 
 
 def test_list_field_validates_provided_values():
@@ -804,9 +804,9 @@ def test_list_field_validates_provided_values():
         default=["default"]
     )
     # Validate with custom values
-    assert field.validate(["custom1", "custom2"]) == ["custom1", "custom2"]
+    assert field.validate_and_build(["custom1", "custom2"]) == ["custom1", "custom2"]
     # Default is not used when a value is provided to validate()
-    assert field.validate(["another"]) == ["another"]
+    assert field.validate_and_build(["another"]) == ["another"]
 
 
 def test_list_field_rejects_none():
@@ -819,7 +819,7 @@ def test_list_field_rejects_none():
         default=[]
     )
     with pytest.raises(ValidationError, match="Expected a list"):
-        field.validate(None)
+        field.validate_and_build(None)
 
 
 def test_nested_list_of_integers():
@@ -842,8 +842,8 @@ def test_nested_list_of_integers():
     )
     
     # Test valid nested lists
-    assert field.validate([[1, 2], [3, 4, 5]]) == [[1, 2], [3, 4, 5]]
-    assert field.validate([[], [1], [1, 2]]) == [[], [1], [1, 2]]
+    assert field.validate_and_build([[1, 2], [3, 4, 5]]) == [[1, 2], [3, 4, 5]]
+    assert field.validate_and_build([[], [1], [1, 2]]) == [[], [1], [1, 2]]
 
 
 def create_constrained_nested_list_field():
@@ -867,34 +867,34 @@ def create_constrained_nested_list_field():
 def test_nested_list_with_constraints_valid():
     """Test that ListField accepts valid nested lists within constraints."""
     field = create_constrained_nested_list_field()
-    assert field.validate([[1], [1, 2], [1, 2, 3]]) == [[1], [1, 2], [1, 2, 3]]
+    assert field.validate_and_build([[1], [1, 2], [1, 2, 3]]) == [[1], [1, 2], [1, 2, 3]]
 
 
 def test_nested_list_with_min_length_constraint():
     """Test that ListField enforces minimum length on inner lists."""
     field = create_constrained_nested_list_field()
     with pytest.raises(ValidationError, match="must contain at least 1 item"):
-        field.validate([[]])
+        field.validate_and_build([[]])
 
 
 def test_nested_list_with_max_length_constraint():
     """Test that ListField enforces maximum length on inner lists."""
     field = create_constrained_nested_list_field()
     with pytest.raises(ValidationError, match="must contain at most 3 items"):
-        field.validate([[1, 2, 3, 4]])
+        field.validate_and_build([[1, 2, 3, 4]])
 
 
 def test_nested_list_with_various_valid_lengths():
     """Test that ListField accepts inner lists at different valid lengths."""
     field = create_constrained_nested_list_field()
-    assert field.validate([[1], [2, 2], [3, 3, 3]]) == [[1], [2, 2], [3, 3, 3]]
+    assert field.validate_and_build([[1], [2, 2], [3, 3, 3]]) == [[1], [2, 2], [3, 3, 3]]
 
 
 def test_nested_list_rejects_mixed_valid_and_invalid():
     """Test that ListField rejects lists containing both valid and invalid inner lists."""
     field = create_constrained_nested_list_field()
     with pytest.raises(ValidationError):
-        field.validate([[], [1], [1, 2, 3, 4]])
+        field.validate_and_build([[], [1], [1, 2, 3, 4]])
 
 
 def test_deeply_nested_lists():
@@ -923,9 +923,9 @@ def test_deeply_nested_lists():
     )
     
     # Test valid deeply nested lists
-    assert field.validate([[[1], [2, 3]], [[4, 5, 6]]]) == [[[1], [2, 3]], [[4, 5, 6]]]
+    assert field.validate_and_build([[[1], [2, 3]], [[4, 5, 6]]]) == [[[1], [2, 3]], [[4, 5, 6]]]
     
     # Test invalid type in deepest level
     with pytest.raises(ValidationError):
-        field.validate([[["not_a_number"]]])
+        field.validate_and_build([[["not_a_number"]]])
 

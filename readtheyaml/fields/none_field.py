@@ -6,7 +6,7 @@ class NoneField(Field):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def validate(self, value):
+    def validate_and_build(self, value):
         if str(value).lower() in {"none", "null"}:
             return None
 

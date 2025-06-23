@@ -9,7 +9,7 @@ class CompositeField(Field):
         super().__init__(**kwargs)
         self.fields = fields or {}
 
-    def validate(self, value):
+    def validate_and_build(self, value):
         if not isinstance(value, dict):
             raise ValidationError(f"Field '{self.name}': must be a dictionary.")
 
@@ -18,7 +18,7 @@ class CompositeField(Field):
             if field.required and field_name not in value:
                 raise ValidationError(f"Field '{self.name}': Missing required field '{field_name}' in '{self.name}'.")
             if field_name in value:
-                result[field_name] = field.validate(value[field_name])
+                result[field_name] = field.validate_and_build(value[field_name])
             elif field.default is not None:
                 result[field_name] = field.default
         return result

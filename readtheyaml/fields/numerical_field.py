@@ -19,7 +19,7 @@ class NumericalField(Field):
         except FormatError as e:
             raise ValidationError(f"Field '{self.name}': {e}")
 
-    def validate(self, value):
+    def validate_and_build(self, value):
         try:
             if str(value).lower() in {"true", "false"}:
                 raise ValidationError(f"Field '{self.name}': Must be of type {self.value_type.__name__}, contains True or False.")

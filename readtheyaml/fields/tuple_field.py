@@ -12,7 +12,7 @@ class TupleField(Field):
             kwargs["ignore_post"] = True
         self._slots = tuple([curr_field(**kwargs) for curr_field in element_fields])
 
-    def validate(self, value):
+    def validate_and_build(self, value):
         if value is None:
             raise ValidationError(f"Field '{self.name}': None is not a valid tuple")
 
@@ -33,7 +33,7 @@ class TupleField(Field):
 
         for idx, (v, field) in enumerate(zip(value, self._slots)):
             try:
-                field.validate(v)
+                field.validate_and_build(v)
             except ValidationError as err:
                 raise ValidationError(f"Field '{self.name}': Tuple element {idx} invalid: {err}")
 
