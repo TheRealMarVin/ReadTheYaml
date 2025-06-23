@@ -1,3 +1,4 @@
 test data instance
 test object type
 test strict mode for validation
+test updated default data
