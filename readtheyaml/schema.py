@@ -23,13 +23,12 @@ class Schema:
         self.fields = fields or {}
         self.subsections = subsections or {}
 
-    def build_and_validate(self, config: Dict[str, Any], strict: bool = True) -> Dict[str, Any]:
+    def build_and_validate(self, data: Dict[str, Any], strict: bool = True) -> Dict[str, Any]:
         result = {}
 
-        # Validate fields
         for field_name, field in self.fields.items():
-            if field_name in config:
-                value = config[field_name]
+            if field_name in data:
+                value = data[field_name]
             elif field.required:
                 raise ValidationError(f"Missing required field '{field_name}'")
             else:
@@ -42,8 +41,8 @@ class Schema:
 
         # Validate subsections
         for section_name, subsection in self.subsections.items():
-            if section_name in config:
-                result[section_name] = subsection.build_and_validate(config[section_name], strict=strict)
+            if section_name in data:
+                result[section_name] = subsection.build_and_validate(data[section_name], strict=strict)
             elif subsection.required:
                 raise ValidationError(f"Missing required section '{section_name}'")
             else:
@@ -52,15 +51,15 @@ class Schema:
         # Handle extra keys
         allowed_keys = set(self.fields.keys()) | set(self.subsections.keys())
         if strict:
-            unexpected_keys = set(config.keys()) - allowed_keys
+            unexpected_keys = set(data.keys()) - allowed_keys
             if unexpected_keys:
                 raise ValidationError(
                     f"Unexpected key(s) in section '{self.name or '<root>'}': {', '.join(sorted(unexpected_keys))}"
                 )
         else:
-            for key in config:
+            for key in data:
                 if key not in allowed_keys:
-                    result[key] = config[key]
+                    result[key] = data[key]
 
         return result
 
