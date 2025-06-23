@@ -177,3 +177,38 @@ def test_data_instance_nested_access_with_dict_style():
     assert db_section["host"] == "localhost"
     assert db_section["port"] == 5432
 
+def test_data_instance_dump_is_yaml_serializable():
+    """Test that DataInstance.dump() produces valid YAML output."""
+    schema_dict = {
+        "val": {
+            "type": "int",
+            "default": 42,
+            "required": False,
+            "description": "some int"
+        }
+    }
+    schema = Schema._from_dict(schema_dict)
+    data = {}
+
+    instance = DataInstance(data, schema)
+
+    # This should never raise
+    parsed = yaml.safe_load(yaml.safe_dump(instance.data_with_default))
+    assert parsed == {"val": 42}
+
+def test_data_instance_dotted_access_fails_on_non_dict():
+    """Test that dotted access fails if intermediate value is not a dict."""
+    schema_dict = {
+        "config": {
+            "type": "str",
+            "description": "string value, not a dict"
+        }
+    }
+    schema = Schema._from_dict(schema_dict)
+    data = {"config": "just_a_string"}
+
+    instance = DataInstance(data, schema)
+
+    with pytest.raises(TypeError):
+        _ = instance["config.subkey"]
+
