@@ -44,8 +44,14 @@ class ObjectField(Field):
             if missing:
                 raise ValidationError(f"Field '{self.name}': Missing required keys: {sorted(missing)}")
 
-            extras = set(value) - required - {self._sentinel}
-            if extras and not self.meta.get("allow_extra", False):
+            sig = inspect.signature(cls.__init__)
+            param_names = set(sig.parameters) - {"self"}
+
+            # Determine if the class accepts **kwargs
+            has_kwargs = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
+
+            extras = set(value) - param_names - {self._sentinel}
+            if extras and not has_kwargs:
                 raise ValidationError(f"Field '{self.name}': Unexpected keys: {sorted(extras)}")
 
             result = cls(**self._clear_sentinel(value))
