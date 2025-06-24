@@ -27,6 +27,9 @@ class ObjectField(Field):
         
         # For built-in types or when we have a direct class path, try to pass the value directly
         if self.class_path or not hasattr(cls, '__init__') or not inspect.isfunction(cls.__init__):
+            extras = set(value) - self._get_constructor_params(cls) - {self._sentinel}
+            if extras and not self._accepts_kwargs(cls):
+                raise ValidationError(f"Field '{self.name}': Unexpected keys: {sorted(extras)}")
             try:
                 return cls(**self._clear_sentinel(value))
             except Exception as e:
@@ -79,3 +82,19 @@ class ObjectField(Field):
 
     def _clear_sentinel(self, mapping):
         return {k: v for k, v in mapping.items() if k != self._sentinel}
+
+    def _get_constructor_params(self, cls):
+        try:
+            sig = inspect.signature(cls.__init__)
+            return {p.name for p in sig.parameters.values() if p.name != "self"}
+        except Exception:
+            return set()
+
+    def _accepts_kwargs(self, cls):
+        try:
+            sig = inspect.signature(cls.__init__)
+            return any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
+        except Exception:
+            return False
+
+
