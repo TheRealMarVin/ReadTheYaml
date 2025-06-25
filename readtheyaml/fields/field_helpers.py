@@ -34,7 +34,10 @@ def build_field(definition: dict, name: str, base_schema_dir: str) -> Field:
     )
 
 def build_terminal_field(definition: dict, name: str):
-    constructor = _parse_field_type(definition["type"])
+    current_type = definition["type"]
+    constructor = _parse_field_type(current_type)
+    if constructor is None:
+        raise ValueError(f"Unknown element type: {current_type}")
     field = constructor(name=name, **definition)
     return field
 
@@ -78,7 +81,7 @@ def _parse_field_type(type_str: str) -> Field:
     object_inner = _extract_types_for_composite(type_str=type_str, type_name="object")
     if object_inner:
         # For object[type] syntax, use the inner type as class_path
-        return partial(ObjectField, class_path=object_inner)
+        return partial(ObjectField, factory=_parse_field_type, class_path=object_inner)
 
     tuple_inner = _extract_types_for_composite(type_str=type_str, type_name="tuple")
     if tuple_inner:
@@ -120,8 +123,7 @@ def _parse_field_type(type_str: str) -> Field:
         return partial(UnionField, options=parsed_fields)
 
     constructor = FIELD_REGISTRY.get(type_str)
-    if not constructor:
-        raise ValueError(f"Unknown field type: {type_str}")
+
     return constructor
 
 
