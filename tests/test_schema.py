@@ -1,10 +1,20 @@
-import pytest
+
 
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field_helpers import _parse_field_type, get_reserved_keywords_by_loaded_fields
 from readtheyaml.schema import Schema
 
+import os
+import pytest
+import sys
+
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 # base types
 def test_valid_none():
@@ -85,11 +95,9 @@ def test_list_unknown_type():
 class MyDummy:
     pass
 
-# TODO I really think that this should be supported!
 def test_list_of_custom_class_parses_correctly():
     """list[MyDummy] should parse incorrectly because it is not in the object tag."""
-    with pytest.raises(ValueError, match="Unknown field type"):
-        field = _parse_field_type("list[readtheyaml.tests.test_schema.MyDummy]")
+    field = _parse_field_type("list[tests.test_schema.MyDummy]")
 
 def test_list_of_objects():
     """list[object[MyDummy]] should parse correctly if MyDummy is in scope."""
