@@ -1,6 +1,9 @@
+import importlib
 import inspect
 import types
 import typing
+
+from readtheyaml.exceptions.validation_error import ValidationError
 
 
 def get_params_and_defaults(target_class):
@@ -48,3 +51,13 @@ def type_to_string(type_) -> str:
 
     # Fallback for weird cases
     return repr(type_)
+
+def import_type(dotted_path):
+    module_path, _, class_name = dotted_path.rpartition(".")
+    if not module_path:
+        raise ValidationError(f"Invalid class path '{dotted_path}': missing module")
+    try:
+        module = importlib.import_module(module_path)
+        return getattr(module, class_name)
+    except (ImportError, AttributeError) as e:
+        raise ValidationError(f"Failed to import '{dotted_path}': {e}")
