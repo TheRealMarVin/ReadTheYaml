@@ -4,6 +4,7 @@ from functools import partial
 
 import yaml
 
+from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.composite_field import CompositeField
 from readtheyaml.fields.field import Field
 from readtheyaml.fields.field_registery import FIELD_REGISTRY
@@ -11,6 +12,8 @@ from readtheyaml.fields.list_field import ListField
 from readtheyaml.fields.object_field import ObjectField
 from readtheyaml.fields.union_field import UnionField
 from readtheyaml.fields.tuple_field import TupleField
+from readtheyaml.utils.type_utils import import_type
+
 
 def build_field(definition: dict, name: str, base_schema_dir: str) -> Field:
     if "$ref" in definition:
@@ -123,6 +126,13 @@ def _parse_field_type(type_str: str) -> Field:
         return partial(UnionField, options=parsed_fields)
 
     constructor = FIELD_REGISTRY.get(type_str)
+
+    if not constructor:
+        try:
+            import_type(type_str)
+            constructor = partial(ObjectField, factory=_parse_field_type, class_path=type_str)
+        except ValidationError:
+            raise ValueError(f"Unknown field type: {type_str}")
 
     return constructor
 

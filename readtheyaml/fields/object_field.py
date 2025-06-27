@@ -5,7 +5,7 @@ from functools import partial
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.any_field import AnyField
 from readtheyaml.fields.field import Field
-from readtheyaml.utils.type_utils import type_to_string, get_params_and_defaults
+from readtheyaml.utils.type_utils import type_to_string, get_params_and_defaults, import_type
 
 
 class ObjectField(Field):
@@ -19,7 +19,7 @@ class ObjectField(Field):
 
         # Attempt to extract subfields from constructor type hints
         if class_path:
-            cls = self._import(class_path)
+            cls = import_type(class_path)
             self._build_subfields_from_type_hints(cls)
             # try:
             #     cls = self._import(class_path)
@@ -79,20 +79,10 @@ class ObjectField(Field):
 
     def _resolve_class(self, mapping):
         if self.class_path:
-            return self._import(self.class_path)
+            return import_type(self.class_path)
         if self._sentinel not in mapping:
             raise ValidationError(f"Field '{self.name}': Missing '{self._sentinel}' key to resolve object type")
-        return self._import(mapping[self._sentinel])
-
-    def _import(self, dotted_path):
-        module_path, _, class_name = dotted_path.rpartition(".")
-        if not module_path:
-            raise ValidationError(f"Field '{self.name}': Invalid class path '{dotted_path}': missing module")
-        try:
-            module = importlib.import_module(module_path)
-            return getattr(module, class_name)
-        except (ImportError, AttributeError) as e:
-            raise ValidationError(f"Field '{self.name}': Failed to import '{dotted_path}': {e}")
+        return import_type(mapping[self._sentinel])
 
     def _clear_sentinel(self, mapping):
         return {k: v for k, v in mapping.items() if k != self._sentinel}

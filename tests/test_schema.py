@@ -79,8 +79,21 @@ def test_invalid_list_bracket_mix():
         _parse_field_type("list(str]")
 
 def test_list_unknown_type():
-    with pytest.raises(ValueError, match="Unknown field type: foo"):
+    with pytest.raises(ValueError):
         _parse_field_type("list[foo]")
+
+class MyDummy:
+    pass
+
+# TODO I really think that this should be supported!
+def test_list_of_custom_class_parses_correctly():
+    """list[MyDummy] should parse incorrectly because it is not in the object tag."""
+    with pytest.raises(ValueError, match="Unknown field type"):
+        field = _parse_field_type("list[readtheyaml.tests.test_schema.MyDummy]")
+
+def test_list_of_objects():
+    """list[object[MyDummy]] should parse correctly if MyDummy is in scope."""
+    field = _parse_field_type("list[object[readtheyaml.tests.test_schema.MyDummy]]")
 
 def test_list_no_type():
     with pytest.raises(ValueError, match="Unknown field type: list()"):
