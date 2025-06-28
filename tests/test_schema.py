@@ -10,11 +10,14 @@ import pytest
 import sys
 
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+#
+# if project_root not in sys.path:
+#     sys.path.insert(0, project_root)
+#
+class MyDummy:
+    pass
 
 # base types
 def test_valid_none():
@@ -37,6 +40,18 @@ def test_valid_str():
     field = _parse_field_type("str")
     assert field.__name__ == "StringField"
 
+def test_valid_direct_object():
+    # At this stage we don't care if the type is not valid. It should be raised by the factory.
+    # Now we are only parsing.
+    field = _parse_field_type("tests.test_schema.MyDummy")
+    assert field.func.__name__ == "ObjectField"
+
+def test_valid_object():
+    # At this stage we don't care if the type is not valid. It should be raised by the factory.
+    # Now we are only parsing.
+    field = _parse_field_type("object[tests.test_schema.MyDummy]")
+    assert field.func.__name__ == "ObjectField"
+
 # Union
 def test_valid_union_int_str_pipe():
     field = _parse_field_type("int | str")
@@ -44,6 +59,14 @@ def test_valid_union_int_str_pipe():
 
 def test_valid_union_int_str_fct_round_bracket():
     field = _parse_field_type("union(int, str)")
+    assert field.func.__name__ == "UnionField"
+
+def test_valid_union_int_direct_object():
+    field = _parse_field_type("union(int, tests.test_schema.MyDummy)")
+    assert field.func.__name__ == "UnionField"
+
+def test_valid_union_int_object():
+    field = _parse_field_type("union(int, object[tests.test_schema.MyDummy])")
     assert field.func.__name__ == "UnionField"
 
 def test_valid_union_int_str_fct_square_bracket():
@@ -88,13 +111,6 @@ def test_invalid_list_bracket_mix():
     with pytest.raises(ValueError, match="Mismatched brackets"):
         _parse_field_type("list(str]")
 
-def test_list_unknown_type():
-    with pytest.raises(ValueError):
-        _parse_field_type("list[foo]")
-
-class MyDummy:
-    pass
-
 def test_list_of_custom_class_parses_correctly():
     """list[MyDummy] should parse incorrectly because it is not in the object tag."""
     field = _parse_field_type("list[tests.test_schema.MyDummy]")
@@ -104,7 +120,7 @@ def test_list_of_objects():
     field = _parse_field_type("list[object[readtheyaml.tests.test_schema.MyDummy]]")
 
 def test_list_no_type():
-    with pytest.raises(ValueError, match="Unknown field type: list()"):
+    with pytest.raises(ValueError, match="Unknown field type"):
         field = _parse_field_type("list()")
 
 def test_list_two_type():
@@ -130,10 +146,6 @@ def test_invalid_tuple_bracket_mix():
 
     with pytest.raises(ValueError, match="Mismatched brackets"):
         _parse_field_type("tuple(int, str]")
-
-def test_tuple_unknown_type():
-    with pytest.raises(ValueError, match="Unknown field type: foo"):
-        _parse_field_type("tuple[foo, str]")
 
 # -------------------
 # Tests Objects

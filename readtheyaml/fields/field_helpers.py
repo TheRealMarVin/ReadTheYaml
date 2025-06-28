@@ -68,7 +68,7 @@ def get_reserved_keywords_by_loaded_fields():
     return reserved_by_class
 
 def _extract_types_for_composite(type_str: str, type_name: str) -> str | None:
-    match = re.fullmatch(rf"{re.escape(type_name)}([\[\(])(.+)([\]\)])", type_str)
+    match = re.fullmatch(rf"{re.escape(type_name)}([\[\(])(.*)([\]\)])", type_str)
     if not match:
         return None  # Not a match at all
 
@@ -78,16 +78,20 @@ def _extract_types_for_composite(type_str: str, type_name: str) -> str | None:
 
     return inner
 
+
 def _parse_field_type(type_str: str) -> Field:
     type_str = type_str.strip()
 
+    if len(type_str) == 0:
+        raise ValueError(f"Unknown field type: Empty")
+
     object_inner = _extract_types_for_composite(type_str=type_str, type_name="object")
-    if object_inner:
+    if object_inner is not None:
         # For object[type] syntax, use the inner type as class_path
         return partial(ObjectField, factory=_parse_field_type, class_path=object_inner)
 
     tuple_inner = _extract_types_for_composite(type_str=type_str, type_name="tuple")
-    if tuple_inner:
+    if tuple_inner is not None:
         element_specs = _split_top_level(tuple_inner, ',')
         element_fields = []
         for spec in element_specs:
@@ -98,7 +102,7 @@ def _parse_field_type(type_str: str) -> Field:
         return partial(TupleField, element_fields=element_fields)
 
     list_inner = _extract_types_for_composite(type_str=type_str, type_name="list")
-    if list_inner:
+    if list_inner is not None:
         constructor = _parse_field_type(list_inner)
         if constructor is None:
             raise ValueError(f"Unknown item type in list: {list_inner}")
