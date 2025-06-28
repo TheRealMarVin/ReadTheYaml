@@ -5,7 +5,6 @@ from functools import partial
 import yaml
 
 from readtheyaml.exceptions.validation_error import ValidationError
-from readtheyaml.fields.composite.composite_field import CompositeField
 from readtheyaml.fields.field import Field
 from readtheyaml.fields.field_registery import FIELD_REGISTRY
 from readtheyaml.fields.composite.list_field import ListField
@@ -25,16 +24,7 @@ def build_field(definition: dict, name: str, base_schema_dir: str) -> Field:
     if "type" in definition:
         return build_terminal_field(definition, name)
 
-    return CompositeField(
-        name=name,
-        required=definition.get("required", True),
-        description=definition.get("description", ""),
-        fields={
-            key: build_field(key, val, base_schema_dir)
-            for key, val in definition.items()
-            if key not in {"required", "description"}
-        }
-    )
+    raise ValueError(f"Unknown type: {name}")
 
 def build_terminal_field(definition: dict, name: str):
     current_type = definition["type"]
