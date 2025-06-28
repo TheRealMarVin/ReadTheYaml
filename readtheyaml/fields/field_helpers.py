@@ -2,8 +2,6 @@ import inspect
 import re
 from functools import partial
 
-import yaml
-
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
 from readtheyaml.fields.field_registery import FIELD_REGISTRY
@@ -15,22 +13,11 @@ from readtheyaml.utils.type_utils import import_type
 
 
 def build_field(definition: dict, name: str, base_schema_dir: str) -> Field:
-    if "$ref" in definition:
-        ref_path = base_schema_dir / definition["$ref"]
-        with open(ref_path) as f:
-            ref_data = yaml.safe_load(f)
-        definition = {**ref_data, **{k: v for k, v in definition.items() if k != "$ref"}}
+    if "type" not in definition:
+        raise ValueError(f"Field with no type: {name}")
 
-    if "type" in definition:
-        return build_terminal_field(definition, name)
-
-    raise ValueError(f"Unknown type: {name}")
-
-def build_terminal_field(definition: dict, name: str):
     current_type = definition["type"]
     constructor = _parse_field_type(current_type)
-    if constructor is None:
-        raise ValueError(f"Unknown element type: {current_type}")
     field = constructor(name=name, **definition)
     return field
 
@@ -40,10 +27,9 @@ def get_reserved_keywords_by_loaded_fields():
     for cls in Field.__subclasses__():
         keywords = set()
 
-        # Traverse the method resolution order (MRO)
         for base in inspect.getmro(cls):
             if not issubclass(base, Field):
-                break  # don't go past the base Field class
+                break
 
             try:
                 sig = inspect.signature(base.__init__)
@@ -86,16 +72,12 @@ def _parse_field_type(type_str: str) -> Field:
         element_fields = []
         for spec in element_specs:
             constructor = _parse_field_type(spec)
-            if constructor is None:
-                raise ValueError(f"Unknown element type in tuple: {spec}")
             element_fields.append(constructor)
         return partial(TupleField, element_fields=element_fields)
 
     list_inner = _extract_types_for_composite(type_str=type_str, type_name="list")
     if list_inner is not None:
         constructor = _parse_field_type(list_inner)
-        if constructor is None:
-            raise ValueError(f"Unknown item type in list: {list_inner}")
         return partial(ListField, item_field=constructor)
 
     if '|' in type_str:
@@ -103,8 +85,6 @@ def _parse_field_type(type_str: str) -> Field:
         parsed_fields = []
         for part in parts:
             constructor = _parse_field_type(part)
-            if constructor is None:
-                raise ValueError(f"Unknown field type in union: {part}")
             parsed_fields.append(constructor)
         return partial(UnionField, options=parsed_fields)
 
@@ -114,8 +94,6 @@ def _parse_field_type(type_str: str) -> Field:
         parsed_fields = []
         for part in parts:
             constructor = _parse_field_type(part)
-            if constructor is None:
-                raise ValueError(f"Unknown field type in union: {part}")
             parsed_fields.append(constructor)
         return partial(UnionField, options=parsed_fields)
 
@@ -129,7 +107,6 @@ def _parse_field_type(type_str: str) -> Field:
             raise ValueError(f"Unknown field type: {type_str}")
 
     return constructor
-
 
 def _split_top_level(s: str, sep: str) -> list[str]:
     parts, depth, last = [], 0, 0
