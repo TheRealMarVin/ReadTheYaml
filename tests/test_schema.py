@@ -40,18 +40,6 @@ def test_valid_str():
     field = _parse_field_type("str")
     assert field.__name__ == "StringField"
 
-def test_valid_direct_object():
-    # At this stage we don't care if the type is not valid. It should be raised by the factory.
-    # Now we are only parsing.
-    field = _parse_field_type("tests.test_schema.MyDummy")
-    assert field.func.__name__ == "ObjectField"
-
-def test_valid_object():
-    # At this stage we don't care if the type is not valid. It should be raised by the factory.
-    # Now we are only parsing.
-    field = _parse_field_type("object[tests.test_schema.MyDummy]")
-    assert field.func.__name__ == "ObjectField"
-
 # Union
 def test_valid_union_int_str_pipe():
     field = _parse_field_type("int | str")
@@ -136,8 +124,26 @@ def test_valid_tuple_square_brackets():
     field = _parse_field_type("tuple[int, str]")
     assert field.func.__name__ == "TupleField"
 
+def test_valid_tuple_direct_object_square_brackets():
+    field = _parse_field_type("tuple[int, tests.test_schema.MyDummy]")
+    assert field.func.__name__ == "TupleField"
+
+def test_valid_tuple_object_square_brackets():
+    field = _parse_field_type("tuple[int, object[tests.test_schema.MyDummy]]")
+    assert field.func.__name__ == "TupleField"
+
 def test_valid_tuple_round_brackets():
     field = _parse_field_type("tuple(int, str)")
+    assert field.func.__name__ == "TupleField"
+
+
+def test_valid_tuple_direct_object_round_brackets():
+    field = _parse_field_type("tuple(int, tests.test_schema.MyDummy)")
+    assert field.func.__name__ == "TupleField"
+
+
+def test_valid_tuple_object_round_brackets():
+    field = _parse_field_type("tuple(int, object[tests.test_schema.MyDummy])")
     assert field.func.__name__ == "TupleField"
 
 def test_invalid_tuple_bracket_mix():
@@ -150,8 +156,30 @@ def test_invalid_tuple_bracket_mix():
 # -------------------
 # Tests Objects
 # -------------------
-def test_valid_object_int_square_brackets():
+def test_valid_any_object_square_brackets():
     field = _parse_field_type("object[*]")
+    assert field.func.__name__ == "ObjectField"
+
+def test_valid_any_object_round_brackets():
+    field = _parse_field_type("object(*)")
+    assert field.func.__name__ == "ObjectField"
+
+def test_valid_direct_object():
+    # At this stage we don't care if the type is not valid. It should be raised by the factory.
+    # Now we are only parsing.
+    field = _parse_field_type("tests.test_schema.MyDummy")
+    assert field.func.__name__ == "ObjectField"
+
+def test_valid_object_square_brackets():
+    # At this stage we don't care if the type is not valid. It should be raised by the factory.
+    # Now we are only parsing.
+    field = _parse_field_type("object[tests.test_schema.MyDummy]")
+    assert field.func.__name__ == "ObjectField"
+
+def test_valid_object_round_brackets():
+    # At this stage we don't care if the type is not valid. It should be raised by the factory.
+    # Now we are only parsing.
+    field = _parse_field_type("object(tests.test_schema.MyDummy)")
     assert field.func.__name__ == "ObjectField"
 
 # -------------------
