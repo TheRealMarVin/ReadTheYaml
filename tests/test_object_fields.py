@@ -1,8 +1,7 @@
 import pytest
-import types
 
 from readtheyaml.fields.field_helpers import _parse_field_type
-from readtheyaml.fields.object_field import ObjectField
+from readtheyaml.fields.base.object_field import ObjectField
 from readtheyaml.exceptions.validation_error import ValidationError
 
 

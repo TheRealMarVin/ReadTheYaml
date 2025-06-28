@@ -4,12 +4,12 @@ import pytest
 
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
-from readtheyaml.fields.list_field import ListField
-from readtheyaml.fields.numerical_field import NumericalField
-from readtheyaml.fields.string_field import StringField
-from readtheyaml.fields.bool_field import BoolField
-from readtheyaml.fields.tuple_field import TupleField
-from readtheyaml.fields.union_field import UnionField
+from readtheyaml.fields.composite.list_field import ListField
+from readtheyaml.fields.base.numerical_field import NumericalField
+from readtheyaml.fields.base.string_field import StringField
+from readtheyaml.fields.base.bool_field import BoolField
+from readtheyaml.fields.composite.tuple_field import TupleField
+from readtheyaml.fields.composite.union_field import UnionField
 
 
 # -------------------

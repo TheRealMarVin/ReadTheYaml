@@ -1,7 +1,7 @@
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
-from readtheyaml.fields.string_field import StringField
+from readtheyaml.fields.base.string_field import StringField
 
 
 class UnionField(Field):

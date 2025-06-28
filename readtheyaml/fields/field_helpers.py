@@ -5,13 +5,13 @@ from functools import partial
 import yaml
 
 from readtheyaml.exceptions.validation_error import ValidationError
-from readtheyaml.fields.composite_field import CompositeField
+from readtheyaml.fields.composite.composite_field import CompositeField
 from readtheyaml.fields.field import Field
 from readtheyaml.fields.field_registery import FIELD_REGISTRY
-from readtheyaml.fields.list_field import ListField
-from readtheyaml.fields.object_field import ObjectField
-from readtheyaml.fields.union_field import UnionField
-from readtheyaml.fields.tuple_field import TupleField
+from readtheyaml.fields.composite.list_field import ListField
+from readtheyaml.fields.base.object_field import ObjectField
+from readtheyaml.fields.composite.union_field import UnionField
+from readtheyaml.fields.composite.tuple_field import TupleField
 from readtheyaml.utils.type_utils import import_type
 
 

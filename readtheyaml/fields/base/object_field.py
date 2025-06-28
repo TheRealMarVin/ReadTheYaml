@@ -1,9 +1,8 @@
-import importlib
 import inspect
 from functools import partial
 
 from readtheyaml.exceptions.validation_error import ValidationError
-from readtheyaml.fields.any_field import AnyField
+from readtheyaml.fields.base.any_field import AnyField
 from readtheyaml.fields.field import Field
 from readtheyaml.utils.type_utils import type_to_string, get_params_and_defaults, import_type
 
