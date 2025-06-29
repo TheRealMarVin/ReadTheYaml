@@ -7,3 +7,7 @@ class AnyField(Field):
 
     def validate_and_build(self, value):
         return value
+
+    @staticmethod
+    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+        return AnyField

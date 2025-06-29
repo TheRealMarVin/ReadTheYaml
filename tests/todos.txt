@@ -1,1 +1,3 @@
-test object type
+test enum fields
+test factory
+test helpers public

@@ -14,3 +14,7 @@ class EnumField(Field):
         if value not in self.choices:
             raise ValidationError(f"Field '{self.name}': Invalid value '{value}', expected one of: {self.choices}")
         return value
+
+    @staticmethod
+    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+        return None

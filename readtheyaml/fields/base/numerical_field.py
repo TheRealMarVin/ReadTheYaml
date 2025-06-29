@@ -1,3 +1,5 @@
+from functools import partial
+
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
@@ -39,3 +41,12 @@ class NumericalField(Field):
             raise ValidationError(f"Field '{self.name}': Value must be at most {self.max_value}.")
 
         return value
+
+    @staticmethod
+    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+        if type_str == "int":
+            return partial(NumericalField, int)
+        elif type_str == "float":
+            return partial(NumericalField, float)
+
+        return None

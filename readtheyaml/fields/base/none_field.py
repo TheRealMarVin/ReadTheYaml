@@ -1,3 +1,5 @@
+from functools import partial
+
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
 
@@ -11,3 +13,10 @@ class NoneField(Field):
             return None
 
         raise ValidationError(f"Field '{self.name}': must be null/None")
+
+    @staticmethod
+    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+        if type_str == "None":
+            return NoneField
+
+        return None

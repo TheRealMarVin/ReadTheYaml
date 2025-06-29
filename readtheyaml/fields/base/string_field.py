@@ -25,7 +25,6 @@ class StringField(Field):
             raise FormatError(f"Field '{self.name}': max_length {max_length} smaller than min_length {min_length}")
 
     def validate_and_build(self, value):
-        # Convert to string if casting is enabled
         if self.cast_to_string:
             try:
                 value = str(value)
@@ -36,10 +35,16 @@ class StringField(Field):
         elif not isinstance(value, str):
             raise ValidationError(f"Field '{self.name}': Expected string, got {type(value).__name__}")
 
-        # Check string constraints
         if len(value) < self.min_length:
             raise ValidationError(f"Field '{self.name}': Value must be at least {self.min_length} characters")
 
         if 0 < self.max_length < len(value):
             raise ValidationError(f"Field '{self.name}': Value must be at most {self.max_length} characters")
         return value
+
+    @staticmethod
+    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+        if type_str == "str":
+            return StringField
+
+        return None

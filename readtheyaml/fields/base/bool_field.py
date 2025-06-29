@@ -19,3 +19,10 @@ class BoolField(Field):
                 raise ValidationError(f"Field '{self.name}': Expected a boolean value, got {type(value).__name__}")
 
         return value
+
+    @staticmethod
+    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+        if type_str == "bool":
+            return BoolField
+
+        return None

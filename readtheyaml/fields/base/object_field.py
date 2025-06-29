@@ -4,7 +4,8 @@ from functools import partial
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.base.any_field import AnyField
 from readtheyaml.fields.field import Field
-from readtheyaml.utils.type_utils import type_to_string, get_params_and_defaults, import_type
+from readtheyaml.utils.type_utils import type_to_string, get_params_and_defaults, import_type, \
+    _extract_types_for_composite
 
 
 class ObjectField(Field):
@@ -16,15 +17,9 @@ class ObjectField(Field):
         self.factory = factory
         self.subfields = {}
 
-        # Attempt to extract subfields from constructor type hints
         if class_path:
             cls = import_type(class_path)
             self._build_subfields_from_type_hints(cls)
-            # try:
-            #     cls = self._import(class_path)
-            #     self._build_subfields_from_type_hints(cls)
-            # except Exception:
-            #     pass  # we ignore failure at schema time — validation will catch it
 
     def _build_subfields_from_type_hints(self, cls):
         try:
@@ -99,3 +94,17 @@ class ObjectField(Field):
             return any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
         except Exception:
             return False
+
+    @staticmethod
+    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+        object_type = _extract_types_for_composite(type_str=type_str, type_name="object")
+        if object_type is not None:
+            return partial(ObjectField, factory=factory, class_path=object_type)
+        else:
+            try:
+                import_type(type_str)
+                return partial(ObjectField, factory=factory, class_path=type_str)
+            except ValidationError:
+                pass # ok to do nothing
+
+        return None

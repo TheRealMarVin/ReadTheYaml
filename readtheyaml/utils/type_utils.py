@@ -1,5 +1,6 @@
 import importlib
 import inspect
+import re
 import types
 import typing
 
@@ -61,3 +62,25 @@ def import_type(dotted_path):
         return getattr(module, class_name)
     except (ImportError, AttributeError) as e:
         raise ValidationError(f"Failed to import '{dotted_path}': {e}")
+
+def _extract_types_for_composite(type_str: str, type_name: str) -> str | None:
+    match = re.fullmatch(rf"{re.escape(type_name)}([\[\(])(.*)([\]\)])", type_str)
+    if not match:
+        return None
+
+    opening, inner, closing = match.groups()
+    if (opening == "[" and closing != "]") or (opening == "(" and closing != ")"):
+        raise ValueError(f"Mismatched brackets in type: {type_str}")
+
+    return inner
+
+def _split_top_level(s: str, sep: str) -> list[str]:
+    parts, depth, last = [], 0, 0
+    for i, ch in enumerate(s):
+        if ch in "([":   depth += 1
+        elif ch in ")]": depth -= 1
+        elif ch == sep and depth == 0:
+            parts.append(s[last:i].strip())
+            last = i + 1
+    parts.append(s[last:].strip())
+    return parts
