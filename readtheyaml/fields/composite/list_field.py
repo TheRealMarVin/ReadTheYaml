@@ -6,7 +6,7 @@ from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
 from readtheyaml.fields.field_validation_helpers import find_and_validate_bounds, get_target_class
-from readtheyaml.utils.type_utils import _extract_types_for_composite
+from readtheyaml.utils.type_utils import extract_types_for_composite
 
 
 class ListField(Field):
@@ -50,7 +50,7 @@ class ListField(Field):
 
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
-        list_type = _extract_types_for_composite(type_str=type_str, type_name="list")
+        list_type = extract_types_for_composite(type_str=type_str, type_name="list")
         if list_type is not None:
             constructor = factory.create_field(list_type, name, **kwargs)
             return partial(ListField, item_field=constructor)

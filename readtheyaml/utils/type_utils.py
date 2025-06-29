@@ -63,7 +63,7 @@ def import_type(dotted_path):
     except (ImportError, AttributeError) as e:
         raise ValidationError(f"Failed to import '{dotted_path}': {e}")
 
-def _extract_types_for_composite(type_str: str, type_name: str) -> str | None:
+def extract_types_for_composite(type_str: str, type_name: str) -> str | None:
     match = re.fullmatch(rf"{re.escape(type_name)}([\[\(])(.*)([\]\)])", type_str)
     if not match:
         return None
@@ -74,7 +74,7 @@ def _extract_types_for_composite(type_str: str, type_name: str) -> str | None:
 
     return inner
 
-def _split_top_level(s: str, sep: str) -> list[str]:
+def split_top_level(s: str, sep: str) -> list[str]:
     parts, depth, last = [], 0, 0
     for i, ch in enumerate(s):
         if ch in "([":   depth += 1

@@ -4,7 +4,7 @@ from typing import Sequence
 
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
-from readtheyaml.utils.type_utils import _extract_types_for_composite, _split_top_level
+from readtheyaml.utils.type_utils import extract_types_for_composite, split_top_level
 
 
 class TupleField(Field):
@@ -43,9 +43,9 @@ class TupleField(Field):
 
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
-        tuple_inner = _extract_types_for_composite(type_str=type_str, type_name="tuple")
+        tuple_inner = extract_types_for_composite(type_str=type_str, type_name="tuple")
         if tuple_inner is not None:
-            element_specs = _split_top_level(tuple_inner, ',')
+            element_specs = split_top_level(tuple_inner, ',')
             element_fields = []
             for element in element_specs:
                 constructor = factory.create_field(element, name, **kwargs)

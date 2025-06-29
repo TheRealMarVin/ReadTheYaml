@@ -4,7 +4,7 @@ from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
 from readtheyaml.fields.base.string_field import StringField
-from readtheyaml.utils.type_utils import _extract_types_for_composite, _split_top_level
+from readtheyaml.utils.type_utils import extract_types_for_composite, split_top_level
 
 
 class UnionField(Field):
@@ -61,16 +61,16 @@ class UnionField(Field):
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
         if '|' in type_str:
-            parts = _split_top_level(type_str, '|')
+            parts = split_top_level(type_str, '|')
             parsed_fields = []
             for part in parts:
                 constructor = factory.create_field(part, name, **kwargs)
                 parsed_fields.append(constructor)
             return partial(UnionField, options=parsed_fields)
 
-        union_inner = _extract_types_for_composite(type_str=type_str, type_name="union")
+        union_inner = extract_types_for_composite(type_str=type_str, type_name="union")
         if union_inner:
-            parts = _split_top_level(union_inner, ',')
+            parts = split_top_level(union_inner, ',')
             parsed_fields = []
             for part in parts:
                 constructor = factory.create_field(part, name, **kwargs)

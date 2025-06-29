@@ -8,7 +8,7 @@ from readtheyaml.fields.composite.list_field import ListField
 from readtheyaml.fields.base.object_field import ObjectField
 from readtheyaml.fields.composite.union_field import UnionField
 from readtheyaml.fields.composite.tuple_field import TupleField
-from readtheyaml.utils.type_utils import import_type, _extract_types_for_composite, _split_top_level
+from readtheyaml.utils.type_utils import import_type, extract_types_for_composite, split_top_level
 
 
 def build_field(definition: dict, name: str, base_schema_dir: str) -> Field:
@@ -49,35 +49,35 @@ def _parse_field_type(type_str: str) -> Field:
     if len(type_str) == 0:
         raise ValueError(f"Unknown field type: Empty")
 
-    object_inner = _extract_types_for_composite(type_str=type_str, type_name="object")
+    object_inner = extract_types_for_composite(type_str=type_str, type_name="object")
     if object_inner is not None:
         return partial(ObjectField, factory=_parse_field_type, class_path=object_inner)
 
-    tuple_inner = _extract_types_for_composite(type_str=type_str, type_name="tuple")
+    tuple_inner = extract_types_for_composite(type_str=type_str, type_name="tuple")
     if tuple_inner is not None:
-        element_specs = _split_top_level(tuple_inner, ',')
+        element_specs = split_top_level(tuple_inner, ',')
         element_fields = []
         for spec in element_specs:
             constructor = _parse_field_type(spec)
             element_fields.append(constructor)
         return partial(TupleField, element_fields=element_fields)
 
-    list_inner = _extract_types_for_composite(type_str=type_str, type_name="list")
+    list_inner = extract_types_for_composite(type_str=type_str, type_name="list")
     if list_inner is not None:
         constructor = _parse_field_type(list_inner)
         return partial(ListField, item_field=constructor)
 
     if '|' in type_str:
-        parts = _split_top_level(type_str, '|')
+        parts = split_top_level(type_str, '|')
         parsed_fields = []
         for part in parts:
             constructor = _parse_field_type(part)
             parsed_fields.append(constructor)
         return partial(UnionField, options=parsed_fields)
 
-    union_inner = _extract_types_for_composite(type_str=type_str, type_name="union")
+    union_inner = extract_types_for_composite(type_str=type_str, type_name="union")
     if union_inner:
-        parts = _split_top_level(union_inner, ',')
+        parts = split_top_level(union_inner, ',')
         parsed_fields = []
         for part in parts:
             constructor = _parse_field_type(part)
