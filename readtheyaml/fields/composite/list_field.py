@@ -1,3 +1,4 @@
+import copy
 import inspect
 from functools import partial
 from typing import Optional
@@ -20,9 +21,8 @@ class ListField(Field):
     ):
         sig = inspect.signature(get_target_class(item_field).__init__)
         super().__init__(additional_allowed_kwargs=set(sig.parameters), **kwargs)
-        if "ignore_post" not in kwargs:
-            kwargs["ignore_post"] = True
-        self.item_field = item_field(**kwargs)
+
+        self.item_field = item_field
 
         try:
             self.min_length, self.max_length = find_and_validate_bounds(length_range, min_length, max_length)
@@ -52,7 +52,10 @@ class ListField(Field):
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
         list_type = extract_types_for_composite(type_str=type_str, type_name="list")
         if list_type is not None:
-            constructor = factory.create_field(list_type, name, **kwargs)
-            return partial(ListField, item_field=constructor)
+            args_copy = copy.deepcopy(kwargs)
+            args_copy["ignore_post"] = True
+
+            constructor = factory.create_field(list_type, name, **args_copy)
+            return ListField(name=name, item_field=constructor, **kwargs)
 
         return None

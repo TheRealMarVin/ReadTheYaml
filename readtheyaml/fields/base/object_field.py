@@ -99,11 +99,11 @@ class ObjectField(Field):
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
         object_type = extract_types_for_composite(type_str=type_str, type_name="object")
         if object_type is not None:
-            return partial(ObjectField, factory=factory, class_path=object_type)
+            return ObjectField(name=name, factory=factory, class_path=object_type, **kwargs)
         else:
             try:
                 import_type(type_str)
-                return partial(ObjectField, factory=factory, class_path=type_str)
+                return ObjectField(name=name, factory=factory, class_path=type_str, **kwargs)
             except ValidationError:
                 pass # ok to do nothing
 

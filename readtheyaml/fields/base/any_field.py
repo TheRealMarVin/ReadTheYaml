@@ -10,4 +10,4 @@ class AnyField(Field):
 
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
-        return AnyField
+        return AnyField(name=name, **kwargs)

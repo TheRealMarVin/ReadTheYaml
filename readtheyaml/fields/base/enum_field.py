@@ -18,6 +18,6 @@ class EnumField(Field):
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
         if type_str == "enum":
-            return EnumField
+            return EnumField(name=name, **kwargs)
 
         return None

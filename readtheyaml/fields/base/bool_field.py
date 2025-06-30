@@ -23,6 +23,6 @@ class BoolField(Field):
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
         if type_str == "bool":
-            return BoolField
+            return BoolField(name=name, **kwargs)
 
         return None

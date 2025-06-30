@@ -1,3 +1,4 @@
+import copy
 from functools import partial
 
 from readtheyaml.exceptions.format_error import FormatError
@@ -10,18 +11,14 @@ from readtheyaml.utils.type_utils import extract_types_for_composite, split_top_
 class UnionField(Field):
     def __init__(self, options: list[Field], **kwargs):
         super().__init__(**kwargs)
-        if "ignore_post" not in kwargs:
-            kwargs["ignore_post"] = True
 
         # Check for duplicate field types and validate StringField casting
         field_types = []
         for option in options:
-            # Get the actual class from the partial object
-            field_class = option.func if hasattr(option, 'func') else option
-            field_types.append(field_class.__name__)
+            field_types.append(option.__class__)
 
             # Check if this is a StringField and if cast_to_string is True in either the partial or the kwargs
-            if field_class is StringField:
+            if option is StringField:
                 # Get cast_to_string from partial args if it exists, otherwise use True as default
                 partial_args = getattr(option, "keywords", {})
                 cast_to_string = partial_args.get("cast_to_string", False) or kwargs.get("cast_to_string", False)
@@ -45,7 +42,7 @@ class UnionField(Field):
                 "Each field type should appear only once."
             )
 
-        self._options = [curr_option(**kwargs) for curr_option in options]
+        self._options = options
 
     def validate_and_build(self, value):
         errors = []
@@ -60,21 +57,29 @@ class UnionField(Field):
 
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+        # TODO content of the if are the same
         if '|' in type_str:
             parts = split_top_level(type_str, '|')
             parsed_fields = []
+
+            args_copy = copy.deepcopy(kwargs)
+            args_copy["ignore_post"] = True
             for part in parts:
-                constructor = factory.create_field(part, name, **kwargs)
+                constructor = factory.create_field(part, name, **args_copy)
                 parsed_fields.append(constructor)
-            return partial(UnionField, options=parsed_fields)
+            return UnionField(name=name, options=parsed_fields, **kwargs)
 
         union_inner = extract_types_for_composite(type_str=type_str, type_name="union")
         if union_inner:
             parts = split_top_level(union_inner, ',')
             parsed_fields = []
+
+            args_copy = copy.deepcopy(kwargs)
+            args_copy["ignore_post"] = True
+
             for part in parts:
-                constructor = factory.create_field(part, name, **kwargs)
+                constructor = factory.create_field(part, name, **args_copy)
                 parsed_fields.append(constructor)
-            return partial(UnionField, options=parsed_fields)
+            return UnionField(name=name, options=parsed_fields, **kwargs)
 
         return None

@@ -45,8 +45,9 @@ class NumericalField(Field):
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
         if type_str == "int":
-            return partial(NumericalField, int)
+            return NumericalField(name=name, value_type=int, **kwargs)
         elif type_str == "float":
-            return partial(NumericalField, float)
+            return NumericalField(name=name, value_type=float, **kwargs)
+
 
         return None

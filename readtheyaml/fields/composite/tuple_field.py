@@ -1,4 +1,5 @@
 import ast
+import copy
 from functools import partial
 from typing import Sequence
 
@@ -10,9 +11,8 @@ from readtheyaml.utils.type_utils import extract_types_for_composite, split_top_
 class TupleField(Field):
     def __init__(self, element_fields: Sequence[Field], **kwargs):
         super().__init__(**kwargs)
-        if "ignore_post" not in kwargs:
-            kwargs["ignore_post"] = True
-        self._slots = tuple([curr_field(**kwargs) for curr_field in element_fields])
+
+        self._slots = element_fields
 
     def validate_and_build(self, value):
         if value is None:
@@ -46,10 +46,14 @@ class TupleField(Field):
         tuple_inner = extract_types_for_composite(type_str=type_str, type_name="tuple")
         if tuple_inner is not None:
             element_specs = split_top_level(tuple_inner, ',')
+
+            args_copy = copy.deepcopy(kwargs)
+            args_copy["ignore_post"] = True
+
             element_fields = []
             for element in element_specs:
-                constructor = factory.create_field(element, name, **kwargs)
+                constructor = factory.create_field(element, name, **args_copy)
                 element_fields.append(constructor)
-            return partial(TupleField, element_fields=element_fields)
+            return TupleField(name=name, element_fields=element_fields, **kwargs)
 
         return None

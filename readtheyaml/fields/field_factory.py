@@ -15,9 +15,11 @@ class FieldFactory:
                          ListField, TupleField, UnionField]
 
     def create_field(self, type_str: str, name: str, **kwargs):
-        for builder in self._builders:
+        for builder in self.builders:
             field = builder.from_type_string(type_str, name, self, **kwargs)
             if field:
-                return builder(type_str, self)
+                return field
 
         raise ValueError(f"Unknown field type: {type_str}")
+
+FIELD_FACTORY = FieldFactory()

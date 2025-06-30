@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional, Union
 from .exceptions.format_error import FormatError
 from .exceptions.validation_error import ValidationError
 from .fields.field import Field
+from .fields.field_factory import FIELD_FACTORY
 from .fields.field_helpers import build_field, get_reserved_keywords_by_loaded_fields
 
 class Schema:
@@ -122,7 +123,9 @@ class Schema:
                             f"The field name '{key}' is reserved by one or more Field classes (e.g., used as constructor argument). Please choose a different name.")
 
                     try:
-                        fields[key] = build_field(value, key, base_schema_dir)
+                        type_str = value["type"]
+                        fields[key] = FIELD_FACTORY.create_field(type_str, key, **value)
+                        # fields[key] = build_field(value, key, base_schema_dir)
                     except Exception as e:
                         raise ValidationError(f"Failed to build field '{key}': {e}")
                 elif "$ref" in value:
