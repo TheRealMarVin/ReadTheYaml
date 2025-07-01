@@ -2,7 +2,6 @@ import pytest
 import yaml
 
 from readtheyaml.data_instance import DataInstance
-from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.schema import Schema
 
