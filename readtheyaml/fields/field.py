@@ -34,7 +34,7 @@ class Field(metaclass=PostInitMeta):
     def post_init(self):
         if not self.required and not self.ignore_post:
             try:
-                self.validate_and_build(self.default)
+                self.default = self.validate_and_build(self.default)
             except ValidationError as e:
                 raise FormatError(f"Field {self.name} got invalid default value: {e}") from None
 
