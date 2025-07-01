@@ -22,7 +22,7 @@ class BoolField(Field):
 
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
-        if type_str == "bool":
+        if type_str in {"Bool", "bool", "BOOL"}:
             return BoolField(name=name, **kwargs)
 
         return None
