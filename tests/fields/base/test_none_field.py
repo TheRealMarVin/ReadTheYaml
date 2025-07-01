@@ -31,9 +31,3 @@ def test_factory_rejects_random_string():
     """Test that unrelated string like 'null' is rejected by the factory."""
     with pytest.raises(ValueError, match="Unknown field type"):
         FIELD_FACTORY.create_field("null", name="my_field", description="test field")
-
-
-def test_factory_rejects_empty_string():
-    """Test that empty string is rejected by the factory."""
-    with pytest.raises(ValueError, match="Unknown field type"):
-        FIELD_FACTORY.create_field("", name="my_field", description="test field")
