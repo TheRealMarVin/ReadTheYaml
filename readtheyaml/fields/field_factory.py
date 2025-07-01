@@ -11,8 +11,8 @@ from readtheyaml.fields.composite.union_field import UnionField
 
 class FieldFactory:
     def __init__(self):
-        self.builders = [BoolField, EnumField, NoneField, NumericalField, ObjectField, StringField,
-                         ListField, TupleField, UnionField]
+        self.builders = [BoolField, EnumField, NoneField, NumericalField, StringField,
+                         ListField, TupleField, UnionField, ObjectField]
 
     def create_field(self, type_str: str, name: str, **kwargs):
         for builder in self.builders:
