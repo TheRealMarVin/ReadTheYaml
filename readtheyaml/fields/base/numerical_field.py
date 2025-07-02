@@ -44,9 +44,9 @@ class NumericalField(Field):
 
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
-        if type_str == "int":
+        if type_str in {"int", "Int", "INT"}:
             return NumericalField(name=name, value_type=int, **kwargs)
-        elif type_str == "float":
+        elif type_str in {"float", "Float", "FLOAT"}:
             return NumericalField(name=name, value_type=float, **kwargs)
 
 
