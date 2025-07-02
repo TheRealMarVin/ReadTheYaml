@@ -44,7 +44,7 @@ class StringField(Field):
 
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
-        if type_str == "str":
+        if type_str in {"str", "Str", "STR"}:
             return StringField(name=name, **kwargs)
 
         return None
