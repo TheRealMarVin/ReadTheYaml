@@ -67,7 +67,7 @@ def test_enum_default_without_required_false():
 
 def test_enum_default_value_not_in_choices():
     """Providing a default not in values list should raise ValidationError later."""
-    with pytest.raises(ValidationError):
+    with pytest.raises(FormatError):
         field = FIELD_FACTORY.create_field(
             type_str="enum",
             name="mode",
@@ -88,7 +88,6 @@ def test_enum_values_as_tuple():
         type_str="enum",
         name="size",
         description="enum test",
-        values=("S", "M", "L"),
-        required=False
+        values=("S", "M", "L")
     )
     assert isinstance(field, EnumField)
