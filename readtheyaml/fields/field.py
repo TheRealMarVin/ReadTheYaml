@@ -1,12 +1,10 @@
-from pygments.lexer import default
-
+from functools import partial
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 
 
 class PostInitMeta(type):
     def __call__(cls, *args, **kwargs):
-        # This runs __new__, __init__, then our post_init hook
         obj = super().__call__(*args, **kwargs)
         if hasattr(obj, "post_init"):
             obj.post_init()
@@ -44,3 +42,10 @@ class Field(metaclass=PostInitMeta):
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
         raise NotImplementedError("Each field must implement its own from_type_string.")
+
+    def _make_option_field(self, option):
+        if isinstance(option, partial):
+            return option()
+        if isinstance(option, type):
+            return option()
+        return option

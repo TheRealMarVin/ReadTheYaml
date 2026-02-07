@@ -42,7 +42,8 @@ class ListField(Field):
         validated = []
         for i, item in enumerate(value):
             try:
-                validated.append(self.item_field.validate_and_build(item))
+                field = self._make_option_field(self.item_field)
+                validated.append(field.validate_and_build(item))
             except ValidationError as e:
                 raise ValidationError(f"Field '{self.name}': Invalid item at index {i}: {e}")
 

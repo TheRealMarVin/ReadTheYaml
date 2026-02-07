@@ -158,7 +158,7 @@ def create_complex_union_field():
         description="Union with complex types",
         options=[
             partial(ListField, name="list_option", description="List option",
-                    item_field=partial(NumericalField, value_type=int, name="num")),
+                    item_field=partial(NumericalField, value_type=int, name="num", description="value")),
             partial(TupleField, name="tuple_option", description="Tuple option",
                     element_fields=[
                         partial(StringField, name="name", description="Name"),
