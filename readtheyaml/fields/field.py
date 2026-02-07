@@ -34,9 +34,13 @@ class Field(metaclass=PostInitMeta):
     def post_init(self):
         if not self.required and not self.ignore_post:
             try:
-                self.validate(self.default)
+                self.default = self.validate_and_build(self.default)
             except ValidationError as e:
                 raise FormatError(f"Field {self.name} got invalid default value: {e}") from None
 
-    def validate(self, value):
+    def validate_and_build(self, value):
         raise NotImplementedError(f"Field '{self.name}': Each field must implement its own validate method.")
+
+    @staticmethod
+    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+        raise NotImplementedError("Each field must implement its own from_type_string.")

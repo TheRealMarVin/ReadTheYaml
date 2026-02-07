@@ -1,3 +1,5 @@
+from functools import partial
+
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
@@ -19,7 +21,7 @@ class NumericalField(Field):
         except FormatError as e:
             raise ValidationError(f"Field '{self.name}': {e}")
 
-    def validate(self, value):
+    def validate_and_build(self, value):
         try:
             if str(value).lower() in {"true", "false"}:
                 raise ValidationError(f"Field '{self.name}': Must be of type {self.value_type.__name__}, contains True or False.")
@@ -39,3 +41,13 @@ class NumericalField(Field):
             raise ValidationError(f"Field '{self.name}': Value must be at most {self.max_value}.")
 
         return value
+
+    @staticmethod
+    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+        if type_str in {"int", "Int", "INT"}:
+            return NumericalField(name=name, value_type=int, **kwargs)
+        elif type_str in {"float", "Float", "FLOAT"}:
+            return NumericalField(name=name, value_type=float, **kwargs)
+
+
+        return None

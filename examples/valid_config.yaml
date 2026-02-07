@@ -17,3 +17,6 @@ test:
   req_tuple_int: (12)
   req_tuple_int_float: (12, 11.5)
   req_tuple_int_float_none: (12, None)
+  delay:
+    days: 2
+    seconds: 3600

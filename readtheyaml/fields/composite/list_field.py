@@ -1,3 +1,4 @@
+import copy
 import inspect
 from functools import partial
 from typing import Optional
@@ -6,6 +7,7 @@ from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
 from readtheyaml.fields.field_validation_helpers import find_and_validate_bounds, get_target_class
+from readtheyaml.utils.type_utils import extract_types_for_composite
 
 
 class ListField(Field):
@@ -19,16 +21,15 @@ class ListField(Field):
     ):
         sig = inspect.signature(get_target_class(item_field).__init__)
         super().__init__(additional_allowed_kwargs=set(sig.parameters), **kwargs)
-        if "ignore_post" not in kwargs:
-            kwargs["ignore_post"] = True
-        self.item_field = item_field(**kwargs)
+
+        self.item_field = item_field
 
         try:
             self.min_length, self.max_length = find_and_validate_bounds(length_range, min_length, max_length)
         except FormatError as e:
             raise ValidationError(f"Field '{self.name}': {e}")
 
-    def validate(self, value):
+    def validate_and_build(self, value):
         if not isinstance(value, list):
             raise ValidationError(f"Field '{self.name}': Expected a list.")
 
@@ -41,8 +42,20 @@ class ListField(Field):
         validated = []
         for i, item in enumerate(value):
             try:
-                validated.append(self.item_field.validate(item))
+                validated.append(self.item_field.validate_and_build(item))
             except ValidationError as e:
                 raise ValidationError(f"Field '{self.name}': Invalid item at index {i}: {e}")
 
         return validated
+
+    @staticmethod
+    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+        list_type = extract_types_for_composite(type_str=type_str, type_name="list")
+        if list_type is not None:
+            args_copy = copy.deepcopy(kwargs)
+            args_copy["ignore_post"] = True
+
+            constructor = factory.create_field(list_type, name, **args_copy)
+            return ListField(name=name, item_field=constructor, **kwargs)
+
+        return None

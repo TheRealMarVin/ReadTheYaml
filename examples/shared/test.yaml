@@ -82,3 +82,6 @@ req_tuple_int_float_none:
   description: test required tuple(int, float) value
   required: true
   type: tuple[int, float|None]
+delay:
+  type: object[datetime.timedelta]
+  description: How long to wait between retries
