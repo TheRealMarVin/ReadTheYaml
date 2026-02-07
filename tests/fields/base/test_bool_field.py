@@ -36,14 +36,14 @@ def test_factory_rejects_random_string_for_bool():
 
 
 def test_factory_bool_with_default_true():
-    """Test that 'bool' field supports default=True."""
+    """Test that the 'bool' field supports default=True."""
     field = FIELD_FACTORY.create_field(
         "bool", name="my_field", description="test field", required=False, default=True
     )
     assert field.default is True
 
 def test_factory_bool_with_default_true_string():
-    """Test that 'bool' field supports default=True."""
+    """Test that the 'bool' field supports default=True."""
     field = FIELD_FACTORY.create_field(
         "bool", name="my_field", description="test field", required=False, default="True"
     )
@@ -51,14 +51,14 @@ def test_factory_bool_with_default_true_string():
 
 
 def test_factory_bool_with_default_false():
-    """Test that 'bool' field supports default=False."""
+    """Test that the 'bool' field supports default=False."""
     field = FIELD_FACTORY.create_field(
         "bool", name="my_field", description="test field", required=False, default=False
     )
     assert field.default is False
 
 def test_factory_bool_with_default_false_string():
-    """Test that 'bool' field supports default=False."""
+    """Test that the 'bool' field supports default=False."""
     field = FIELD_FACTORY.create_field(
         "bool", name="my_field", description="test field", required=False, default="False"
     )
@@ -66,12 +66,12 @@ def test_factory_bool_with_default_false_string():
 
 
 def test_factory_bool_with_invalid_default_string():
-    """Test that 'bool' field rejects non-boolean default values."""
+    """Test that the 'bool' field rejects non-boolean default values."""
     with pytest.raises(FormatError):
         FIELD_FACTORY.create_field("bool", name="my_field", description="test field", required=False, default="yes")
 
 
 def test_factory_bool_with_invalid_default_int():
-    """Test that 'bool' field rejects integer default values."""
+    """Test that the 'bool' field rejects integer default values."""
     with pytest.raises(FormatError):
         FIELD_FACTORY.create_field("bool", name="my_field", description="test field", required=False, default=1)
