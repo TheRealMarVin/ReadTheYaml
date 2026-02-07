@@ -24,7 +24,7 @@ def test_factory_accepts_Bool_capitalized():
 
 
 def test_factory_rejects_mixed_case_boOL():
-    """Test that mixed case like 'boOL' is rejected by the factory."""
+    """Test that a mixed case like 'boOL' is rejected by the factory."""
     with pytest.raises(ValueError):
         FIELD_FACTORY.create_field("boOL", name="my_field", description="test field")
 
