@@ -1,7 +1,6 @@
 from functools import partial
 
 import pytest
-from scripts.regsetup import description
 
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
