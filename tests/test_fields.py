@@ -57,7 +57,7 @@ def test_none_field_rejects_integer():
 def test_none_field_accepts_string_default():
     """Test field initialization with string 'None' as default."""
     field = NoneField(name="new_field", description="My description", required=False, default="None")
-    assert field.default == "None"
+    assert field.default == None
 
 def test_none_field_rejects_bool_default():
     """Test that boolean default value raises FormatError."""
@@ -209,12 +209,12 @@ def test_validate_bool_empty_string():
 def test_bool_field_with_text_default_true():
     """Test that default can be set as string 'True'."""
     field = BoolField(name="new_field", description="My description", required=False, default="True")
-    assert field.default is "True"
+    assert field.default is True
 
 def test_bool_field_with_text_default_false():
     """Test that default can be set as string 'False'."""
     field = BoolField(name="new_field", description="My description", required=False, default="False")
-    assert field.default is "False"
+    assert field.default is False
 
 def test_bool_field_invalid_default_none():
     """Test that None as default raises FormatError."""
