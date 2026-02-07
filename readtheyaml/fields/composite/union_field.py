@@ -54,12 +54,19 @@ class UnionField(Field):
 
         self._options = options
 
+    def _make_option_field(self, option):
+        if isinstance(option, partial):
+            return option()
+        if isinstance(option, type):
+            return option()
+        return option
+
     def validate_and_build(self, value):
         errors = []
-        for field in self._options:
+        for option in self._options:
+            field = self._make_option_field(option)
             try:
-                validated_value = field.validate_and_build(value)
-                return validated_value
+                return field.validate_and_build(value)
             except ValidationError as e:
                 errors.append(str(e))
 
