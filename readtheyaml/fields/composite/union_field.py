@@ -9,26 +9,35 @@ from readtheyaml.utils.type_utils import extract_types_for_composite, split_top_
 
 
 class UnionField(Field):
-    def __init__(self, options: list[Field], **kwargs):
+    def __init__(self, options, **kwargs):
         super().__init__(**kwargs)
 
-        # Check for duplicate field types and validate StringField casting
+        def get_field_type(opt):
+            if isinstance(opt, partial):
+                return opt.func
+            if isinstance(opt, type):
+                return opt
+            return opt.__class__
+
+        def get_partial_keywords(opt):
+            if isinstance(opt, partial):
+                return opt.keywords or {}
+            return {}
+
         field_types = []
         for option in options:
-            field_types.append(option.__class__)
+            field_type = get_field_type(option)
+            field_types.append(field_type)
 
-            # Check if this is a StringField and if cast_to_string is True in either the partial or the kwargs
-            if option is StringField:
-                # Get cast_to_string from partial args if it exists, otherwise use True as default
-                partial_args = getattr(option, "keywords", {})
-                cast_to_string = partial_args.get("cast_to_string", False) or kwargs.get("cast_to_string", False)
-                
+            if field_type is StringField:
+                partial_args = get_partial_keywords(option)
+                cast_to_string = partial_args.get("cast_to_string", True)
                 if cast_to_string:
                     raise FormatError(
                         f"Field '{self.name}': StringField with cast_to_string=True is not allowed in UnionField. "
                         "Please set cast_to_string=False for StringField in UnionField or handle string conversion explicitly."
                     )
-            
+
         seen_types = set()
         duplicates = set()
         for field_type in field_types:
@@ -37,8 +46,9 @@ class UnionField(Field):
             seen_types.add(field_type)
 
         if duplicates:
+            duplicates_names = ", ".join(t.__name__ for t in duplicates)
             raise FormatError(
-                f"Field '{self.name}': Duplicate field types found in UnionField: {', '.join(duplicates)}. "
+                f"Field '{self.name}': Duplicate field types found in UnionField: {duplicates_names}. "
                 "Each field type should appear only once."
             )
 
