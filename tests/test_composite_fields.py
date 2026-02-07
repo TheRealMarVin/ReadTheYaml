@@ -193,7 +193,7 @@ def test_union_field_required_rejects_none():
         description="Test required union",
         required=True,
         options=[
-            partial(StringField, name="string_option", description="String option")
+            partial(StringField, name="string_option", description="String option", cast_to_string=False)
         ]
     )
     with pytest.raises(ValidationError):
@@ -208,7 +208,7 @@ def test_union_field_optional_rejects_none_without_default():
         required=False,
         default="",
         options=[
-            partial(StringField, name="string_option", description="String option")
+            partial(StringField, name="string_option", description="String option", cast_to_string=False)
         ]
     )
     with pytest.raises(ValidationError):
@@ -221,7 +221,7 @@ def test_union_field_error_messages():
         name="test_errors",
         description="Test error messages",
         options=[
-            partial(StringField, name="string_option", description="String option", min_length=3),
+            partial(StringField, name="string_option", description="String option", min_length=3, cast_to_string=False),
             partial(NumericalField, value_type=int, name="int_option", description="Integer option", min_value=0)
         ]
     )
@@ -347,8 +347,8 @@ def test_validate_tuple_with_nested_structures():
         name="nested",
         description="Test tuple",
         element_fields=[
-            partial(ListField, name="numbers", item_field=partial(NumericalField, value_type=int, name="num")),
-            partial(StringField, name="name", description="Name")
+            partial(ListField, name="numbers", description="numbers", item_field=partial(NumericalField, value_type=int, name="num", description="Val")),
+            partial(StringField, name="name", description="Name", cast_to_string=False)
         ]
     )
     
