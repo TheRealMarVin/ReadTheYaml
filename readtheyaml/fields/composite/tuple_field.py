@@ -35,7 +35,8 @@ class TupleField(Field):
 
         for idx, (v, field) in enumerate(zip(value, self._slots)):
             try:
-                field.validate_and_build(v)
+                field_instance = self._make_option_field(field)
+                field_instance.validate_and_build(v)
             except ValidationError as err:
                 raise ValidationError(f"Field '{self.name}': Tuple element {idx} invalid: {err}")
 
