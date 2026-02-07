@@ -1,6 +1,7 @@
 from functools import partial
 
 import pytest
+from scripts.regsetup import description
 
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
@@ -385,7 +386,7 @@ def test_list_field_initialization():
         name="test_list",
         description="Test list",
         required=False,
-        item_field=partial(NumericalField, value_type=int),
+        item_field=partial(NumericalField, value_type=int, name="name", description="desc"),
         min_length=1,
         max_length=5,
         default=[1] 
