@@ -43,9 +43,14 @@ class Field(metaclass=PostInitMeta):
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
         raise NotImplementedError("Each field must implement its own from_type_string.")
 
-    def _make_option_field(self, option):
-        if isinstance(option, partial):
-            return option()
-        if isinstance(option, type):
-            return option()
-        return option
+    def _make_partial_field(self, field, suffix):
+        if isinstance(field, partial):
+            kwargs = dict(field.keywords or {})
+            if "name" not in kwargs:
+                kwargs["name"] = f"{self.name}_{suffix}"
+            if "description" not in kwargs:
+                kwargs["description"] = f"{self.description}_{suffix}"
+
+            return field.func(*field.args, **kwargs)
+
+        return field

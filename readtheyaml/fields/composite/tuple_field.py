@@ -1,7 +1,5 @@
 import ast
 import copy
-from functools import partial
-from typing import Sequence
 
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
@@ -9,7 +7,7 @@ from readtheyaml.utils.type_utils import extract_types_for_composite, split_top_
 
 
 class TupleField(Field):
-    def __init__(self, element_fields: Sequence[Field], **kwargs):
+    def __init__(self, element_fields, **kwargs):
         super().__init__(**kwargs)
 
         self._slots = element_fields
@@ -35,7 +33,7 @@ class TupleField(Field):
 
         for idx, (v, field) in enumerate(zip(value, self._slots)):
             try:
-                field_instance = self._make_option_field(field)
+                field_instance = self._make_partial_field(field, "item")
                 field_instance.validate_and_build(v)
             except ValidationError as err:
                 raise ValidationError(f"Field '{self.name}': Tuple element {idx} invalid: {err}")
@@ -43,7 +41,7 @@ class TupleField(Field):
         return value
 
     @staticmethod
-    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+    def from_type_string(type_str, name, factory, **kwargs):
         tuple_inner = extract_types_for_composite(type_str=type_str, type_name="tuple")
         if tuple_inner is not None:
             element_specs = split_top_level(tuple_inner, ',')

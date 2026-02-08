@@ -32,6 +32,22 @@ def test_union_field_initialization():
     assert len(field._options) == 2
 
 
+def test_union_field_initialization_no_name():
+    """Test that UnionField is properly initialized with options when no names are provided"""
+    field = UnionField(
+        name="test_union",
+        description="Test union field",
+        required=True,
+        options=[
+            partial(StringField, cast_to_string=False),
+            partial(NumericalField, value_type=int)
+        ]
+    )
+    assert field.name == "test_union"
+    assert field.description == "Test union field"
+    assert field.required
+    assert len(field._options) == 2
+
 def test_union_field_rejects_string_field_with_cast_to_string_true():
     """Test that UnionField rejects StringField with cast_to_string=True."""
     with pytest.raises(FormatError, match="StringField with cast_to_string=True is not allowed"):
@@ -39,7 +55,7 @@ def test_union_field_rejects_string_field_with_cast_to_string_true():
             name="test_union",
             description="Test invalid union field",
             options=[
-                partial(StringField, name="string_option", description="String option", cast_to_string=True),  # cast_to_string defaults to False
+                partial(StringField, name="string_option", description="String option", cast_to_string=True),
                 partial(NumericalField, value_type=int, name="int_option", description="Integer option")
             ]
         )
@@ -51,8 +67,8 @@ def test_union_field_accepts_string_field_with_cast_to_string_false():
         name="test_union",
         description="Test valid union field",
         options=[
-            partial(StringField, name="string_option", description="String option", cast_to_string=False),
-            partial(NumericalField, value_type=int, name="int_option", description="Integer option")
+            partial(StringField, cast_to_string=False),
+            partial(NumericalField, value_type=int)
         ]
     )
     assert len(field._options) == 2
@@ -67,7 +83,7 @@ def test_union_field_rejects_duplicate_field_types():
             options=[
                 partial(NumericalField, value_type=int, name="int1", description="First int"),
                 partial(NumericalField, value_type=float, name="float1", description="Float field"),
-                partial(NumericalField, value_type=int, name="int2", description="Second int")  # Duplicate
+                partial(NumericalField, value_type=int, name="int2", description="Second int")
             ]
         )
 
@@ -92,8 +108,8 @@ def create_simple_union_field():
         name="test_union",
         description="Test union field",
         options=[
-            partial(StringField, name="string_option", description="String option", cast_to_string=False),
-            partial(NumericalField, value_type=int, name="int_option", description="Integer option")
+            partial(StringField, cast_to_string=False),
+            partial(NumericalField, value_type=int)
         ]
     )
 
@@ -122,10 +138,8 @@ def create_test_union_field():
         name="test_union",
         description="Test union field",
         options=[
-            partial(StringField, name="string_option", description="String option", 
-                   min_length=3, cast_to_string=False),
-            partial(NumericalField, value_type=int, name="int_option", 
-                   description="Integer option", min_value=0)
+            partial(StringField, min_length=3, cast_to_string=False),
+            partial(NumericalField, value_type=int, min_value=0)
         ]
     )
 
@@ -157,9 +171,8 @@ def create_complex_union_field():
         name="complex_union",
         description="Union with complex types",
         options=[
-            partial(ListField, name="list_option", description="List option",
-                    item_field=partial(NumericalField, value_type=int, name="num", description="value")),
-            partial(TupleField, name="tuple_option", description="Tuple option",
+            partial(ListField, item_field=partial(NumericalField, value_type=int)),
+            partial(TupleField,
                     element_fields=[
                         partial(StringField, name="name", description="Name"),
                         partial(NumericalField, value_type=int, name="age", description="Age")
@@ -193,7 +206,7 @@ def test_union_field_required_rejects_none():
         description="Test required union",
         required=True,
         options=[
-            partial(StringField, name="string_option", description="String option", cast_to_string=False)
+            partial(StringField, cast_to_string=False)
         ]
     )
     with pytest.raises(ValidationError):
@@ -208,7 +221,7 @@ def test_union_field_optional_rejects_none_without_default():
         required=False,
         default="",
         options=[
-            partial(StringField, name="string_option", description="String option", cast_to_string=False)
+            partial(StringField, cast_to_string=False)
         ]
     )
     with pytest.raises(ValidationError):
@@ -221,8 +234,8 @@ def test_union_field_error_messages():
         name="test_errors",
         description="Test error messages",
         options=[
-            partial(StringField, name="string_option", description="String option", min_length=3, cast_to_string=False),
-            partial(NumericalField, value_type=int, name="int_option", description="Integer option", min_value=0)
+            partial(StringField, min_length=3, cast_to_string=False),
+            partial(NumericalField, value_type=int, min_value=0)
         ]
     )
 
@@ -241,14 +254,14 @@ def test_required_tuple_field():
         description="Test tuple",
         required=True,
         element_fields=[
-            partial(StringField, name="name", description="Name field"),
-            partial(NumericalField, value_type=int, name="age", description="Age field")
+            partial(StringField),
+            partial(NumericalField, value_type=int)
         ]
     )
     assert field.name == "test_tuple"
     assert field.description == "Test tuple"
     assert field.required
-    assert field.default is None  # No default for required fields
+    assert field.default is None
     assert len(field._slots) == 2
 
 
@@ -261,8 +274,8 @@ def test_optional_tuple_field_with_default():
         required=False,
         default=default_value,
         element_fields=[
-            partial(StringField, name="name", description="Name field"),
-            partial(NumericalField, value_type=int, name="age", description="Age field")
+            partial(StringField),
+            partial(NumericalField, value_type=int)
         ]
     )
     assert field.name == "test_tuple"
@@ -278,9 +291,9 @@ def test_validate_tuple_with_correct_types():
         name="person",
         description="Test tuple",
         element_fields=[
-            partial(StringField, name="name", description="Name"),
-            partial(NumericalField, value_type=int, name="age", description="Age"),
-            partial(BoolField, name="active", description="Active status")
+            partial(StringField),
+            partial(NumericalField, value_type=int),
+            partial(BoolField)
         ]
     )
     
@@ -290,7 +303,7 @@ def test_validate_tuple_with_correct_types():
 
 
 def test_validate_tuple_with_string_representation():
-    """Test that TupleField can parse string representation of a tuple."""
+    """Test that TupleField can parse a string representation of a tuple."""
     field = TupleField(
         name="coordinates",
         description="Test tuple",
@@ -306,7 +319,7 @@ def test_validate_tuple_with_string_representation():
 
 
 def test_validate_tuple_rejects_wrong_length():
-    """Test that TupleField rejects tuples with wrong length."""
+    """Test that TupleField rejects tuples with the wrong length."""
     field = TupleField(
         name="coordinates",
         description="Test tuple",
@@ -352,11 +365,11 @@ def test_validate_tuple_with_nested_structures():
         ]
     )
     
-    # Test with valid nested structure
+    # Test with a valid nested structure
     result = field.validate_and_build(([1, 2, 3], "test"))
     assert result == ([1, 2, 3], "test")
     
-    # Test with invalid nested structure
+    # Test with an invalid nested structure
     with pytest.raises(ValidationError, match="Tuple element 0 invalid"):
         field.validate_and_build(([1, "two", 3], "test"))  # Non-int in list
 
@@ -380,12 +393,12 @@ def test_validate_tuple_rejects_none():
 # -------------------
 
 def test_list_field_initialization():
-    """Test that ListField is properly initialized with item field."""
+    """Test that ListField is properly initialized with the item field."""
     field = ListField(
         name="test_list",
         description="Test list",
         required=False,
-        item_field=partial(NumericalField, value_type=int, name="name", description="desc"),
+        item_field=partial(NumericalField, value_type=int),
         min_length=1,
         max_length=5,
         default=[1] 
@@ -402,9 +415,9 @@ def test_validate_list_of_integers():
     field = ListField(
         name="int_list",
         description="List of integers",
-        item_field=partial(NumericalField, value_type=int, name="num", description="Number"),
+        item_field=partial(NumericalField, value_type=int),
         required=False,
-        default=[0]  # Valid default
+        default=[0]
     )
     
     # Test valid integer list
@@ -416,7 +429,7 @@ def test_validate_list_converts_string_numbers():
     field = ListField(
         name="int_list",
         description="List of integers",
-        item_field=partial(NumericalField, value_type=int, name="num", description="Number"),
+        item_field=partial(NumericalField, value_type=int),
         required=False,
         default=[0]
     )
@@ -431,7 +444,7 @@ def test_validate_list_rejects_non_numeric_strings():
     field = ListField(
         name="int_list",
         description="List of integers",
-        item_field=partial(NumericalField, value_type=int, name="num", description="Number"),
+        item_field=partial(NumericalField, value_type=int),
         required=False,
         default=[0]
     )
@@ -444,7 +457,7 @@ def test_validate_list_rejects_mixed_types():
     field = ListField(
         name="int_list",
         description="List of integers",
-        item_field=partial(NumericalField, value_type=int, name="num", description="Number"),
+        item_field=partial(NumericalField, value_type=int),
         required=False,
         default=[0]
     )
@@ -457,7 +470,7 @@ def test_validate_list_rejects_floats():
     field = ListField(
         name="int_list",
         description="List of integers",
-        item_field=partial(NumericalField, value_type=int, name="num", description="Number"),
+        item_field=partial(NumericalField, value_type=int),
         required=False,
         default=[0]
     )
@@ -466,11 +479,11 @@ def test_validate_list_rejects_floats():
 
 
 def test_validate_list_accepts_min_length():
-    """Test that ListField accepts a list with minimum length."""
+    """Test that ListField accepts a list with a minimum length."""
     field = ListField(
         name="bounded_list",
         description="Bounded list",
-        item_field=partial(StringField, name="item", description="String item"),
+        item_field=partial(StringField),
         min_length=2,
         max_length=4,
         required=False,
@@ -480,11 +493,11 @@ def test_validate_list_accepts_min_length():
 
 
 def test_validate_list_accepts_max_length():
-    """Test that ListField accepts a list with maximum length."""
+    """Test that ListField accepts a list with a maximum length."""
     field = ListField(
         name="bounded_list",
         description="Bounded list",
-        item_field=partial(StringField, name="item", description="String item"),
+        item_field=partial(StringField),
         min_length=2,
         max_length=4,
         required=False,
@@ -494,11 +507,11 @@ def test_validate_list_accepts_max_length():
 
 
 def test_validate_list_rejects_below_min_length():
-    """Test that ListField rejects a list below minimum length."""
+    """Test that ListField rejects a list below the minimum length."""
     field = ListField(
         name="bounded_list",
         description="Bounded list",
-        item_field=partial(StringField, name="item", description="String item"),
+        item_field=partial(StringField),
         min_length=2,
         max_length=4,
         required=False,
@@ -509,11 +522,11 @@ def test_validate_list_rejects_below_min_length():
 
 
 def test_validate_list_rejects_above_max_length():
-    """Test that ListField rejects a list above maximum length."""
+    """Test that ListField rejects a list above the maximum length."""
     field = ListField(
         name="bounded_list",
         description="Bounded list",
-        item_field=partial(StringField, name="item", description="String item"),
+        item_field=partial(StringField),
         min_length=2,
         max_length=4,
         required=False,
@@ -528,7 +541,7 @@ def test_validate_list_with_boolean_values():
     field = ListField(
         name="bool_list",
         description="List of booleans",
-        item_field=partial(BoolField, name="flag", description="Boolean flag"),
+        item_field=partial(BoolField),
         required=False,
         default=[True]
     )
@@ -540,7 +553,7 @@ def test_validate_list_converts_boolean_strings():
     field = ListField(
         name="bool_list",
         description="List of booleans",
-        item_field=partial(BoolField, name="flag", description="Boolean flag"),
+        item_field=partial(BoolField),
         required=False,
         default=[True]
     )
@@ -552,7 +565,7 @@ def test_validate_list_rejects_mixed_invalid_boolean():
     field = ListField(
         name="bool_list",
         description="List of booleans",
-        item_field=partial(BoolField, name="flag", description="Boolean flag"),
+        item_field=partial(BoolField),
         required=False,
         default=[True]
     )
@@ -565,7 +578,7 @@ def test_validate_list_rejects_single_invalid_boolean():
     field = ListField(
         name="bool_list",
         description="List of booleans",
-        item_field=partial(BoolField, name="flag", description="Boolean flag"),
+        item_field=partial(BoolField),
         required=False,
         default=[True]
     )
@@ -578,7 +591,7 @@ def test_validate_list_with_mixed_boolean_types():
     field = ListField(
         name="bool_list",
         description="List of booleans",
-        item_field=partial(BoolField, name="flag", description="Boolean flag"),
+        item_field=partial(BoolField),
         required=False,
         default=[True]
     )
@@ -591,13 +604,7 @@ def test_validate_list_accepts_valid_strings():
     field = ListField(
         name="string_list",
         description="List of strings with length constraints",
-        item_field=partial(
-            StringField,
-            name="text", 
-            description="Text item",
-            min_length=2,
-            max_length=5
-        ),
+        item_field=partial(StringField, min_length=2, max_length=5),
         required=False,
         default=["abc"]
     )
@@ -609,13 +616,7 @@ def test_validate_list_rejects_short_strings():
     field = ListField(
         name="string_list",
         description="List of strings with length constraints",
-        item_field=partial(
-            StringField,
-            name="text",
-            description="Text item",
-            min_length=2,
-            max_length=5
-        ),
+        item_field=partial(StringField, min_length=2, max_length=5),
         required=False,
         default=["abc"]
     )
@@ -628,13 +629,7 @@ def test_validate_list_rejects_long_strings():
     field = ListField(
         name="string_list",
         description="List of strings with length constraints",
-        item_field=partial(
-            StringField,
-            name="text",
-            description="Text item",
-            min_length=2,
-            max_length=5
-        ),
+        item_field=partial(StringField, min_length=2, max_length=5),
         required=False,
         default=["abc"]
     )
@@ -647,13 +642,7 @@ def test_validate_list_with_exact_length_strings():
     field = ListField(
         name="string_list",
         description="List of strings with length constraints",
-        item_field=partial(
-            StringField,
-            name="text",
-            description="Text item",
-            min_length=2,
-            max_length=5
-        ),
+        item_field=partial(StringField, min_length=2, max_length=5),
         required=False,
         default=["abc"]
     )
@@ -666,7 +655,7 @@ def test_validate_empty_list_default_min_length():
     field = ListField(
         name="empty_ok_list",
         description="List that can be empty",
-        item_field=partial(StringField, name="item", description="String item"),
+        item_field=partial(StringField),
         required=False,
         default=[]
     )
@@ -678,7 +667,7 @@ def test_validate_empty_list_explicit_min_length_zero():
     field = ListField(
         name="empty_ok_list2",
         description="List that can be empty",
-        item_field=partial(StringField, name="item", description="String item"),
+        item_field=partial(StringField),
         min_length=0,
         required=False,
         default=[]
@@ -691,7 +680,7 @@ def test_validate_empty_list_rejects_when_min_length_one():
     field = ListField(
         name="non_empty_list",
         description="List that cannot be empty",
-        item_field=partial(StringField, name="item", description="String item"),
+        item_field=partial(StringField),
         min_length=1,
         required=False,
         default=["valid"]
@@ -705,7 +694,7 @@ def test_validate_empty_list_with_non_empty_default():
     field = ListField(
         name="non_empty_list",
         description="List that cannot be empty",
-        item_field=partial(StringField, name="item", description="String item"),
+        item_field=partial(StringField),
         min_length=1,
         required=False,
         default=["valid"]
@@ -714,11 +703,11 @@ def test_validate_empty_list_with_non_empty_default():
 
 
 def test_list_field_accepts_min_length_range():
-    """Test that ListField accepts a list with minimum length in range."""
+    """Test that ListField accepts a list with a minimum length in range."""
     field = ListField(
         name="ranged_list",
         description="List with length range",
-        item_field=partial(NumericalField, name="num", description="Number", value_type=int),
+        item_field=partial(NumericalField, value_type=int),
         length_range=(2, 4),
         required=False,
         default=[1, 2]
@@ -727,11 +716,11 @@ def test_list_field_accepts_min_length_range():
 
 
 def test_list_field_accepts_max_length_range():
-    """Test that ListField accepts a list with maximum length in range."""
+    """Test that ListField accepts a list with the maximum length in range."""
     field = ListField(
         name="ranged_list",
         description="List with length range",
-        item_field=partial(NumericalField, name="num", description="Number", value_type=int),
+        item_field=partial(NumericalField, value_type=int),
         length_range=(2, 4),
         required=False,
         default=[1, 2, 3, 4]
@@ -744,7 +733,7 @@ def test_list_field_rejects_below_min_length_range():
     field = ListField(
         name="ranged_list",
         description="List with length range",
-        item_field=partial(NumericalField, name="num", description="Number", value_type=int),
+        item_field=partial(NumericalField, value_type=int),
         length_range=(2, 4),
         required=False,
         default=[1, 2]
@@ -758,7 +747,7 @@ def test_list_field_rejects_above_max_length_range():
     field = ListField(
         name="ranged_list",
         description="List with length range",
-        item_field=partial(NumericalField, name="num", description="Number", value_type=int),
+        item_field=partial(NumericalField, value_type=int),
         length_range=(2, 4),
         required=False,
         default=[1, 2, 3, 4]
@@ -772,7 +761,7 @@ def test_list_field_with_length_range_accepts_middle_length():
     field = ListField(
         name="ranged_list",
         description="List with length range",
-        item_field=partial(NumericalField, name="num", description="Number", value_type=int),
+        item_field=partial(NumericalField, value_type=int),
         length_range=(2, 4),
         required=False,
         default=[1, 2, 3]
@@ -780,11 +769,11 @@ def test_list_field_with_length_range_accepts_middle_length():
     assert field.validate_and_build([1, 2, 3]) == [1, 2, 3]
 
 def test_list_field_uses_default_when_no_value_provided():
-    """Test that ListField uses default value when no value is provided to validate()."""
+    """Test that ListField uses the default value when no value is provided to validate()."""
     field = ListField(
         name="default_list",
         description="List with default value",
-        item_field=partial(StringField, name="item", description="String item"),
+        item_field=partial(StringField),
         required=False,
         default=["default1", "default2"]
     )
@@ -799,7 +788,7 @@ def test_list_field_validates_provided_values():
     field = ListField(
         name="test_list",
         description="Test list",
-        item_field=partial(StringField, name="item", description="String item"),
+        item_field=partial(StringField),
         required=False,
         default=["default"]
     )
@@ -814,7 +803,7 @@ def test_list_field_rejects_none():
     field = ListField(
         name="test_list",
         description="Test list",
-        item_field=partial(StringField, name="item", description="String item"),
+        item_field=partial(StringField),
         required=False,
         default=[]
     )
@@ -829,7 +818,7 @@ def test_nested_list_of_integers():
         ListField,
         name="inner_list",
         description="Inner list of integers",
-        item_field=partial(NumericalField, name="num", description="Number", value_type=int)
+        item_field=partial(NumericalField, value_type=int)
     )
     
     # Create the outer field (list of lists)
@@ -855,7 +844,7 @@ def create_constrained_nested_list_field():
             ListField,
             name="inner_list",
             description="Inner list with constraints",
-            item_field=partial(NumericalField, name="num", description="Number", value_type=int),
+            item_field=partial(NumericalField, value_type=int),
             min_length=1,
             max_length=3
         ),
@@ -899,7 +888,7 @@ def test_nested_list_rejects_mixed_valid_and_invalid():
 
 def test_deeply_nested_lists():
     """Test that ListField can handle deeply nested lists."""
-    # Create a field for a list of lists of lists of integers
+    # Create a field for a list of lists of integers
     innermost_field = partial(NumericalField, name="num", description="Number", value_type=int)
     
     middle_field = partial(ListField,
@@ -925,7 +914,7 @@ def test_deeply_nested_lists():
     # Test valid deeply nested lists
     assert field.validate_and_build([[[1], [2, 3]], [[4, 5, 6]]]) == [[[1], [2, 3]], [[4, 5, 6]]]
     
-    # Test invalid type in deepest level
+    # Test invalid type in the deepest level
     with pytest.raises(ValidationError):
         field.validate_and_build([[["not_a_number"]]])
 
