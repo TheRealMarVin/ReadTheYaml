@@ -28,6 +28,23 @@ def test_union_field_initialization():
     assert len(field._options) == 2
 
 
+def test_union_field_initialization_no_cast_in_string():
+    """Test that UnionField is properly initialized with options with no cast for string."""
+    field = UnionField(
+        name="test_union",
+        description="Test union field",
+        required=True,
+        options=[
+            partial(StringField, name="string_option", description="String option"),
+            partial(NumericalField, value_type=int, name="int_option", description="Integer option")
+        ]
+    )
+    assert field.name == "test_union"
+    assert field.description == "Test union field"
+    assert field.required
+    assert len(field._options) == 2
+
+
 def test_union_field_initialization_no_name():
     """Test that UnionField is properly initialized with options when no names are provided"""
     field = UnionField(
@@ -35,7 +52,7 @@ def test_union_field_initialization_no_name():
         description="Test union field",
         required=True,
         options=[
-            partial(StringField, cast_to_string=False),
+            partial(StringField),
             partial(NumericalField, value_type=int)
         ]
     )
@@ -91,9 +108,9 @@ def test_duplicate_check_ignores_different_parameters():
             name="test_union",
             description="Test duplicate field types with different parameters",
             options=[
-                partial(StringField, name="str1", description="First string", min_length=1, cast_to_string=False),
+                partial(StringField, name="str1", description="First string", min_length=1),
                 partial(NumericalField, value_type=int, name="int1", description="Integer field"),
-                partial(StringField, name="str2", description="Second string", max_length=10, cast_to_string=False)  # Still a duplicate
+                partial(StringField, name="str2", description="Second string", max_length=10)  # Still a duplicate
             ]
         )
 
@@ -104,7 +121,7 @@ def create_simple_union_field():
         name="test_union",
         description="Test union field",
         options=[
-            partial(StringField, cast_to_string=False),
+            partial(StringField),
             partial(NumericalField, value_type=int)
         ]
     )
@@ -134,7 +151,7 @@ def create_test_union_field():
         name="test_union",
         description="Test union field",
         options=[
-            partial(StringField, min_length=3, cast_to_string=False),
+            partial(StringField, min_length=3),
             partial(NumericalField, value_type=int, min_value=0)
         ]
     )
@@ -201,9 +218,7 @@ def test_union_field_required_rejects_none():
         name="test_required",
         description="Test required union",
         required=True,
-        options=[
-            partial(StringField, cast_to_string=False)
-        ]
+        options=[partial(StringField)]
     )
     with pytest.raises(ValidationError):
         field.validate_and_build(None)
@@ -216,9 +231,7 @@ def test_union_field_optional_rejects_none_without_default():
         description="Test optional union",
         required=False,
         default="",
-        options=[
-            partial(StringField, cast_to_string=False)
-        ]
+        options=[partial(StringField)]
     )
     with pytest.raises(ValidationError):
         field.validate_and_build(None)
@@ -230,7 +243,7 @@ def test_union_field_error_messages():
         name="test_errors",
         description="Test error messages",
         options=[
-            partial(StringField, min_length=3, cast_to_string=False),
+            partial(StringField, min_length=3),
             partial(NumericalField, value_type=int, min_value=0)
         ]
     )
