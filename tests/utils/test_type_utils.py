@@ -26,7 +26,7 @@ def test_type_to_string_nested():
 
 
 def test_type_to_string_custom_class():
-    """Test custom class formatting includes module path."""
+    """Test custom class formatting includes a module path."""
     class MyCustomClass:
         pass
 
@@ -37,7 +37,7 @@ def test_type_to_string_custom_class():
 # --- get_params_and_defaults tests ---
 
 def test_get_params_and_defaults_basic():
-    """Test parameter introspection for class with no defaults."""
+    """Test parameter introspection for a class with no defaults."""
     class MyClass:
         def __init__(self, a: int, b: str):
             pass
