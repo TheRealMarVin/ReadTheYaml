@@ -127,7 +127,7 @@ def test_union_field_validates_int_option():
 
 
 def test_union_field_handles_numeric_strings_as_strings():
-    """Test that UnionField treats numeric strings as strings when StringField is first option."""
+    """Test that UnionField treats numeric strings as strings when StringField is the first option."""
     field = create_simple_union_field()
     assert field.validate_and_build("123") == "123"  # Should be treated as string, not converted to int
 
@@ -371,7 +371,7 @@ def test_validate_tuple_with_nested_structures():
     
     # Test with an invalid nested structure
     with pytest.raises(ValidationError, match="Tuple element 0 invalid"):
-        field.validate_and_build(([1, "two", 3], "test"))  # Non-int in list
+        field.validate_and_build(([1, "two", 3], "test"))  # Non-int in a list
 
 
 def test_validate_tuple_rejects_none():
