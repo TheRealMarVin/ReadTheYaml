@@ -9,14 +9,7 @@ from readtheyaml.utils.type_utils import extract_types_for_composite
 
 
 class ListField(Field):
-    def __init__(
-        self,
-        item_field,
-        min_length = None,
-        max_length = None,
-        length_range = None,
-        **kwargs
-    ):
+    def __init__(self, item_field, min_length=None, max_length=None, length_range=None, **kwargs):
         sig = inspect.signature(get_target_class(item_field).__init__)
         super().__init__(additional_allowed_kwargs=set(sig.parameters), **kwargs)
 
@@ -53,6 +46,7 @@ class ListField(Field):
         if list_type is not None:
             args_copy = copy.deepcopy(kwargs)
             args_copy["ignore_post"] = True
+            args_copy["additional_allowed_kwargs"] = set(["min_length", "max_length", "length_range"])
 
             constructor = factory.create_field(list_type, name, **args_copy)
             return ListField(name=name, item_field=constructor, **kwargs)

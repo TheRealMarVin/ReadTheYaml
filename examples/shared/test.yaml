@@ -35,6 +35,12 @@ req_int_list_val:
   required: true
   value_range: [1, 256]
   type: list[int]
+req_int_list_val_length:
+  description: test required int list value
+  required: true
+  value_range: [1, 256]
+  length_range: [2, 4]
+  type: list[int]
 unreq_int_list_val:
   description: test un-required int list value
   required: false
