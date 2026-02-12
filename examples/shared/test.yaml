@@ -88,6 +88,10 @@ req_tuple_int_float_none:
   description: test required tuple(int, float) value
   required: true
   type: tuple[int, float|None]
+random_generator:
+  description: Seed for the random generator
+  required: true
+  type: object[numpy.random.default_rng]
 delay:
   type: object[datetime.timedelta]
   description: How long to wait between retries

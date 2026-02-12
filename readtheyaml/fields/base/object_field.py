@@ -46,7 +46,7 @@ class ObjectField(Field):
         if not isinstance(value, dict):
             if self.class_path:
                 try:
-                    cls = self._import(self.class_path)
+                    cls = import_type(self.class_path)
                     return cls(value)
                 except Exception as e:
                     raise ValidationError(f"Field '{self.name}': Failed to create '{self.class_path}': {e}") from e
