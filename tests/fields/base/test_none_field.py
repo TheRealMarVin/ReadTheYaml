@@ -8,6 +8,10 @@ def test_factory_accepts_None():
     field = FIELD_FACTORY.create_field("None", name="my_field", description="test field")
     assert isinstance(field, NoneField)
 
+    assert field.name == "my_field"
+    assert field.description == "test field"
+    assert not field.required
+
 
 def test_factory_accepts_none_lowercase():
     """Test that 'none' (lowercase) is accepted by the factory."""
@@ -33,12 +37,13 @@ def test_factory_rejects_random_string():
         FIELD_FACTORY.create_field("null", name="my_field", description="test field")
 
 ###
-def test_none_field_initialization():
-    """Test that NoneField is properly initialized."""
-    field = NoneField(name="new_field", description="My description", required=False, default=None)
-    assert field.name == "new_field"
-    assert field.description == "My description"
-    assert not field.required
+# def test_none_field_initialization():
+#     """Test that NoneField is properly initialized."""
+#     field = FIELD_FACTORY.create_field("NONE", name="my_field", description="test field")
+#     field = NoneField(name="new_field", description="My description", required=False, default=None)
+#     assert field.name == "new_field"
+#     assert field.description == "My description"
+#     assert not field.required
 
 def test_none_field_validate_uppercase_none():
     """Test validation of string 'None' as None."""
