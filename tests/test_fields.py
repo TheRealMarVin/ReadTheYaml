@@ -5,14 +5,8 @@ from fractions import Fraction
 
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
-from readtheyaml.fields.base.bool_field import BoolField
 from readtheyaml.fields.base.numerical_field import NumericalField
 from readtheyaml.fields.base.string_field import StringField
-
-
-# -------------------
-# Tests for BoolField
-# -------------------
 
 
 # testing int
