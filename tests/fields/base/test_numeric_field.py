@@ -1,4 +1,7 @@
 import pytest
+import sys
+from decimal import Decimal
+from fractions import Fraction
 from readtheyaml.fields.base.numerical_field import NumericalField
 from readtheyaml.fields.field_factory import FIELD_FACTORY
 from readtheyaml.exceptions.format_error import FormatError
@@ -291,9 +294,92 @@ def test_float_field_rejects_invalid_default_types(default):
         {"default": 1.0, "value_type": float, "min_value": 5.0},
         {"default": 1.0, "value_type": float, "value_range": [5.0, 1024.0]},
         {"default": 1024.0, "value_type": float, "max_value": 512.0},
-        {"default": 2048.0, "value_type": float, "value_range": [5.0, 1024.0]},
-    ],
+        {"default": 2048.0, "value_type": float, "value_range": [5.0, 1024.0]}
+    ]
 )
 def test_float_field_rejects_default_outside_bounds(kwargs):
     with pytest.raises(FormatError, match="invalid default value"):
         NumericalField(name="num", description="test", required=False, **kwargs)
+
+
+# -----------------------------
+# Advanced numeric representations
+# -----------------------------
+
+@pytest.mark.parametrize("value", [sys.maxsize - 1, -sys.maxsize + 1, str(sys.maxsize - 1), str(-sys.maxsize + 1)])
+def test_int_field_handles_extreme_values_and_strings(value):
+    field = NumericalField(name="large_int", description="extreme int", required=False, default=0, value_type=int)
+    assert field.validate_and_build(value) == int(value)
+
+
+def test_int_field_enforces_extreme_bounds():
+    min_value = -sys.maxsize + 1
+    max_value = sys.maxsize - 1
+    field = NumericalField(name="bounded_int", description="bounded large int", required=False, default=0, value_type=int, min_value=min_value, max_value=max_value)
+
+    assert field.validate_and_build(min_value) == min_value
+    assert field.validate_and_build(max_value) == max_value
+
+
+def test_int_field_rejects_extreme_boundary_violations():
+    upper_bounded = NumericalField(name="upper_bounded", description="upper bound", required=False, default=0, value_type=int, max_value=sys.maxsize - 1)
+    lower_bounded = NumericalField(name="lower_bounded", description="lower bound", required=False, default=0, value_type=int, min_value=-sys.maxsize + 1)
+
+    with pytest.raises(ValidationError, match="Value must be at most"):
+        upper_bounded.validate_and_build(sys.maxsize + 1)
+    with pytest.raises(ValidationError, match="Value must be at least"):
+        lower_bounded.validate_and_build(-sys.maxsize - 2)
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("1.23e-4", 0.000123),
+        ("1.23e4", 12300.0),
+        ("-1.23e-4", -0.000123),
+        ("1.23E-4", 0.000123),
+        ("1.23E4", 12300.0),
+        ("1e6", 1000000.0),
+        ("1e-6", 0.000001),
+        ("1.7976931348623157e+308", 1.7976931348623157e+308),
+        ("2.2250738585072014e-308", 2.2250738585072014e-308)
+    ]
+)
+def test_float_field_parses_scientific_notation(value, expected):
+    field = NumericalField(name="sci_float", description="scientific notation", required=False, default=0.0, value_type=float)
+    assert field.validate_and_build(value) == expected
+
+
+@pytest.mark.parametrize("value", ["1.23e", "e123", "1.2.3e4"])
+def test_float_field_rejects_invalid_scientific_notation(value):
+    field = NumericalField(name="sci_float_invalid", description="invalid scientific notation", required=False, default=0.0, value_type=float)
+    with pytest.raises(ValidationError, match="Must be of type float"):
+        field.validate_and_build(value)
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (Decimal("123.456"), 123.456),
+        (Decimal("-123.456"), -123.456),
+        (Decimal("1e-6"), 1e-6),
+        (Decimal("1e6"), 1e6),
+        (Fraction(1, 2), 0.5),
+        (Fraction(3, 4), 0.75),
+        (Fraction(-2, 3), -2 / 3),
+        (Fraction("10/2"), 5.0)
+    ]
+)
+def test_float_field_accepts_decimal_and_fraction_objects(value, expected):
+    field = NumericalField(name="num_obj", description="decimal/fraction", required=False, default=0.0, value_type=float)
+    assert field.validate_and_build(value) == pytest.approx(expected)
+
+
+def test_float_field_enforces_bounds_for_fraction_values():
+    field = NumericalField(name="bounded_fraction", description="fraction bounds", required=False, default=0.5, value_type=float, min_value=0.1, max_value=0.9)
+
+    assert field.validate_and_build(Fraction(1, 2)) == 0.5
+    with pytest.raises(ValidationError, match="Value must be at least"):
+        field.validate_and_build(Fraction(1, 100))
+    with pytest.raises(ValidationError, match="Value must be at most"):
+        field.validate_and_build(Fraction(1, 1))
