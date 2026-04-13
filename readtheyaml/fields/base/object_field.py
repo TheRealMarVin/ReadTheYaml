@@ -35,7 +35,7 @@ class ObjectField(Field):
                     constructor = partial(AnyField)
                 else:
                     type_as_string = type_to_string(values["hint"])
-                    constructor = self.factory(type_as_string)
+                    constructor = partial(self.factory.create_field, type_str=type_as_string)
 
                 self.subfields[name] = constructor(name=name, description=name, required=not values["has_default"], default=values["default"])
 
