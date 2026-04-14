@@ -16,12 +16,17 @@ class ObjectField(Field):
         self.class_path = class_path
         self.factory = factory
         self.subfields = {}
+        self._fixed_class = None
+        self._subfields_cache = {}
 
         if class_path:
             cls = import_type(class_path)
-            self._build_subfields_from_type_hints(cls)
+            self._fixed_class = cls
+            self.subfields = self._build_subfields_from_type_hints(cls)
+            self._subfields_cache[cls] = self.subfields
 
     def _build_subfields_from_type_hints(self, cls):
+        subfields = {}
         try:
             hints = get_params_and_defaults(cls)
         except Exception:
@@ -37,29 +42,36 @@ class ObjectField(Field):
                     type_as_string = type_to_string(values["hint"])
                     constructor = partial(self.factory.create_field, type_str=type_as_string)
 
-                self.subfields[name] = constructor(name=name, description=name, required=not values["has_default"], default=values["default"])
+                subfields[name] = constructor(name=name, description=name, required=not values["has_default"], default=values["default"])
 
             except Exception as e:
                 print(e)  # fallback: skip unsupported
+        return subfields
+
+    def _get_subfields_for_class(self, cls):
+        if cls not in self._subfields_cache:
+            self._subfields_cache[cls] = self._build_subfields_from_type_hints(cls)
+        return self._subfields_cache[cls]
 
     def validate_and_build(self, value):
         if not isinstance(value, dict):
             if self.class_path:
                 try:
-                    cls = import_type(self.class_path)
+                    cls = self._fixed_class or import_type(self.class_path)
                     return cls(value)
                 except Exception as e:
                     raise ValidationError(f"Field '{self.name}': Failed to create '{self.class_path}': {e}") from e
             raise ValidationError(f"Field '{self.name}': Expected a dictionary to instantiate object")
 
         cls = self._resolve_class(value)
+        subfields = self._get_subfields_for_class(cls)
 
         extras = set(value) - self._get_constructor_params(cls) - {self._sentinel}
         if extras and not self._accepts_kwargs(cls):
             raise ValidationError(f"Field '{self.name}': Unexpected keys: {sorted(extras)}")
 
         # Validate type hints
-        for param, field in self.subfields.items():
+        for param, field in subfields.items():
             if param in value:
                 try:
                     field.validate_and_build(value[param])
@@ -73,7 +85,14 @@ class ObjectField(Field):
 
     def _resolve_class(self, mapping):
         if self.class_path:
-            return import_type(self.class_path)
+            base_cls = self._fixed_class or import_type(self.class_path)
+            if self._sentinel not in mapping:
+                return base_cls
+
+            resolved_cls = import_type(mapping[self._sentinel])
+            if not isinstance(resolved_cls, type) or not issubclass(resolved_cls, base_cls):
+                raise ValidationError(f"Field '{self.name}': '{mapping[self._sentinel]}' is not a subclass of '{self.class_path}'")
+            return resolved_cls
         if self._sentinel not in mapping:
             raise ValidationError(f"Field '{self.name}': Missing '{self._sentinel}' key to resolve object type")
         return import_type(mapping[self._sentinel])
