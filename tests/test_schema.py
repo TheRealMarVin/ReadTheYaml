@@ -149,3 +149,25 @@ def test_schema_optional_subsection_not_provided():
     assert built["optional_section"] == {"enabled": False}
     assert data_with_default["optional_section"]["enabled"] is False
 
+def test_schema_optional_subsection_with_none_default_not_expanded():
+    """Optional subsection with default=None should stay None and not inject child defaults."""
+    schema_dict = {
+        "optional_section": {
+            "description": "optional config",
+            "required": False,
+            "default": None,
+            "enabled": {
+                "type": "bool",
+                "description": "Whether enabled",
+                "required": False,
+                "default": False
+            }
+        }
+    }
+    schema = Schema._from_dict(schema_dict)
+    built, data_with_default = schema.build_and_validate({})
+
+    assert "optional_section" in built
+    assert built["optional_section"] is None
+    assert data_with_default["optional_section"] is None
+

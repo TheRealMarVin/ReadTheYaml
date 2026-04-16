@@ -18,12 +18,16 @@ class Schema:
             required: bool = True,
             fields: Optional[Dict[str, Field]] = None,
             subsections: Optional[Dict[str, 'Section']] = None,
+            default: Any = None,
+            has_default: bool = False,
     ):
         self.name = name
         self.description = description
         self.required = required
         self.fields = fields or {}
         self.subsections = subsections or {}
+        self.default = default
+        self.has_default = has_default
 
     def build_and_validate(self, data: Dict[str, Any], strict: bool = True) -> Dict[str, Any]:
         built_data = {}
@@ -50,7 +54,11 @@ class Schema:
             elif subsection.required:
                 raise ValidationError(f"Missing required section '{section_name}'")
             else:
-                built_data[section_name], data_with_default[section_name] = subsection.build_and_validate({}, strict=strict)
+                if subsection.has_default:
+                    built_data[section_name] = copy.deepcopy(subsection.default)
+                    data_with_default[section_name] = copy.deepcopy(subsection.default)
+                else:
+                    built_data[section_name], data_with_default[section_name] = subsection.build_and_validate({}, strict=strict)
 
         # Handle extra keys
         allowed_keys = set(self.fields.keys()) | set(self.subsections.keys())
@@ -68,13 +76,16 @@ class Schema:
         return built_data, data_with_default
 
     def to_dict(self) -> dict:
-        return {
+        output = {
             "name": self.name,
             "description": self.description,
             "required": self.required,
             "fields": {k: v.to_dict() for k, v in self.fields.items()},
             "subsections": {k: v.to_dict() for k, v in self.subsections.items()},
         }
+        if self.has_default:
+            output["default"] = self.default
+        return output
 
     @classmethod
     def from_yaml(cls, schema_file: str, base_schema_dir: str = None) -> "Schema":
@@ -111,6 +122,8 @@ class Schema:
         name = data.get("name", "")
         description = data.get("description", "")
         required = data.get("required", True)
+        has_default = "default" in data
+        default = data.get("default")
 
         fields: Dict[str, Field] = {}
         subsections: Dict[str, Schema] = {}
@@ -146,6 +159,8 @@ class Schema:
             required=required,
             fields=fields,
             subsections=subsections,
+            default=default,
+            has_default=has_default,
         )
 
     @staticmethod
