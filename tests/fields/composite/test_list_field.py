@@ -22,6 +22,28 @@ class ListPet:
         self.kind = kind
 
 
+class BaseListAnimal:
+    def __init__(self, name: str):
+        self.name = name
+
+
+class ListDog(BaseListAnimal):
+    def __init__(self, name: str, breed: str):
+        super().__init__(name)
+        self.breed = breed
+
+
+class ListCat(BaseListAnimal):
+    def __init__(self, name: str, lives: int = 9):
+        super().__init__(name)
+        self.lives = lives
+
+
+class ListCar:
+    def __init__(self, model: str):
+        self.model = model
+
+
 def test_list_field_initialization():
     """Test that ListField is properly initialized with the item field."""
     field = ListField(
@@ -572,3 +594,54 @@ def test_validate_list_of_various_objects():
     assert result[0].age == 30
     assert isinstance(result[1], ListPet)
     assert result[1].kind == "cat"
+
+
+def test_validate_list_of_objects_deriving_from_base_class():
+    """ListField should build derived objects when ObjectField is configured with a base class."""
+    field = ListField(
+        name="animals",
+        description="List of animals",
+        item_field=partial(
+            ObjectField,
+            factory=FIELD_FACTORY,
+            class_path="tests.fields.composite.test_list_field.BaseListAnimal",
+        ),
+        required=False,
+        default=[],
+    )
+
+    result = field.validate_and_build(
+        [
+            {"_type_": "tests.fields.composite.test_list_field.ListDog", "name": "Rex", "breed": "Labrador"},
+            {"_type_": "tests.fields.composite.test_list_field.ListCat", "name": "Mittens", "lives": 7},
+        ]
+    )
+
+    assert isinstance(result[0], ListDog)
+    assert result[0].name == "Rex"
+    assert result[0].breed == "Labrador"
+    assert isinstance(result[1], ListCat)
+    assert result[1].name == "Mittens"
+    assert result[1].lives == 7
+
+
+def test_validate_list_rejects_non_subclass_for_base_class_object_field():
+    """ListField should reject list items whose _type_ is not a subclass of configured base class."""
+    field = ListField(
+        name="animals",
+        description="List of animals",
+        item_field=partial(
+            ObjectField,
+            factory=FIELD_FACTORY,
+            class_path="tests.fields.composite.test_list_field.BaseListAnimal",
+        ),
+        required=False,
+        default=[],
+    )
+
+    with pytest.raises(ValidationError, match="Invalid item at index 0"):
+        field.validate_and_build(
+            [
+                {"_type_": "tests.fields.composite.test_list_field.ListCar", "model": "Roadster"},
+            ]
+        )

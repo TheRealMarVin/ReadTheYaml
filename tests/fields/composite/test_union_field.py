@@ -24,6 +24,28 @@ class UnionPet:
         self.kind = kind
 
 
+class BaseUnionAnimal:
+    def __init__(self, name: str):
+        self.name = name
+
+
+class UnionDog(BaseUnionAnimal):
+    def __init__(self, name: str, breed: str):
+        super().__init__(name)
+        self.breed = breed
+
+
+class UnionCat(BaseUnionAnimal):
+    def __init__(self, name: str, lives: int = 9):
+        super().__init__(name)
+        self.lives = lives
+
+
+class UnionCar:
+    def __init__(self, model: str):
+        self.model = model
+
+
 def test_union_field_initialization():
     """Test that UnionField is properly initialized with options."""
     field = UnionField(
@@ -344,3 +366,76 @@ def test_union_field_error_messages():
 
     with pytest.raises(ValidationError):
         field.validate_and_build(False)
+
+
+def test_union_field_accepts_various_object_types_with_dynamic_object_option():
+    """UnionField should validate and build different object types via dynamic ObjectField resolution."""
+    field = UnionField(
+        name="object_union",
+        description="Union with dynamic object option",
+        options=[
+            partial(ObjectField, factory=FIELD_FACTORY),
+        ]
+    )
+
+    person = field.validate_and_build(
+        {"_type_": "tests.fields.composite.test_union_field.UnionPerson", "name": "Alice", "age": 30}
+    )
+    pet = field.validate_and_build(
+        {"_type_": "tests.fields.composite.test_union_field.UnionPet", "kind": "cat"}
+    )
+
+    assert isinstance(person, UnionPerson)
+    assert person.name == "Alice"
+    assert person.age == 30
+    assert isinstance(pet, UnionPet)
+    assert pet.kind == "cat"
+
+
+def test_union_field_accepts_object_deriving_from_base_class():
+    """UnionField should accept derived object types when ObjectField is configured with a base class."""
+    field = UnionField(
+        name="animal_union",
+        description="Union with base animal object",
+        options=[
+            partial(
+                ObjectField,
+                factory=FIELD_FACTORY,
+                class_path="tests.fields.composite.test_union_field.BaseUnionAnimal"
+            ),
+        ]
+    )
+
+    dog = field.validate_and_build(
+        {"_type_": "tests.fields.composite.test_union_field.UnionDog", "name": "Rex", "breed": "Labrador"}
+    )
+    cat = field.validate_and_build(
+        {"_type_": "tests.fields.composite.test_union_field.UnionCat", "name": "Mittens", "lives": 7}
+    )
+
+    assert isinstance(dog, UnionDog)
+    assert dog.name == "Rex"
+    assert dog.breed == "Labrador"
+    assert isinstance(cat, UnionCat)
+    assert cat.name == "Mittens"
+    assert cat.lives == 7
+
+
+def test_union_field_rejects_non_subclass_for_base_class_object_option():
+    """UnionField should reject object type that is not a subclass of configured base class."""
+    field = UnionField(
+        name="animal_union",
+        description="Union with base animal object",
+        options=[
+            partial(
+                ObjectField,
+                factory=FIELD_FACTORY,
+                class_path="tests.fields.composite.test_union_field.BaseUnionAnimal"
+            ),
+        ]
+    )
+
+    with pytest.raises(ValidationError, match="does not match any allowed type"):
+        field.validate_and_build(
+            {"_type_": "tests.fields.composite.test_union_field.UnionCar", "model": "Roadster"}
+        )

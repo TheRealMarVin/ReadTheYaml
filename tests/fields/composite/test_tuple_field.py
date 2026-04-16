@@ -7,6 +7,8 @@ from readtheyaml.fields.composite.list_field import ListField
 from readtheyaml.fields.base.numerical_field import NumericalField
 from readtheyaml.fields.base.string_field import StringField
 from readtheyaml.fields.base.bool_field import BoolField
+from readtheyaml.fields.base.object_field import ObjectField
+from readtheyaml.fields.field_factory import FIELD_FACTORY
 from readtheyaml.fields.composite.tuple_field import TupleField
 
 
@@ -164,3 +166,108 @@ def test_validate_tuple_rejects_non_string_non_tuple_input():
 
     with pytest.raises(ValidationError, match="Not a valid tuple"):
         field.validate_and_build({"name": "Alice"})
+
+
+class TuplePerson:
+    def __init__(self, name: str, age: int):
+        self.name = name
+        self.age = age
+
+
+class TuplePet:
+    def __init__(self, kind: str):
+        self.kind = kind
+
+
+class BaseTupleAnimal:
+    def __init__(self, name: str):
+        self.name = name
+
+
+class TupleDog(BaseTupleAnimal):
+    def __init__(self, name: str, breed: str):
+        super().__init__(name)
+        self.breed = breed
+
+
+class TupleCat(BaseTupleAnimal):
+    def __init__(self, name: str, lives: int = 9):
+        super().__init__(name)
+        self.lives = lives
+
+
+class TupleCar:
+    def __init__(self, model: str):
+        self.model = model
+
+
+def test_validate_tuple_of_various_objects():
+    """TupleField should validate tuples containing different object types."""
+    field = TupleField(
+        name="mixed_objects_tuple",
+        description="Tuple of various objects",
+        element_fields=[
+            partial(ObjectField, factory=FIELD_FACTORY),
+            partial(ObjectField, factory=FIELD_FACTORY),
+        ],
+    )
+
+    value = (
+        {"_type_": "tests.fields.composite.test_tuple_field.TuplePerson", "name": "Alice", "age": 30},
+        {"_type_": "tests.fields.composite.test_tuple_field.TuplePet", "kind": "cat"},
+    )
+    assert field.validate_and_build(value) == value
+
+
+def test_validate_tuple_of_objects_deriving_from_base_class():
+    """TupleField should validate derived object types when ObjectField uses a base class."""
+    field = TupleField(
+        name="animals_tuple",
+        description="Tuple of animals",
+        element_fields=[
+            partial(
+                ObjectField,
+                factory=FIELD_FACTORY,
+                class_path="tests.fields.composite.test_tuple_field.BaseTupleAnimal",
+            ),
+            partial(
+                ObjectField,
+                factory=FIELD_FACTORY,
+                class_path="tests.fields.composite.test_tuple_field.BaseTupleAnimal",
+            ),
+        ],
+    )
+
+    value = (
+        {"_type_": "tests.fields.composite.test_tuple_field.TupleDog", "name": "Rex", "breed": "Labrador"},
+        {"_type_": "tests.fields.composite.test_tuple_field.TupleCat", "name": "Mittens", "lives": 7},
+    )
+    assert field.validate_and_build(value) == value
+
+
+def test_validate_tuple_rejects_non_subclass_for_base_class_object_field():
+    """TupleField should reject tuple elements whose _type_ is not a subclass of configured base class."""
+    field = TupleField(
+        name="animals_tuple",
+        description="Tuple of animals",
+        element_fields=[
+            partial(
+                ObjectField,
+                factory=FIELD_FACTORY,
+                class_path="tests.fields.composite.test_tuple_field.BaseTupleAnimal",
+            ),
+            partial(
+                ObjectField,
+                factory=FIELD_FACTORY,
+                class_path="tests.fields.composite.test_tuple_field.BaseTupleAnimal",
+            ),
+        ],
+    )
+
+    with pytest.raises(ValidationError, match="Tuple element 0 invalid"):
+        field.validate_and_build(
+            (
+                {"_type_": "tests.fields.composite.test_tuple_field.TupleCar", "model": "Roadster"},
+                {"_type_": "tests.fields.composite.test_tuple_field.TupleCat", "name": "Mittens"},
+            )
+        )

@@ -1,4 +1,3 @@
 test factory
 test helpers public
 in fields variable are named constructor
-test list of object deriving from a base class
