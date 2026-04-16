@@ -6,9 +6,22 @@ from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.composite.list_field import ListField
 from readtheyaml.fields.base.numerical_field import NumericalField
+from readtheyaml.fields.base.object_field import ObjectField
 from readtheyaml.fields.base.string_field import StringField
+from readtheyaml.fields.field_factory import FIELD_FACTORY
 from readtheyaml.fields.composite.tuple_field import TupleField
 from readtheyaml.fields.composite.union_field import UnionField
+
+
+class UnionPerson:
+    def __init__(self, name: str, age: int):
+        self.name = name
+        self.age = age
+
+
+class UnionPet:
+    def __init__(self, kind: str):
+        self.kind = kind
 
 
 def test_union_field_initialization():
@@ -85,6 +98,53 @@ def test_union_field_accepts_string_field_with_cast_to_string_false():
         ]
     )
     assert len(field._options) == 2
+
+
+def test_union_field_rejects_duplicate_list_field_types():
+    """ListField entries are considered duplicate union option types, even with different item_field constraints."""
+    with pytest.raises(FormatError, match="Duplicate field types found in UnionField"):
+        UnionField(
+            name="test_union",
+            description="Test duplicate list field types",
+            options=[
+                partial(ListField, item_field=partial(NumericalField, value_type=int)),
+                partial(ListField, item_field=partial(StringField, cast_to_string=False))
+            ]
+        )
+
+
+def test_union_field_rejects_duplicate_tuple_field_types():
+    """TupleField entries are considered duplicate union option types, even with different element definitions."""
+    with pytest.raises(FormatError, match="Duplicate field types found in UnionField"):
+        UnionField(
+            name="test_union",
+            description="Test duplicate tuple field types",
+            options=[
+                partial(TupleField, element_fields=[partial(StringField, cast_to_string=False)]),
+                partial(TupleField, element_fields=[partial(NumericalField, value_type=int)])
+            ]
+        )
+
+
+def test_union_field_rejects_duplicate_object_field_types():
+    """ObjectField entries are considered duplicate union option types, even with different class_path values."""
+    with pytest.raises(FormatError, match="Duplicate field types found in UnionField"):
+        UnionField(
+            name="test_union",
+            description="Test duplicate object field types",
+            options=[
+                partial(
+                    ObjectField,
+                    factory=FIELD_FACTORY,
+                    class_path="tests.fields.composite.test_union_field.UnionPerson"
+                ),
+                partial(
+                    ObjectField,
+                    factory=FIELD_FACTORY,
+                    class_path="tests.fields.composite.test_union_field.UnionPet"
+                )
+            ]
+        )
 
 
 def test_union_field_rejects_duplicate_field_types():
@@ -194,6 +254,19 @@ def create_complex_union_field():
     )
 
 
+def create_collection_and_object_union_field():
+    """Helper function to create a union with list, tuple, and object options."""
+    return UnionField(
+        name="mixed_complex_union",
+        description="Union with list, tuple, and object options",
+        options=[
+            partial(ListField, item_field=partial(NumericalField, value_type=int)),
+            partial(TupleField, element_fields=[partial(StringField, cast_to_string=False), partial(NumericalField, value_type=int)]),
+            partial(ObjectField, factory=FIELD_FACTORY, class_path="tests.fields.composite.test_union_field.UnionPerson")
+        ]
+    )
+
+
 def test_union_field_accepts_list_of_numbers():
     """Test that UnionField accepts a list of numbers when ListField is an option."""
     field = create_complex_union_field()
@@ -210,6 +283,27 @@ def test_union_field_parses_string_representation_of_tuple():
     """Test that UnionField parses string representation of a tuple when TupleField is an option."""
     field = create_complex_union_field()
     assert field.validate_and_build("('Alice', 25)") == ("Alice", 25)
+
+
+def test_union_field_accepts_list_tuple_and_object_consistently():
+    """Union should route values to list/tuple/object options and preserve their validated output types."""
+    field = create_collection_and_object_union_field()
+
+    assert field.validate_and_build([1, 2, 3]) == [1, 2, 3]
+    assert field.validate_and_build(("Alice", 25)) == ("Alice", 25)
+
+    person = field.validate_and_build({"name": "Bob", "age": 31})
+    assert isinstance(person, UnionPerson)
+    assert person.name == "Bob"
+    assert person.age == 31
+
+
+def test_union_field_list_like_tuple_input_hits_limit():
+    """A list value with tuple-like contents should not be accepted by the tuple option."""
+    field = create_collection_and_object_union_field()
+
+    with pytest.raises(ValidationError, match="does not match any allowed type"):
+        field.validate_and_build(["Alice", 25])
 
 
 def test_union_field_required_rejects_none():

@@ -17,10 +17,16 @@ class TupleField(Field):
             raise ValidationError(f"Field '{self.name}': None is not a valid tuple")
 
         if type(value) != tuple:
+            if not isinstance(value, str):
+                raise ValidationError(f"Field '{self.name}': Not a valid tuple")
+
             if not (value.startswith("(") and value.endswith(")")):
                 raise ValidationError(f"Field '{self.name}': Not a valid tuple")
 
-            value = ast.literal_eval(value)
+            try:
+                value = ast.literal_eval(value)
+            except (ValueError, SyntaxError):
+                raise ValidationError(f"Field '{self.name}': Not a valid tuple")
 
             if type(value) != tuple:
                 value = (value,)

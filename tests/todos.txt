@@ -1,4 +1,3 @@
-test enum fields
 test factory
 test helpers public
 in fields variable are named constructor

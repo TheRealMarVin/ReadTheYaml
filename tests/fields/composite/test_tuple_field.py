@@ -150,3 +150,17 @@ def test_validate_tuple_rejects_none():
 
     with pytest.raises(ValidationError, match="None is not a valid tuple"):
         field.validate_and_build(None)
+
+
+def test_validate_tuple_rejects_non_string_non_tuple_input():
+    """Test that TupleField rejects non-string/non-tuple inputs without crashing."""
+    field = TupleField(
+        name="test",
+        description="Test tuple",
+        element_fields=[
+            partial(StringField, name="name", description="Name")
+        ]
+    )
+
+    with pytest.raises(ValidationError, match="Not a valid tuple"):
+        field.validate_and_build({"name": "Alice"})
