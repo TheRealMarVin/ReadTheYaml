@@ -8,15 +8,17 @@ from readtheyaml.exceptions.validation_error import ValidationError
 # Field Creation
 # -----------------------------
 
+
 @pytest.mark.parametrize("casing", ["str", "Str", "STR"])
 def test_string_type_valid_casing(casing):
     """Factory should accept 'str', 'Str', and 'STR'."""
     field = FIELD_FACTORY.create_field(
         type_str=casing,
         name="my_str",
-        description="test string"
+        description="test string",
     )
     assert isinstance(field, StringField)
+
 
 def test_string_type_invalid_casing():
     """Factory should reject incorrectly cased string types."""
@@ -26,31 +28,37 @@ def test_string_type_invalid_casing():
                 type_str=invalid,
                 name="my_str",
                 description="test",
-                required=False
+                required=False,
             )
+
 
 # -----------------------------
 # Constructor Format Validation
 # -----------------------------
+
 
 def test_string_invalid_min_length():
     """StringField should raise FormatError if min_length < 0."""
     with pytest.raises(FormatError):
         StringField(name="s1", description="", min_length=-1)
 
+
 def test_string_invalid_max_length():
     """StringField should raise FormatError if max_length < min_length."""
     with pytest.raises(FormatError):
         StringField(name="s2", description="", min_length=5, max_length=3)
 
+
 # -----------------------------
 # Value Validation
 # -----------------------------
+
 
 def test_string_valid_input():
     """StringField should accept valid strings within length limits."""
     field = StringField(name="s", description="", min_length=2, max_length=5)
     assert field.validate_and_build("abc") == "abc"
+
 
 def test_string_too_short():
     """StringField should raise ValidationError for too-short strings."""
@@ -58,16 +66,19 @@ def test_string_too_short():
     with pytest.raises(ValidationError):
         field.validate_and_build("hi")
 
+
 def test_string_too_long():
     """StringField should raise ValidationError for too-long strings."""
     field = StringField(name="s", description="", max_length=4)
     with pytest.raises(ValidationError):
         field.validate_and_build("hello")
 
+
 def test_string_cast_to_string_enabled():
     """StringField should cast non-string values to string when enabled."""
     field = StringField(name="s", description="", cast_to_string=True)
     assert field.validate_and_build(1234) == "1234"
+
 
 def test_string_cast_to_string_disabled():
     """StringField should reject non-string values when casting is disabled."""
@@ -75,9 +86,87 @@ def test_string_cast_to_string_disabled():
     with pytest.raises(ValidationError):
         field.validate_and_build(1234)
 
+
+def test_string_cast_to_string_handles_none():
+    """StringField should cast None to 'None' when casting is enabled."""
+    field = StringField(name="s", description="", cast_to_string=True)
+    assert field.validate_and_build(None) == "None"
+
+
+def test_string_rejects_none_without_casting_when_required():
+    """StringField should reject None when casting is disabled and required=True."""
+    field = StringField(name="s", description="", required=True, cast_to_string=False)
+    with pytest.raises(ValidationError, match="Expected string"):
+        field.validate_and_build(None)
+
+
+@pytest.mark.parametrize("value", [123, True])
+def test_string_without_casting_rejects_non_strings(value):
+    """StringField should reject non-string values when casting is disabled."""
+    field = StringField(name="s", description="", required=False, default="", cast_to_string=False)
+    with pytest.raises(ValidationError, match="Expected string"):
+        field.validate_and_build(value)
+
+
+def test_string_accepts_empty_string():
+    """StringField should accept empty string when min_length is 0."""
+    field = StringField(name="s", description="", required=False, default="", min_length=0, cast_to_string=True)
+    assert field.validate_and_build("") == ""
+
+
+@pytest.mark.parametrize("value", ["None", "none", "NONE", "123"])
+def test_string_casting_treats_string_literals_as_strings(value):
+    """StringField should keep provided string literals unchanged."""
+    field = StringField(name="s", description="", required=False, default="", cast_to_string=True)
+    assert field.validate_and_build(value) == value
+
+
+def test_string_exact_min_length():
+    """StringField should accept values equal to min_length."""
+    field = StringField(name="s", description="", min_length=3, max_length=5)
+    assert field.validate_and_build("123") == "123"
+
+
+def test_string_exact_max_length():
+    """StringField should accept values equal to max_length."""
+    field = StringField(name="s", description="", min_length=3, max_length=5)
+    assert field.validate_and_build("12345") == "12345"
+
+
+def test_string_preserves_whitespace():
+    """StringField should preserve leading, trailing, and internal whitespace."""
+    field = StringField(name="s", description="", required=False, default="", cast_to_string=False)
+    assert field.validate_and_build("  test  ") == "  test  "
+    assert field.validate_and_build("test string") == "test string"
+    assert field.validate_and_build("   ") == "   "
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "\u3053\u3093\u306b\u3061\u306f",
+        "\u041f\u0440\u0438\u0432\u0435\u0442",
+        "\u0645\u0631\u062d\u0628\u0627",
+        "\U0001f60a\U0001f44d\U0001f31f",
+    ],
+)
+def test_string_accepts_unicode(value):
+    """StringField should handle unicode input."""
+    field = StringField(name="s", description="", required=False, default="", cast_to_string=False)
+    assert field.validate_and_build(value) == value
+
+
+def test_string_accepts_control_characters():
+    """StringField should preserve control characters in strings."""
+    field = StringField(name="s", description="", required=False, default="", cast_to_string=True)
+    value = "line1\nline2\r\nline3"
+    assert field.validate_and_build(value) == value
+
+
 # -----------------------------
 # Default Value Handling
 # -----------------------------
+
 
 def test_string_valid_default():
     """Factory should accept valid default when required=False."""
@@ -86,9 +175,10 @@ def test_string_valid_default():
         name="opt",
         description="",
         required=False,
-        default="default value"
+        default="default value",
     )
     assert field.default == "default value"
+
 
 def test_string_default_without_required_false():
     """Providing a default without required=False should raise FormatError."""
@@ -97,8 +187,9 @@ def test_string_default_without_required_false():
             type_str="str",
             name="bad",
             description="",
-            default="oops"
+            default="oops",
         )
+
 
 def test_string_default_too_short():
     """Default shorter than min_length should raise ValidationError."""
@@ -109,9 +200,10 @@ def test_string_default_too_short():
             description="",
             min_length=5,
             required=False,
-            default="abc"
+            default="abc",
         )
         field.validate_and_build("abc")
+
 
 def test_string_default_too_long():
     """Default longer than max_length should raise ValidationError."""
@@ -122,6 +214,12 @@ def test_string_default_too_long():
             description="",
             max_length=2,
             required=False,
-            default="abc"
+            default="abc",
         )
         field.validate_and_build("abc")
+
+
+def test_string_rejects_none_default_without_casting():
+    """StringField should reject None default when required=False and cast_to_string=False."""
+    with pytest.raises(FormatError):
+        StringField(name="s", description="", required=False, default=None, min_length=0, max_length=-1, cast_to_string=False)
