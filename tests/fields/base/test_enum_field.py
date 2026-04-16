@@ -31,19 +31,19 @@ def test_enum_type_invalid_casing(invalid):
         )
 
 def test_enum_valid_value():
-    """EnumField should accept a value that is in the list."""
+    """EnumField should accept a value in the list."""
     field = EnumField(name="color", description="Color", values=["red", "green"])
     assert field.validate_and_build("green") == "green"
 
 def test_enum_invalid_value():
-    """EnumField should reject a value that is not in the list."""
+    """EnumField should reject a value not in the list."""
     field = EnumField(name="color", description="Color", values=["red", "green"])
     with pytest.raises(ValidationError):
         field.validate_and_build("blue")
 
 
 def test_enum_valid_default_value():
-    """Factory should accept valid default value when required=False."""
+    """Factory should accept a valid default value when required=False."""
     field = FIELD_FACTORY.create_field(
         type_str="enum",
         name="mode",
@@ -66,7 +66,7 @@ def test_enum_default_without_required_false():
         )
 
 def test_enum_default_value_not_in_choices():
-    """Providing a default not in values list should raise ValidationError later."""
+    """Providing a default not in the values list should raise ValidationError later."""
     with pytest.raises(FormatError):
         field = FIELD_FACTORY.create_field(
             type_str="enum",
@@ -84,10 +84,5 @@ def test_enum_default_value_not_in_choices():
 
 def test_enum_values_as_tuple():
     """EnumField should accept values as a tuple."""
-    field = FIELD_FACTORY.create_field(
-        type_str="enum",
-        name="size",
-        description="enum test",
-        values=("S", "M", "L")
-    )
+    field = FIELD_FACTORY.create_field(type_str="enum", name="size", description="enum test", values=("S", "M", "L"))
     assert isinstance(field, EnumField)

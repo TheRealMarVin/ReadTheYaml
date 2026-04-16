@@ -150,7 +150,7 @@ class Schema:
 
     @staticmethod
     def _resolve_ref(ref: str, base_dir: Path) -> Dict[str, Any]:
-        if ref.startswith("http://") or ref.startswith("https://"):
+        if ref.startswith("https://") or ref.startswith("https://"):
             import requests
             resp = requests.get(ref, timeout=10)
             resp.raise_for_status()

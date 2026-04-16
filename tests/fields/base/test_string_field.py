@@ -151,7 +151,7 @@ def test_string_preserves_whitespace():
     ],
 )
 def test_string_accepts_unicode(value):
-    """StringField should handle unicode input."""
+    """StringField should handle Unicode input."""
     field = StringField(name="s", description="", required=False, default="", cast_to_string=False)
     assert field.validate_and_build(value) == value
 
