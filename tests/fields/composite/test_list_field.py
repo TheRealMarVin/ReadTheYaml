@@ -7,6 +7,19 @@ from readtheyaml.fields.composite.list_field import ListField
 from readtheyaml.fields.base.numerical_field import NumericalField
 from readtheyaml.fields.base.string_field import StringField
 from readtheyaml.fields.base.bool_field import BoolField
+from readtheyaml.fields.base.object_field import ObjectField
+from readtheyaml.fields.field_factory import FIELD_FACTORY
+
+
+class ListPerson:
+    def __init__(self, name: str, age: int):
+        self.name = name
+        self.age = age
+
+
+class ListPet:
+    def __init__(self, kind: str):
+        self.kind = kind
 
 
 def test_list_field_initialization():
@@ -535,3 +548,27 @@ def test_deeply_nested_lists():
     # Test invalid type in the deepest level
     with pytest.raises(ValidationError):
         field.validate_and_build([[["not_a_number"]]])
+
+
+def test_validate_list_of_various_objects():
+    """ListField should support different object types through ObjectField dynamic resolution."""
+    field = ListField(
+        name="mixed_objects",
+        description="List of various objects",
+        item_field=partial(ObjectField, factory=FIELD_FACTORY),
+        required=False,
+        default=[]
+    )
+
+    result = field.validate_and_build(
+        [
+            {"_type_": "tests.fields.composite.test_list_field.ListPerson", "name": "Alice", "age": 30},
+            {"_type_": "tests.fields.composite.test_list_field.ListPet", "kind": "cat"},
+        ]
+    )
+
+    assert isinstance(result[0], ListPerson)
+    assert result[0].name == "Alice"
+    assert result[0].age == 30
+    assert isinstance(result[1], ListPet)
+    assert result[1].kind == "cat"

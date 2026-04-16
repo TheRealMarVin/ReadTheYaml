@@ -1,6 +1,4 @@
 test factory
 test helpers public
 in fields variable are named constructor
-test optional sections with None as default
-test list of various object
 test list of object deriving from a base class
