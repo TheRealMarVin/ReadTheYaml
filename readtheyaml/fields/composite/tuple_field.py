@@ -57,8 +57,8 @@ class TupleField(Field):
 
             element_fields = []
             for element in element_specs:
-                constructor = factory.create_field(element, name, **args_copy)
-                element_fields.append(constructor)
+                element_field = factory.create_field(element, name, **args_copy)
+                element_fields.append(element_field)
             return TupleField(name=name, element_fields=element_fields, **kwargs)
 
         return None

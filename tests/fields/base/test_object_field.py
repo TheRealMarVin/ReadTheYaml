@@ -1,6 +1,8 @@
 import pytest
 
 from readtheyaml.exceptions.validation_error import ValidationError
+from readtheyaml.fields.base.any_field import AnyField
+from readtheyaml.fields.base.numerical_field import NumericalField
 from readtheyaml.fields.base.object_field import ObjectField
 from readtheyaml.fields.field_factory import FIELD_FACTORY
 from readtheyaml.schema import Schema
@@ -8,6 +10,12 @@ from readtheyaml.schema import Schema
 
 class SimpleUser:
     def __init__(self, name: str, age: int = 18):
+        self.name = name
+        self.age = age
+
+
+class MixedHintsUser:
+    def __init__(self, name, age: int):
         self.name = name
         self.age = age
 
@@ -62,6 +70,28 @@ def test_object_field_uses_optional_constructor_default_when_missing():
     result = field.validate_and_build({"name": "Alice"})
     assert isinstance(result, SimpleUser)
     assert result.age == 18
+
+
+def test_object_field_uses_anyfield_for_untyped_constructor_params():
+    field = ObjectField(
+        name="user",
+        description="user object",
+        factory=FIELD_FACTORY,
+        class_path="tests.fields.base.test_object_field.MixedHintsUser",
+    )
+
+    assert isinstance(field.subfields["name"], AnyField)
+
+
+def test_object_field_uses_typed_field_for_typed_constructor_params():
+    field = ObjectField(
+        name="user",
+        description="user object",
+        factory=FIELD_FACTORY,
+        class_path="tests.fields.base.test_object_field.MixedHintsUser",
+    )
+
+    assert isinstance(field.subfields["age"], NumericalField)
 
 
 def test_object_field_validates_optional_parameter_type():

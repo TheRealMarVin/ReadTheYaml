@@ -78,8 +78,8 @@ class UnionField(Field):
             args_copy = copy.deepcopy(kwargs)
             args_copy["ignore_post"] = True
             for part in parts:
-                constructor = factory.create_field(part, name, **args_copy)
-                parsed_fields.append(constructor)
+                option_field = factory.create_field(part, name, **args_copy)
+                parsed_fields.append(option_field)
             return UnionField(name=name, options=parsed_fields, **kwargs)
 
         union_inner = extract_types_for_composite(type_str=type_str, type_name="union")
@@ -91,8 +91,8 @@ class UnionField(Field):
             args_copy["ignore_post"] = True
 
             for part in parts:
-                constructor = factory.create_field(part, name, **args_copy)
-                parsed_fields.append(constructor)
+                option_field = factory.create_field(part, name, **args_copy)
+                parsed_fields.append(option_field)
             return UnionField(name=name, options=parsed_fields, **kwargs)
 
         return None

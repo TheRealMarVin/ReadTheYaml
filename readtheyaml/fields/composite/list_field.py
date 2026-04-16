@@ -48,7 +48,7 @@ class ListField(Field):
             args_copy["ignore_post"] = True
             args_copy["additional_allowed_kwargs"] = set(["min_length", "max_length", "length_range"])
 
-            constructor = factory.create_field(list_type, name, **args_copy)
-            return ListField(name=name, item_field=constructor, **kwargs)
+            item_field = factory.create_field(list_type, name, **args_copy)
+            return ListField(name=name, item_field=item_field, **kwargs)
 
         return None

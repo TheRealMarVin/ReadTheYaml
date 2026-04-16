@@ -37,12 +37,12 @@ class ObjectField(Field):
                 continue
             try:
                 if not values["has_hint"]:
-                    constructor = partial(AnyField)
+                    field_builder = partial(AnyField)
                 else:
                     type_as_string = type_to_string(values["hint"])
-                    constructor = partial(self.factory.create_field, type_str=type_as_string)
+                    field_builder = partial(self.factory.create_field, type_str=type_as_string)
 
-                subfields[name] = constructor(name=name, description=name, required=not values["has_default"], default=values["default"])
+                subfields[name] = field_builder(name=name, description=name, required=not values["has_default"], default=values["default"])
 
             except Exception as e:
                 print(e)  # fallback: skip unsupported
