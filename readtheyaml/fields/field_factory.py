@@ -1,3 +1,4 @@
+from readtheyaml.fields.base.any_field import AnyField
 from readtheyaml.fields.base.bool_field import BoolField
 from readtheyaml.fields.base.enum_field import EnumField
 from readtheyaml.fields.base.none_field import NoneField
@@ -11,7 +12,7 @@ from readtheyaml.fields.composite.union_field import UnionField
 
 class FieldFactory:
     def __init__(self):
-        self.builders = [BoolField, EnumField, NoneField, NumericalField, StringField,
+        self.builders = [AnyField, BoolField, EnumField, NoneField, NumericalField, StringField,
                          ListField, TupleField, UnionField, ObjectField]
 
     def create_field(self, type_str: str, name: str, **kwargs):
