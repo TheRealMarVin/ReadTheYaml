@@ -21,8 +21,11 @@ def schema_examples_dir(request) -> Path:
     tests_dir = Path(__file__).resolve().parents[1]
     run_root = tests_dir / ".tmp" / "schema_examples"
 
-    safe_name = sub(r"[^A-Za-z0-9_.-]+", "_", request.node.nodeid)
-    test_dir = run_root / safe_name
+    file_nodeid, _, test_nodeid = request.node.nodeid.partition("::")
+    safe_file = sub(r"[^A-Za-z0-9_.-]+", "_", file_nodeid.replace("\\", "/"))
+    safe_test = sub(r"[^A-Za-z0-9_.-]+", "_", test_nodeid or request.node.name)
+
+    test_dir = run_root / safe_file / safe_test
     reset_test_dir(test_dir)
 
     yield test_dir
