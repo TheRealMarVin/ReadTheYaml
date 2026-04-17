@@ -39,8 +39,8 @@ class Schema:
             elif field.required:
                 raise ValidationError(f"Missing required field '{field_name}'")
             else:
-                value = field.default
-                data_with_default[field_name] = value
+                value = copy.deepcopy(field.default)
+                data_with_default[field_name] = copy.deepcopy(value)
 
             if value is not None:
                 value = field.validate_and_build(value)
@@ -88,13 +88,15 @@ class Schema:
         return output
 
     @classmethod
-    def from_yaml(cls, schema_file: str, base_schema_dir: str = None) -> "Schema":
+    def from_yaml(cls, schema_file: str, base_schema_dir: Optional[Union[str, Path]] = None) -> "Schema":
         if not os.path.isfile(schema_file):
             raise FileNotFoundError(f"Schema file not found: {schema_file}")
 
         # Default base dir to the folder containing the YAML file
         if base_schema_dir is None:
-            base_schema_dir = os.path.dirname(os.path.abspath(schema_file))
+            base_schema_dir = Path(schema_file).resolve().parent
+        else:
+            base_schema_dir = Path(base_schema_dir)
 
         if not os.path.isdir(base_schema_dir):
             raise NotADirectoryError(f"Base schema directory does not exist: {base_schema_dir}")
@@ -165,7 +167,7 @@ class Schema:
 
     @staticmethod
     def _resolve_ref(ref: str, base_dir: Path) -> Dict[str, Any]:
-        if ref.startswith("https://") or ref.startswith("https://"):
+        if ref.startswith("https://") or ref.startswith("http://"):
             import requests
             resp = requests.get(ref, timeout=10)
             resp.raise_for_status()
