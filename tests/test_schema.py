@@ -1,17 +1,9 @@
-
-
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field_helpers import get_reserved_keywords_by_loaded_fields
 from readtheyaml.schema import Schema
 
-import os
 import pytest
-import sys
-
-
-class MyDummy:
-    pass
 
 # -------------------
 # Tests Other
