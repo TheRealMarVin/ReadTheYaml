@@ -4,9 +4,9 @@ from readtheyaml.fields.field import Field
 
 
 class EnumField(Field):
-    def __init__(self, values, **kwargs):
+    def __init__(self, values=None, **kwargs):
         super().__init__(**kwargs)
-        if not values or not isinstance(values, (list, tuple)):
+        if not values or not isinstance(values, (list, tuple) or (isinstance(values, (list, tuple)) and len(values) == 0)):
             raise FormatError(f"Field '{self.name}': EnumField requires a list of choices.")
         self.choices = values
 
