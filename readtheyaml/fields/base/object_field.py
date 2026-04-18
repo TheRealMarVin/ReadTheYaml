@@ -54,6 +54,9 @@ class ObjectField(Field):
         return self._subfields_cache[cls]
 
     def validate_and_build(self, value):
+        if value is None:
+            raise ValidationError(f"Field '{self.name}': None is not a valid object value")
+
         if not isinstance(value, dict):
             if self.class_path:
                 try:
