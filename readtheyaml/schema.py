@@ -17,9 +17,9 @@ class Schema:
             description: str = "",
             required: bool = True,
             fields: Optional[Dict[str, Field]] = None,
-            subsections: Optional[Dict[str, 'Section']] = None,
+            subsections: Optional[Dict[str, "Schema"]] = None,
             default: Any = None,
-            has_default: bool = False,
+            has_default: bool = False
     ):
         self.name = name
         self.description = description
@@ -30,19 +30,27 @@ class Schema:
         self.has_default = has_default
 
     def build_and_validate(self, data: Dict[str, Any], strict: bool = True) -> Dict[str, Any]:
+        if not isinstance(data, dict):
+            raise ValidationError(f"Section '{self.name or '<root>'}' expects a mapping/dictionary, got {type(data).__name__}")
+
         built_data = {}
         data_with_default = copy.deepcopy(data)
 
         for field_name, field in self.fields.items():
+            from_default = False
             if field_name in data:
                 value = data[field_name]
             elif field.required:
                 raise ValidationError(f"Missing required field '{field_name}'")
             else:
+                from_default = True
                 value = copy.deepcopy(field.default)
                 data_with_default[field_name] = copy.deepcopy(value)
 
-            if value is not None:
+            # Defaults are already validated/built by Field.post_init.
+            # Re-validating them can be harmful for fields like ObjectField
+            # where validate_and_build constructs instances.
+            if not from_default:
                 value = field.validate_and_build(value)
 
             built_data[field_name] = value
@@ -65,9 +73,7 @@ class Schema:
         if strict:
             unexpected_keys = set(data.keys()) - allowed_keys
             if unexpected_keys:
-                raise ValidationError(
-                    f"Unexpected key(s) in section '{self.name or '<root>'}': {', '.join(sorted(unexpected_keys))}"
-                )
+                raise ValidationError(f"Unexpected key(s) in section '{self.name or '<root>'}': {', '.join(sorted(unexpected_keys))}")
         else:
             for key in data:
                 if key not in allowed_keys:
@@ -115,6 +121,9 @@ class Schema:
 
     @classmethod
     def _from_dict(cls, data: Dict[str, Any], base_schema_dir: Optional[Path] = None) -> "Schema":
+        if not isinstance(data, dict):
+            raise ValidationError(f"Schema definition must be a mapping/dictionary, got {type(data).__name__}")
+
         reserved_map = get_reserved_keywords_by_loaded_fields()
         all_reserved_keywords = set().union(*reserved_map.values())
 
@@ -140,41 +149,45 @@ class Schema:
                     try:
                         type_str = value["type"]
                         fields[key] = FIELD_FACTORY.create_field(type_str, key, **value)
-                        # fields[key] = build_field(value, key, base_schema_dir)
                     except Exception as e:
                         raise ValidationError(f"Failed to build field '{key}': {e}")
                 elif "$ref" in value:
                     ref_path = value["$ref"]
-                    ref_dict = cls._resolve_ref(ref_path, base_schema_dir)
+                    ref_dict, ref_base_dir = cls._resolve_ref_and_base(ref_path, base_schema_dir)
+                    if not isinstance(ref_dict, dict):
+                        raise ValidationError(f"Schema definition must be a mapping/dictionary, got {type(ref_dict).__name__}")
                     full_section_data = ref_dict.copy()
                     full_section_data.update({k: v for k, v in value.items() if k != "$ref"})
-                    subsection = cls._from_dict(full_section_data, base_schema_dir=base_schema_dir)
+
+                    # Optional referenced sections should default to None unless explicitly overridden.
+                    # This avoids implicitly materializing nested defaults when the whole section is absent.
+                    if full_section_data.get("required", True) is False and "default" not in full_section_data:
+                        full_section_data["default"] = None
+
+                    subsection = cls._from_dict(full_section_data, base_schema_dir=ref_base_dir)
                     subsections[key] = subsection
                 else:
                     # Handle nested sections
                     subsection = cls._from_dict(value, base_schema_dir=base_schema_dir)
                     subsections[key] = subsection
 
-        return cls(
-            name=name,
-            description=description,
-            required=required,
-            fields=fields,
-            subsections=subsections,
-            default=default,
-            has_default=has_default,
-        )
+        return cls(name=name, description=description, required=required, fields=fields, subsections=subsections, default=default, has_default=has_default)
 
     @staticmethod
     def _resolve_ref(ref: str, base_dir: Path) -> Dict[str, Any]:
+        resolved, _ = Schema._resolve_ref_and_base(ref, base_dir)
+        return resolved
+
+    @staticmethod
+    def _resolve_ref_and_base(ref: str, base_dir: Path) -> tuple[Dict[str, Any], Path]:
         if ref.startswith("https://") or ref.startswith("http://"):
             import requests
             resp = requests.get(ref, timeout=10)
             resp.raise_for_status()
-            return yaml.safe_load(resp.text)
+            return yaml.safe_load(resp.text), base_dir
 
         target = (base_dir / ref).resolve()
         if not target.exists():
             raise FileNotFoundError(f"Referenced schema file not found: {target}")
         with open(target, "r", encoding="utf-8") as f:
-            return yaml.safe_load(f)
+            return yaml.safe_load(f), target.parent
