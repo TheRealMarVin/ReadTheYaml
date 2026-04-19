@@ -22,6 +22,28 @@ def test_reserved_keyword_as_field_name(reserved_keyword):
     with pytest.raises(FormatError, match="reserved"):
         Schema._from_dict(bad_schema)
 
+@pytest.mark.parametrize(
+    "field_definition",
+    [
+        {"type": "int", "default": 3, "description": "int field"},
+        {"type": "str", "default": "abc", "description": "string field"},
+        {"type": "bool", "default": True, "description": "bool field"},
+        {"type": "enum", "values": ["a", "b"], "default": "a", "description": "enum field"},
+        {"type": "list(int)", "default": [1, 2], "description": "list field"},
+        {"type": "tuple(int, str)", "default": "(1, 'a')", "description": "tuple field"},
+        {"type": "int|str", "default": 1, "description": "union field"},
+    ],
+)
+@pytest.mark.parametrize("reserved_keyword", sorted(set().union(*get_reserved_keywords_by_loaded_fields().values())))
+def test_reserved_keyword_rejected_for_various_field_types(reserved_keyword, field_definition):
+    """Reserved field names should be rejected regardless of declared field type."""
+    bad_schema = {
+        reserved_keyword: field_definition
+    }
+
+    with pytest.raises(FormatError, match="reserved"):
+        Schema._from_dict(bad_schema)
+
 def test_schema_missing_required_field_raises():
     """Missing a required field should raise ValidationError."""
     schema_dict = {
