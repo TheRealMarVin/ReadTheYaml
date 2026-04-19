@@ -6,6 +6,7 @@ from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.composite.list_field import ListField
 from readtheyaml.fields.base.numerical_field import NumericalField
+from readtheyaml.fields.base.none_field import NoneField
 from readtheyaml.fields.base.object_field import ObjectField
 from readtheyaml.fields.base.string_field import StringField
 from readtheyaml.fields.field_factory import FIELD_FACTORY
@@ -390,6 +391,62 @@ def test_union_field_accepts_various_object_types_with_dynamic_object_option():
     assert person.age == 30
     assert isinstance(pet, UnionPet)
     assert pet.kind == "cat"
+
+
+def test_union_field_accepts_dynamic_object_types_and_none():
+    """UnionField should accept dynamic object types plus None via NoneField."""
+    field = UnionField(
+        name="object_or_none_union",
+        description="Union with dynamic object type and none",
+        options=[
+            partial(ObjectField, factory=FIELD_FACTORY),
+            partial(NoneField),
+        ]
+    )
+
+    person = field.validate_and_build(
+        {"_type_": "tests.fields.composite.test_union_field.UnionPerson", "name": "Alice", "age": 30}
+    )
+    pet = field.validate_and_build(
+        {"_type_": "tests.fields.composite.test_union_field.UnionPet", "kind": "dog"}
+    )
+    car = field.validate_and_build(
+        {"_type_": "tests.fields.composite.test_union_field.UnionCar", "model": "Roadster"}
+    )
+    empty = field.validate_and_build(None)
+
+    assert isinstance(person, UnionPerson)
+    assert person.name == "Alice"
+    assert person.age == 30
+    assert isinstance(pet, UnionPet)
+    assert pet.kind == "dog"
+    assert isinstance(car, UnionCar)
+    assert car.model == "Roadster"
+    assert empty is None
+
+
+def test_union_field_accepts_object_and_none():
+    """UnionField should accept a fixed object type and None."""
+    field = UnionField(
+        name="person_or_none_union",
+        description="Union with person object and none",
+        options=[
+            partial(
+                ObjectField,
+                factory=FIELD_FACTORY,
+                class_path="tests.fields.composite.test_union_field.UnionPerson"
+            ),
+            partial(NoneField),
+        ]
+    )
+
+    person = field.validate_and_build({"name": "Bob", "age": 31})
+    empty = field.validate_and_build(None)
+
+    assert isinstance(person, UnionPerson)
+    assert person.name == "Bob"
+    assert person.age == 31
+    assert empty is None
 
 
 def test_union_field_accepts_object_deriving_from_base_class():
