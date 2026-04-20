@@ -100,6 +100,37 @@ def test_schema_accepts_unknown_field_in_non_strict_mode():
     assert built["id"] == 1
     assert built["extra"] == "ok"
 
+def test_schema_strict_mode_reports_exact_unexpected_keys_message():
+    """Strict mode should report sorted unexpected keys and root section name."""
+    schema_dict = {
+        "id": {
+            "type": "int",
+            "description": "User ID"
+        }
+    }
+    schema = Schema._from_dict(schema_dict)
+
+    with pytest.raises(ValidationError) as exc:
+        schema.build_and_validate({"id": 1, "z": 9, "a": 2}, strict=True)
+
+    assert str(exc.value) == "Unexpected key(s) in section '<root>': a, z"
+
+@pytest.mark.parametrize("strict_mode", [True, False])
+def test_schema_type_mismatch_reports_same_error_in_strict_and_non_strict(strict_mode):
+    """Type mismatch should raise the same field-level message in both modes."""
+    schema_dict = {
+        "count": {
+            "type": "int",
+            "description": "Count value"
+        }
+    }
+    schema = Schema._from_dict(schema_dict)
+
+    with pytest.raises(ValidationError) as exc:
+        schema.build_and_validate({"count": "not-an-int"}, strict=strict_mode)
+
+    assert str(exc.value) == "Field 'count': Must be of type int"
+
 def test_schema_with_nested_subsection():
     """Subsections should be recursively validated."""
     schema_dict = {

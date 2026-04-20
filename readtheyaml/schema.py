@@ -107,15 +107,15 @@ class Schema:
         if not os.path.isdir(base_schema_dir):
             raise NotADirectoryError(f"Base schema directory does not exist: {base_schema_dir}")
 
-        with open(schema_file, "r") as f:
-            data = yaml.safe_load(f)
+        with open(schema_file, "r", encoding="utf-8") as f:
+            data = cls._safe_load_yaml(f.read(), str(schema_file))
 
         return cls._from_dict(data, base_schema_dir)
 
     def validate_file(self, yaml_path: Union[str, Path], strict: bool = True):
         yaml_path = Path(yaml_path)
         with open(yaml_path, "r", encoding="utf-8") as f:
-            config = yaml.safe_load(f)
+            config = self._safe_load_yaml(f.read(), str(yaml_path))
 
         return self.build_and_validate(config, strict=strict)
 
@@ -184,10 +184,17 @@ class Schema:
             import requests
             resp = requests.get(ref, timeout=10)
             resp.raise_for_status()
-            return yaml.safe_load(resp.text), base_dir
+            return Schema._safe_load_yaml(resp.text, ref), base_dir
 
         target = (base_dir / ref).resolve()
         if not target.exists():
             raise FileNotFoundError(f"Referenced schema file not found: {target}")
         with open(target, "r", encoding="utf-8") as f:
-            return yaml.safe_load(f), target.parent
+            return Schema._safe_load_yaml(f.read(), str(target)), target.parent
+
+    @staticmethod
+    def _safe_load_yaml(content: str, source: str) -> Any:
+        try:
+            return yaml.safe_load(content)
+        except yaml.YAMLError as e:
+            raise FormatError(f"Invalid YAML format in '{source}': {e}") from e
