@@ -22,6 +22,7 @@ from readtheyaml.utils.type_utils import import_type, extract_types_for_composit
 
 def get_reserved_keywords_by_loaded_fields():
     reserved_by_class = {}
+    allowed_field_names = {"when"}
 
     for cls in Field.__subclasses__():
         keywords = set()
@@ -38,7 +39,7 @@ def get_reserved_keywords_by_loaded_fields():
                 continue
 
         if keywords:
-            reserved_by_class[cls.__name__] = keywords
+            reserved_by_class[cls.__name__] = keywords - allowed_field_names
 
     return reserved_by_class
 

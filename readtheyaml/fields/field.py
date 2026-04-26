@@ -21,6 +21,10 @@ class Field(metaclass=PostInitMeta):
         self.default = default
         self.description = description
         self.ignore_post = ignore_post
+        self.when = parse_when(when, f"when for field '{self.name}'")
+
+        if additional_allowed_kwargs is None:
+            additional_allowed_kwargs = set()
 
         if default is not None and required:
             raise FormatError(f"Field {self.name} you are providing default value for a required field. This is useless.")
