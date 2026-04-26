@@ -22,6 +22,31 @@ def test_reserved_keyword_as_field_name(reserved_keyword):
     with pytest.raises(FormatError, match="reserved"):
         Schema._from_dict(bad_schema)
 
+
+def test_when_is_not_treated_as_reserved_field_name():
+    reserved_keywords = set().union(*get_reserved_keywords_by_loaded_fields().values())
+    assert "when" not in reserved_keywords
+
+
+@pytest.mark.parametrize(
+    "field_definition",
+    [
+        {"type": "int", "description": "int field"},
+        {"type": "str", "description": "string field"},
+        {"type": "bool", "description": "bool field"},
+        {"type": "enum", "values": ["a", "b"], "description": "enum field"},
+        {"type": "list(int)", "description": "list field"},
+        {"type": "tuple(int, str)", "description": "tuple field"},
+        {"type": "int|str", "description": "union field"},
+    ],
+)
+def test_when_is_allowed_as_field_name_for_supported_field_shapes(field_definition):
+    schema_dict = {"when": field_definition}
+
+    schema = Schema._from_dict(schema_dict)
+
+    assert "when" in schema.fields
+
 @pytest.mark.parametrize(
     "field_definition",
     [
@@ -215,4 +240,195 @@ def test_schema_optional_subsection_with_none_default_not_expanded():
     assert "optional_section" in built
     assert built["optional_section"] is None
     assert data_with_default["optional_section"] is None
+
+
+def test_schema_when_inactive_field_is_skipped_even_if_present():
+    schema_dict = {
+        "compile_enabled": {
+            "type": "bool",
+            "description": "compile toggle",
+            "required": False,
+            "default": False,
+        },
+        "threads": {
+            "type": "int",
+            "description": "thread count",
+            "required": True,
+            "when": {"field": "compile_enabled", "op": "eq", "value": True},
+        },
+    }
+    schema = Schema._from_dict(schema_dict)
+
+    built, data_with_default = schema.build_and_validate({"threads": "not-an-int"}, strict=True)
+
+    assert built["compile_enabled"] is False
+    assert "threads" not in built
+    assert "threads" not in data_with_default
+
+
+def test_schema_when_active_field_is_validated():
+    schema_dict = {
+        "compile_enabled": {
+            "type": "bool",
+            "description": "compile toggle",
+            "required": False,
+            "default": False,
+        },
+        "threads": {
+            "type": "int",
+            "description": "thread count",
+            "required": True,
+            "when": {"field": "compile_enabled", "op": "eq", "value": True},
+        },
+    }
+    schema = Schema._from_dict(schema_dict)
+
+    with pytest.raises(ValidationError, match="Must be of type int"):
+        schema.build_and_validate({"compile_enabled": True, "threads": "not-an-int"}, strict=True)
+
+
+def test_schema_when_inactive_subsection_is_skipped_in_strict_mode():
+    schema_dict = {
+        "compile_enabled": {
+            "type": "bool",
+            "description": "compile toggle",
+            "required": False,
+            "default": False,
+        },
+        "compile": {
+            "required": False,
+            "when": {"field": "compile_enabled", "op": "eq", "value": True},
+            "command": {
+                "type": "str",
+                "description": "compile command",
+                "required": True,
+            },
+        },
+    }
+    schema = Schema._from_dict(schema_dict)
+
+    built, data_with_default = schema.build_and_validate(
+        {"compile": {"command": 123, "extra": "ignored"}},
+        strict=True,
+    )
+
+    assert built["compile_enabled"] is False
+    assert "compile" not in built
+    assert "compile" not in data_with_default
+
+
+def test_schema_when_active_subsection_is_validated():
+    schema_dict = {
+        "compile_enabled": {
+            "type": "bool",
+            "description": "compile toggle",
+            "required": False,
+            "default": False,
+        },
+        "compile": {
+            "required": False,
+            "when": {"field": "compile_enabled", "op": "eq", "value": True},
+            "command": {
+                "type": "str",
+                "description": "compile command",
+                "required": True,
+            },
+        },
+    }
+    schema = Schema._from_dict(schema_dict)
+
+    with pytest.raises(ValidationError, match="Missing required field 'command'"):
+        schema.build_and_validate({"compile_enabled": True, "compile": {}}, strict=True)
+
+
+def test_schema_when_condition_uses_default_value():
+    schema_dict = {
+        "compile_enabled": {
+            "type": "bool",
+            "description": "compile toggle",
+            "required": False,
+            "default": True,
+        },
+        "compile": {
+            "required": True,
+            "when": {"field": "compile_enabled", "op": "eq", "value": True},
+            "command": {
+                "type": "str",
+                "description": "compile command",
+                "required": True,
+            },
+        },
+    }
+    schema = Schema._from_dict(schema_dict)
+
+    with pytest.raises(ValidationError, match="Missing required section 'compile'"):
+        schema.build_and_validate({}, strict=True)
+
+
+def test_schema_rejects_invalid_field_when_definition():
+    schema_dict = {
+        "threads": {
+            "type": "int",
+            "description": "thread count",
+            "when": {"field": "compile_enabled", "op": "invalid_op", "value": True},
+        }
+    }
+
+    with pytest.raises(ValidationError, match="unsupported operator"):
+        Schema._from_dict(schema_dict)
+
+
+def test_schema_rejects_invalid_section_when_definition():
+    schema_dict = {
+        "compile": {
+            "required": False,
+            "when": {"all": []},
+            "command": {
+                "type": "str",
+                "description": "compile command",
+                "required": True,
+            },
+        }
+    }
+
+    with pytest.raises(ValidationError, match="must be a non-empty list"):
+        Schema._from_dict(schema_dict)
+
+
+def test_schema_allows_field_named_when_for_backward_compatibility():
+    schema_dict = {
+        "when": {
+            "type": "int",
+            "description": "legacy field name",
+            "required": True,
+        }
+    }
+    schema = Schema._from_dict(schema_dict)
+
+    built, _ = schema.build_and_validate({"when": 5}, strict=True)
+    assert built["when"] == 5
+
+
+def test_schema_when_does_not_disable_top_level_strict_unknown_key_check():
+    schema_dict = {
+        "compile_enabled": {
+            "type": "bool",
+            "description": "compile toggle",
+            "required": False,
+            "default": False,
+        },
+        "compile": {
+            "required": False,
+            "when": {"field": "compile_enabled", "op": "eq", "value": True},
+            "command": {
+                "type": "str",
+                "description": "compile command",
+                "required": True,
+            },
+        },
+    }
+    schema = Schema._from_dict(schema_dict)
+
+    with pytest.raises(ValidationError, match="Unexpected key\\(s\\) in section '<root>'"):
+        schema.build_and_validate({"unknown": 1}, strict=True)
 
