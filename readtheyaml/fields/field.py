@@ -1,6 +1,7 @@
 from functools import partial
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
+from readtheyaml.conditions import parse_when
 
 
 class PostInitMeta(type):
@@ -12,10 +13,9 @@ class PostInitMeta(type):
 
 
 class Field(metaclass=PostInitMeta):
-    allowed_kwargs = {"type"}
+    allowed_kwargs = {"type", "when"}
 
-    def __init__(self, name, description, required=True, default=None,
-                 additional_allowed_kwargs=set(), ignore_post=False, **kwargs):
+    def __init__(self, name, description, required=True, default=None, *, when=None, additional_allowed_kwargs=None, ignore_post=False, **kwargs):
         self.name = name
         self.required = required
         self.default = default

@@ -7,8 +7,8 @@ from readtheyaml.fields.field_validation_helpers import find_and_validate_bounds
 
 
 class NumericalField(Field):
-    def __init__(self, value_type=int, min_value=None, max_value=None, value_range=None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, value_type=int, min_value=None, max_value=None, value_range=None, *, when=None, **kwargs):
+        super().__init__(when=when, **kwargs)
 
         self.value_type = value_type
 

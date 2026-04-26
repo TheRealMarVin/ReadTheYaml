@@ -7,8 +7,8 @@ from readtheyaml.utils.type_utils import extract_types_for_composite, split_top_
 
 
 class TupleField(Field):
-    def __init__(self, element_fields, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, element_fields, *, when=None, **kwargs):
+        super().__init__(when=when, **kwargs)
 
         self._slots = element_fields
 

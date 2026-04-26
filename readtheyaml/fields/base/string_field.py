@@ -4,7 +4,7 @@ from readtheyaml.fields.field import Field
 
 
 class StringField(Field):
-    def __init__(self, min_length=0, max_length=-1, cast_to_string=False, **kwargs):
+    def __init__(self, min_length=0, max_length=-1, cast_to_string=False, *, when=None, **kwargs):
         """
         A field that validates and optionally converts values to strings.
 
@@ -14,7 +14,7 @@ class StringField(Field):
             cast_to_string: If True, automatically convert non-string values to strings.
                            If False, only accept string values.
         """
-        super().__init__(**kwargs)
+        super().__init__(when=when, **kwargs)
         self.min_length = min_length
         self.max_length = max_length
         self.cast_to_string = cast_to_string

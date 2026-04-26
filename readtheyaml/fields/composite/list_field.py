@@ -9,9 +9,9 @@ from readtheyaml.utils.type_utils import extract_types_for_composite
 
 
 class ListField(Field):
-    def __init__(self, item_field, min_length=None, max_length=None, length_range=None, **kwargs):
+    def __init__(self, item_field, min_length=None, max_length=None, length_range=None, *, when=None, **kwargs):
         sig = inspect.signature(get_target_class(item_field).__init__)
-        super().__init__(additional_allowed_kwargs=set(sig.parameters), **kwargs)
+        super().__init__(when=when, additional_allowed_kwargs=set(sig.parameters), **kwargs)
 
         self.item_field = item_field
 

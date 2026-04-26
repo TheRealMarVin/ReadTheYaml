@@ -9,8 +9,8 @@ from readtheyaml.utils.type_utils import extract_types_for_composite, split_top_
 
 
 class UnionField(Field):
-    def __init__(self, options, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, options, *, when=None, **kwargs):
+        super().__init__(when=when, **kwargs)
 
         def get_field_type(opt):
             if isinstance(opt, partial):

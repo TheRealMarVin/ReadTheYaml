@@ -11,8 +11,8 @@ from readtheyaml.utils.type_utils import type_to_string, get_params_and_defaults
 class ObjectField(Field):
     _sentinel = "_type_"  # key in config used to specify class name if not fixed
 
-    def __init__(self, factory, class_path=None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, factory, class_path=None, *, when=None, **kwargs):
+        super().__init__(when=when, **kwargs)
         self.class_path = class_path
         self.factory = factory
         self.subfields = {}
