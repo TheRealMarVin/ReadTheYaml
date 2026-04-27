@@ -432,3 +432,117 @@ def test_schema_when_does_not_disable_top_level_strict_unknown_key_check():
     with pytest.raises(ValidationError, match="Unexpected key\\(s\\) in section '<root>'"):
         schema.build_and_validate({"unknown": 1}, strict=True)
 
+
+def test_schema_when_inactive_field_default_is_not_injected_into_condition_context():
+    schema_dict = {
+        "feature_enabled": {
+            "type": "bool",
+            "description": "feature toggle",
+            "required": False,
+            "default": False,
+        },
+        "hidden_value": {
+            "type": "int",
+            "description": "hidden default",
+            "required": False,
+            "default": 42,
+            "when": {"field": "feature_enabled", "op": "eq", "value": True},
+        },
+        "consumer": {
+            "type": "str",
+            "description": "depends on hidden value presence",
+            "required": True,
+            "when": {"field": "hidden_value", "op": "exists"},
+        },
+    }
+    schema = Schema._from_dict(schema_dict)
+
+    built, data_with_default = schema.build_and_validate({}, strict=True)
+
+    assert built["feature_enabled"] is False
+    assert "hidden_value" not in built
+    assert "consumer" not in built
+    assert "hidden_value" not in data_with_default
+    assert "consumer" not in data_with_default
+
+
+def test_schema_when_inactive_subsection_default_is_not_injected_into_condition_context():
+    schema_dict = {
+        "advanced_enabled": {
+            "type": "bool",
+            "description": "advanced toggle",
+            "required": False,
+            "default": False,
+        },
+        "advanced": {
+            "required": False,
+            "default": {"threshold": 10},
+            "when": {"field": "advanced_enabled", "op": "eq", "value": True},
+            "threshold": {
+                "type": "int",
+                "description": "advanced threshold",
+                "required": False,
+                "default": 10,
+            },
+        },
+        "consumer": {
+            "type": "str",
+            "description": "depends on advanced threshold",
+            "required": True,
+            "when": {"field": "advanced.threshold", "op": "exists"},
+        },
+    }
+    schema = Schema._from_dict(schema_dict)
+
+    built, data_with_default = schema.build_and_validate({}, strict=True)
+
+    assert built["advanced_enabled"] is False
+    assert "advanced" not in built
+    assert "consumer" not in built
+    assert "advanced" not in data_with_default
+    assert "consumer" not in data_with_default
+
+
+def test_schema_when_uses_raw_default_values_for_condition_evaluation():
+    schema_dict = {
+        "pair": {
+            "type": "tuple(int, str)",
+            "description": "tuple pair",
+            "required": False,
+            "default": "(1, 'a')",
+        },
+        "consumer": {
+            "type": "str",
+            "description": "becomes required when pair raw default matches",
+            "required": True,
+            "when": {"field": "pair", "op": "eq", "value": "(1, 'a')"},
+        },
+    }
+    schema = Schema._from_dict(schema_dict)
+
+    with pytest.raises(ValidationError, match="Missing required field 'consumer'"):
+        schema.build_and_validate({}, strict=True)
+
+
+def test_schema_without_when_behaves_unchanged():
+    schema_dict = {
+        "id": {
+            "type": "int",
+            "description": "identifier",
+        },
+        "retries": {
+            "type": "int",
+            "description": "retry count",
+            "required": False,
+            "default": 3,
+        },
+    }
+    schema = Schema._from_dict(schema_dict)
+
+    built, data_with_default = schema.build_and_validate({"id": 9}, strict=True)
+    assert built == {"id": 9, "retries": 3}
+    assert data_with_default == {"id": 9, "retries": 3}
+
+    with pytest.raises(ValidationError, match="Missing required field 'id'"):
+        schema.build_and_validate({}, strict=True)
+
