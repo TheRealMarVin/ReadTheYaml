@@ -17,4 +17,3 @@ FIELD_REGISTRY = {
     "tuple": TupleField,
     # We handle "list(...)" dynamically
 }
-
