@@ -4,8 +4,7 @@ from functools import partial
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.base.any_field import AnyField
 from readtheyaml.fields.field import Field
-from readtheyaml.utils.type_utils import type_to_string, get_params_and_defaults, import_type, \
-    extract_types_for_composite
+from readtheyaml.utils.type_utils import type_to_string, get_params_and_defaults, import_type, extract_types_for_composite
 
 
 class ObjectField(Field):

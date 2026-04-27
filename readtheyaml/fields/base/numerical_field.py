@@ -1,5 +1,3 @@
-from functools import partial
-
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
@@ -48,6 +46,5 @@ class NumericalField(Field):
             return NumericalField(name=name, value_type=int, **kwargs)
         elif type_str in {"float", "Float", "FLOAT"}:
             return NumericalField(name=name, value_type=float, **kwargs)
-
 
         return None

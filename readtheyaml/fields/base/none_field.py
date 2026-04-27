@@ -1,5 +1,3 @@
-from functools import partial
-
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
 

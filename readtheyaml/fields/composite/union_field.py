@@ -70,29 +70,20 @@ class UnionField(Field):
 
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
-        # TODO content of the if are the same
-        if '|' in type_str:
-            parts = split_top_level(type_str, '|')
+        def build_union_field(parts, split_token):
             parsed_fields = []
-
             args_copy = copy.deepcopy(kwargs)
             args_copy["ignore_post"] = True
-            for part in parts:
+            for part in split_top_level(parts, split_token):
                 option_field = factory.create_field(part, name, **args_copy)
                 parsed_fields.append(option_field)
             return UnionField(name=name, options=parsed_fields, **kwargs)
+
+        if '|' in type_str:
+            return build_union_field(type_str, '|')
 
         union_inner = extract_types_for_composite(type_str=type_str, type_name="union")
         if union_inner:
-            parts = split_top_level(union_inner, ',')
-            parsed_fields = []
-
-            args_copy = copy.deepcopy(kwargs)
-            args_copy["ignore_post"] = True
-
-            for part in parts:
-                option_field = factory.create_field(part, name, **args_copy)
-                parsed_fields.append(option_field)
-            return UnionField(name=name, options=parsed_fields, **kwargs)
+            return build_union_field(union_inner, ',')
 
         return None
