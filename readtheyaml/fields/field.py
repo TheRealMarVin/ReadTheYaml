@@ -1,3 +1,4 @@
+from copy import deepcopy
 from functools import partial
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
@@ -19,6 +20,7 @@ class Field(metaclass=PostInitMeta):
         self.name = name
         self.required = required
         self.default = default
+        self.raw_default = deepcopy(default)
         self.description = description
         self.ignore_post = ignore_post
         self.when = parse_when(when, f"when for field '{self.name}'")
