@@ -222,23 +222,37 @@ class Schema:
         return context
 
     def _inject_defaults_for_condition_context(self, context: Dict[str, Any]) -> None:
-        for field_name, field in self.fields.items():
-            if field_name not in context and not field.required:
-                context[field_name] = copy.deepcopy(field.default)
+        changed = True
+        while changed:
+            changed = False
 
-        for section_name, subsection in self.subsections.items():
-            if section_name in context:
-                section_value = context[section_name]
-                if isinstance(section_value, dict):
-                    subsection._inject_defaults_for_condition_context(section_value)
-                continue
+            for field_name, field in self.fields.items():
+                if field_name in context or field.required:
+                    continue
+                if not evaluate_when(field.when, context):
+                    continue
 
-            if subsection.has_default:
+                default_value = getattr(field, "raw_default", field.default)
+                context[field_name] = copy.deepcopy(default_value)
+                changed = True
+
+            for section_name, subsection in self.subsections.items():
+                if section_name in context:
+                    section_value = context[section_name]
+                    if isinstance(section_value, dict):
+                        subsection._inject_defaults_for_condition_context(section_value)
+                    continue
+
+                if not evaluate_when(subsection.when, context):
+                    continue
+                if not subsection.has_default:
+                    continue
+
                 context[section_name] = copy.deepcopy(subsection.default)
                 section_value = context[section_name]
                 if isinstance(section_value, dict):
                     subsection._inject_defaults_for_condition_context(section_value)
-                continue
+                changed = True
 
     @staticmethod
     def _resolve_ref(ref: str, base_dir: Path) -> Dict[str, Any]:
