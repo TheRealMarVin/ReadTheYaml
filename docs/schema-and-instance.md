@@ -5,6 +5,7 @@
 Supports:
 - Build schema from dict or YAML (`from_yaml`).
 - Field and nested subsection validation.
+- Conditional inclusion with `when` on fields and subsections.
 - Strict mode (`strict=True`) for unknown-key rejection.
 - Non-strict mode passthrough for unknown keys.
 - Local and HTTP `$ref` loading.
@@ -15,6 +16,18 @@ Limitations:
 - Reserved keywords cannot be used as field names.
 - Optional fields usually require valid defaults (enforced per field class).
 - HTTP `$ref` uses `requests` at runtime; missing dependency or network failure will fail resolution.
+
+### `when` behavior summary
+
+- `when` is evaluated before validating the target field/subsection.
+- If condition is false:
+  - the field/subsection is skipped
+  - it is omitted from `built`
+  - it is removed from `data_with_default` if present
+- If condition is true, normal required/default/type validation applies.
+- Conditions can reference nested paths using dot notation (for example `feature.flags.beta`).
+
+See [conditions.md](conditions.md) for full operator and combinator details.
 
 ## `DataInstance`
 

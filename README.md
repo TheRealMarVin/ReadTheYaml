@@ -22,6 +22,7 @@ pip install -e .
 - Default values for optional fields
 - Primitive and composite types
 - Nested sections
+- Conditional fields/sections with `when`
 - Strict mode (reject unknown keys) and non-strict mode (pass through unknown keys)
 - Schema composition with `$ref` (local files and HTTP URLs)
 
@@ -99,6 +100,35 @@ Common field options:
 - `default`
 - `min_value` / `max_value` / `value_range`
 - `min_length` / `max_length` / `length_range`
+
+## Conditions (`when`)
+
+Use `when` to conditionally enable fields or sections.
+
+Example:
+
+```yaml
+compile_enabled:
+  type: bool
+  required: false
+  default: false
+
+compile:
+  required: false
+  when:
+    field: compile_enabled
+    op: eq
+    value: true
+  command:
+    type: str
+    description: Compile command
+    required: true
+```
+
+If `compile_enabled` is `false`, `compile` is skipped.
+If `compile_enabled` is `true`, `compile.command` is validated and required.
+
+Full reference (operators, aliases, combinators): [docs/conditions.md](docs/conditions.md)
 
 ## Notes
 
