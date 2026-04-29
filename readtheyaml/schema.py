@@ -84,9 +84,9 @@ class Schema:
                     built_data[section_name] = copy.deepcopy(subsection.default)
                     data_with_default[section_name] = copy.deepcopy(subsection.default)
                 else:
-                    built_data[section_name], data_with_default[section_name] = subsection.build_and_validate(
-                        {}, strict=strict, _condition_context=_condition_context
-                    )
+                    # Missing optional subsection without explicit default is inactive:
+                    # do not materialize/validate nested required fields.
+                    data_with_default.pop(section_name, None)
 
         # Handle extra keys
         allowed_keys = set(self.fields.keys()) | set(self.subsections.keys())
