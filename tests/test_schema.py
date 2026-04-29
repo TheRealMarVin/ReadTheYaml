@@ -199,7 +199,7 @@ def test_schema_nested_missing_required_field():
         schema.build_and_validate(data)
 
 def test_schema_optional_subsection_not_provided():
-    """Optional subsection should not raise if missing and should produce defaults."""
+    """Missing optional subsection without explicit default should be omitted."""
     schema_dict = {
         "optional_section": {
             "description": "optional config",
@@ -215,9 +215,8 @@ def test_schema_optional_subsection_not_provided():
     schema = Schema._from_dict(schema_dict)
     built, data_with_default = schema.build_and_validate({})
 
-    assert "optional_section" in built
-    assert built["optional_section"] == {"enabled": False}
-    assert data_with_default["optional_section"]["enabled"] is False
+    assert "optional_section" not in built
+    assert "optional_section" not in data_with_default
 
 def test_schema_optional_subsection_with_none_default_not_expanded():
     """Optional subsection with default=None should stay None and not inject child defaults."""

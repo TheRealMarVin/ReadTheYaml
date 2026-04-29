@@ -378,3 +378,285 @@ def test_when_file_config_strict_mode_ignores_inactive_subsection_payload(create
     assert built["compile_enabled"] is False
     assert "compile" not in built
     assert "compile" not in data_with_default
+
+
+def test_when_file_config_object_member_gt_condition_activates_required_field(create_schema_examples):
+    files = create_schema_examples(
+        {
+            "schema.yaml": """
+                A:
+                  required: true
+                  X:
+                    type: int
+                    description: threshold source
+                    required: true
+                gated_value:
+                  type: str
+                  description: required when A.X is greater than 3
+                  required: true
+                  when:
+                    field: A.X
+                    op: gt
+                    value: 3
+            """,
+            "config.yaml": """
+                A:
+                  X: 4
+            """,
+        }
+    )
+
+    schema = Schema.from_yaml(str(files["schema.yaml"]))
+    with pytest.raises(ValidationError, match="Missing required field 'gated_value'"):
+        schema.validate_file(files["config.yaml"], strict=True)
+
+
+def test_when_file_config_object_member_gt_condition_inactive_skips_required_field(create_schema_examples):
+    files = create_schema_examples(
+        {
+            "schema.yaml": """
+                A:
+                  required: true
+                  X:
+                    type: int
+                    description: threshold source
+                    required: true
+                gated_value:
+                  type: str
+                  description: required when A.X is greater than 3
+                  required: true
+                  when:
+                    field: A.X
+                    op: gt
+                    value: 3
+            """,
+            "config.yaml": """
+                A:
+                  X: 3
+            """,
+        }
+    )
+
+    schema = Schema.from_yaml(str(files["schema.yaml"]))
+    built, data_with_default = schema.validate_file(files["config.yaml"], strict=True)
+
+    assert built["A"]["X"] == 3
+    assert "gated_value" not in built
+    assert "gated_value" not in data_with_default
+
+
+def test_when_file_config_optional_section_present_checks_nested_port_threshold(create_schema_examples):
+    files = create_schema_examples(
+        {
+            "schema.yaml": """
+                network:
+                  required: false
+                  ip:
+                    type: str
+                    description: bind ip
+                    required: true
+                  port:
+                    type: int
+                    description: bind port
+                    required: true
+                high_port_note:
+                  type: str
+                  description: required when network.port is greater than 128
+                  required: true
+                  when:
+                    field: network.port
+                    op: gt
+                    value: 128
+            """,
+            "config.yaml": """
+                network:
+                  ip: 127.0.0.1
+                  port: 8080
+            """,
+        }
+    )
+
+    schema = Schema.from_yaml(str(files["schema.yaml"]))
+    with pytest.raises(ValidationError, match="Missing required field 'high_port_note'"):
+        schema.validate_file(files["config.yaml"], strict=True)
+
+
+def test_when_file_config_optional_section_absent_skips_nested_port_condition(create_schema_examples):
+    files = create_schema_examples(
+        {
+            "schema.yaml": """
+                network:
+                  required: false
+                  ip:
+                    type: str
+                    description: bind ip
+                    required: true
+                  port:
+                    type: int
+                    description: bind port
+                    required: true
+                high_port_note:
+                  type: str
+                  description: required when network.port is greater than 128
+                  required: true
+                  when:
+                    field: network.port
+                    op: gt
+                    value: 128
+            """,
+            "config.yaml": """
+                {}
+            """,
+        }
+    )
+
+    schema = Schema.from_yaml(str(files["schema.yaml"]))
+    built, data_with_default = schema.validate_file(files["config.yaml"], strict=True)
+
+    assert "network" not in built
+    assert "high_port_note" not in built
+    assert "high_port_note" not in data_with_default
+
+
+def test_when_file_config_disabled_optional_section_is_ignored_for_nested_port_condition(create_schema_examples):
+    files = create_schema_examples(
+        {
+            "schema.yaml": """
+                network_enabled:
+                  type: bool
+                  description: enable network section
+                  required: false
+                  default: false
+                network:
+                  required: false
+                  when:
+                    field: network_enabled
+                    op: eq
+                    value: true
+                  ip:
+                    type: str
+                    description: bind ip
+                    required: true
+                  port:
+                    type: int
+                    description: bind port
+                    required: true
+                high_port_note:
+                  type: str
+                  description: required when network.port is greater than 128
+                  required: true
+                  when:
+                    field: network.port
+                    op: gt
+                    value: 128
+            """,
+            "config.yaml": """
+                network_enabled: false
+                network:
+                  ip: 127.0.0.1
+                  port: 8080
+            """,
+        }
+    )
+
+    schema = Schema.from_yaml(str(files["schema.yaml"]))
+    built, data_with_default = schema.validate_file(files["config.yaml"], strict=True)
+
+    assert built["network_enabled"] is False
+    assert "network" not in built
+    assert "high_port_note" not in built
+    assert "high_port_note" not in data_with_default
+
+
+def test_when_file_config_cascading_conditions_activate_transitively(create_schema_examples):
+    files = create_schema_examples(
+        {
+            "schema.yaml": """
+                network:
+                  required: false
+                  ip:
+                    type: str
+                    description: bind ip
+                    required: true
+                  port:
+                    type: int
+                    description: bind port
+                    required: true
+                high_port_mode:
+                  type: bool
+                  description: enabled when port is high
+                  required: false
+                  default: false
+                  when:
+                    field: network.port
+                    op: gt
+                    value: 128
+                high_port_token:
+                  type: str
+                  description: required when high_port_mode is true
+                  required: true
+                  when:
+                    field: high_port_mode
+                    op: eq
+                    value: true
+            """,
+            "config.yaml": """
+                network:
+                  ip: 127.0.0.1
+                  port: 8080
+                high_port_mode: true
+            """,
+        }
+    )
+
+    schema = Schema.from_yaml(str(files["schema.yaml"]))
+    with pytest.raises(ValidationError, match="Missing required field 'high_port_token'"):
+        schema.validate_file(files["config.yaml"], strict=True)
+
+
+def test_when_file_config_cascading_conditions_skip_downstream_when_parent_is_inactive(create_schema_examples):
+    files = create_schema_examples(
+        {
+            "schema.yaml": """
+                network:
+                  required: false
+                  ip:
+                    type: str
+                    description: bind ip
+                    required: true
+                  port:
+                    type: int
+                    description: bind port
+                    required: true
+                high_port_mode:
+                  type: bool
+                  description: enabled when port is high
+                  required: false
+                  default: false
+                  when:
+                    field: network.port
+                    op: gt
+                    value: 128
+                high_port_token:
+                  type: str
+                  description: required when high_port_mode is true
+                  required: true
+                  when:
+                    field: high_port_mode
+                    op: eq
+                    value: true
+            """,
+            "config.yaml": """
+                {}
+            """,
+        }
+    )
+
+    schema = Schema.from_yaml(str(files["schema.yaml"]))
+    built, data_with_default = schema.validate_file(files["config.yaml"], strict=True)
+
+    assert "network" not in built
+    assert "high_port_mode" not in built
+    assert "high_port_token" not in built
+    assert "high_port_mode" not in data_with_default
+    assert "high_port_token" not in data_with_default
