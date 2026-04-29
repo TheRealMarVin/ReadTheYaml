@@ -218,8 +218,34 @@ class Schema:
 
     def _build_condition_context(self, data: Dict[str, Any]) -> Dict[str, Any]:
         context = copy.deepcopy(data)
+        self._prune_inactive_from_condition_context(context)
         self._inject_defaults_for_condition_context(context)
         return context
+
+    def _prune_inactive_from_condition_context(self, context: Dict[str, Any]) -> None:
+        changed = True
+        while changed:
+            changed = False
+
+            for field_name, field in self.fields.items():
+                if field_name not in context:
+                    continue
+                if evaluate_when(field.when, context):
+                    continue
+                context.pop(field_name, None)
+                changed = True
+
+            for section_name, subsection in self.subsections.items():
+                if section_name not in context:
+                    continue
+                if not evaluate_when(subsection.when, context):
+                    context.pop(section_name, None)
+                    changed = True
+                    continue
+
+                section_value = context.get(section_name)
+                if isinstance(section_value, dict):
+                    subsection._prune_inactive_from_condition_context(section_value)
 
     def _inject_defaults_for_condition_context(self, context: Dict[str, Any]) -> None:
         changed = True
