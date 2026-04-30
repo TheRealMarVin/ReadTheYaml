@@ -103,9 +103,10 @@ Common field options:
 
 ## Conditions (`when`)
 
-Use `when` to conditionally enable fields or sections.
+`when` exists so one schema can express conditional fields/sections without splitting into multiple schemas.
+It gates validation and output inclusion based on other config values known at schema-validation time.
 
-Example:
+Practical example (`compile_enabled` toggles a `compile` section):
 
 ```yaml
 compile_enabled:
@@ -127,6 +128,30 @@ compile:
 
 If `compile_enabled` is `false`, `compile` is skipped.
 If `compile_enabled` is `true`, `compile.command` is validated and required.
+
+Syntax reference:
+- Atomic condition:
+  - `when: { field: some.path, op: eq, value: 123 }`
+- Logical combinators:
+  - `all: [...]` (AND)
+  - `any: [...]` (OR)
+  - `not: {...}` (NOT)
+
+Semantics:
+- Active node (`when` is true):
+  - validated normally
+  - included in `built`
+  - included in `data_with_default` (with defaults applied as needed)
+- Inactive node (`when` is false):
+  - not validated
+  - omitted from `built`
+  - removed/omitted from `data_with_default`
+- If an optional subsection is missing and has no explicit section `default`, it is omitted (not auto-materialized from child defaults).
+- If a subsection is inactive due to `when`, payload under that subsection is ignored when evaluating other `when` conditions.
+
+Limitations / non-goals for this phase:
+- `when` does not inspect runtime Python objects or object internals.
+- `when` does not evaluate arbitrary Python expressions from YAML.
 
 Full reference (operators, aliases, combinators): [docs/conditions.md](docs/conditions.md)
 

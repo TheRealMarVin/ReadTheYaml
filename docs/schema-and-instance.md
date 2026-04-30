@@ -10,6 +10,7 @@ Supports:
 - Non-strict mode passthrough for unknown keys.
 - Local and HTTP `$ref` loading.
 - Optional sections with explicit defaults.
+- Optional sections without explicit defaults are omitted when missing.
 
 Limitations:
 - Input data for validation must be a dictionary at each section.
@@ -20,12 +21,16 @@ Limitations:
 ### `when` behavior summary
 
 - `when` is evaluated before validating the target field/subsection.
-- If condition is false:
+- If condition is false (inactive node):
   - the field/subsection is skipped
   - it is omitted from `built`
   - it is removed from `data_with_default` if present
-- If condition is true, normal required/default/type validation applies.
+- If an optional subsection is missing and has no explicit section default, it remains omitted (its child defaults are not materialized).
+- If a subsection is inactive due to `when`, payload under that subsection is ignored for condition lookups from other nodes.
+- If condition is true (active node), normal required/default/type validation applies.
 - Conditions can reference nested paths using dot notation (for example `feature.flags.beta`).
+- Conditions are declarative YAML condition objects (`field`/`op`/`value`, `all`/`any`/`not`), not Python expressions.
+- Runtime object inspection is out of scope at this stage.
 
 See [conditions.md](conditions.md) for full operator and combinator details.
 
