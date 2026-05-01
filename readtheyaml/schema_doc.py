@@ -19,6 +19,8 @@ class DocRow:
     path: str
     type_name: str
     description: str
+    required: str
+    default: str
     conditions: str
 
 
@@ -87,11 +89,6 @@ def _normalize_for_dump(value: Any) -> Any:
 
 def _format_conditions(node: dict[str, Any], *, is_field: bool) -> str:
     parts: list[str] = []
-    required = node.get("required", True)
-    parts.append(f"required={required}")
-
-    if "default" in node:
-        parts.append(f"default={node['default']!r}")
 
     if "when" in node:
         when_repr = _format_when(node.get("when"))
@@ -105,6 +102,16 @@ def _format_conditions(node: dict[str, Any], *, is_field: bool) -> str:
             parts.append(f"constraints={extras}")
 
     return "; ".join(parts)
+
+
+def _format_required(node: dict[str, Any]) -> str:
+    return str(node.get("required", True))
+
+
+def _format_default(node: dict[str, Any]) -> str:
+    if "default" not in node:
+        return ""
+    return repr(node["default"])
 
 
 def _walk_schema(
@@ -137,6 +144,8 @@ def _walk_schema(
                     path=path,
                     type_name=str(value["type"]),
                     description=description,
+                    required=_format_required(value),
+                    default=_format_default(value),
                     conditions=_format_conditions(value, is_field=True),
                 )
             )
@@ -155,6 +164,8 @@ def _walk_schema(
                     path=path,
                     type_name=f'section (<a href="#{escape(target_anchor)}">{escape(ref_alias)}</a>)',
                     description=description,
+                    required=_format_required(value),
+                    default=_format_default(value),
                     conditions=_format_conditions(value, is_field=False),
                 )
             )
@@ -168,6 +179,8 @@ def _walk_schema(
                 path=path,
                 type_name="section",
                 description=description,
+                required=_format_required(value),
+                default=_format_default(value),
                 conditions=_format_conditions(value, is_field=False),
             )
         )
@@ -184,18 +197,21 @@ def _walk_schema(
 
 def _build_table(title: str, anchor: str, rows: list[DocRow]) -> str:
     escaped_title = escape(title)
+    sorted_rows = sorted(rows, key=lambda row: (row.required != "True", row.path))
     parts = [
         f'<h2 id="{escape(anchor)}">{escaped_title}</h2>',
         "<table>",
-        "<thead><tr><th>Field Path</th><th>Type</th><th>Description</th><th>Conditions</th></tr></thead>",
+        "<thead><tr><th>Field Path</th><th>Type</th><th>Required</th><th>Description</th><th>Default</th><th>Conditions</th></tr></thead>",
         "<tbody>",
     ]
-    for row in rows:
+    for row in sorted_rows:
         parts.append(
             "<tr>"
             f"<td><code>{escape(row.path)}</code></td>"
             f"<td>{row.type_name}</td>"
+            f"<td>{escape(row.required)}</td>"
             f"<td>{escape(row.description)}</td>"
+            f"<td>{escape(row.default)}</td>"
             f"<td>{escape(row.conditions)}</td>"
             "</tr>"
         )
