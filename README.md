@@ -72,6 +72,9 @@ This repository currently exposes a CLI through `main.py`:
 
 ```bash
 python main.py --schema schema.yaml --config config.yaml
+
+# Generate HTML documentation from a schema
+python main.py --schema schema.yaml --generate-doc --output schema-doc.html
 ```
 
 ## Type syntax overview
