@@ -98,10 +98,10 @@ def _format_conditions(node: dict[str, Any], *, is_field: bool) -> str:
     reserved = {"type", "description", "required", "default", "when", "$ref"}
     if is_field:
         extras = {k: v for k, v in node.items() if k not in reserved}
-        if extras:
-            parts.append(f"constraints={extras}")
+        for key in sorted(extras):
+            parts.append(f"{key}: {extras[key]!r}")
 
-    return "; ".join(parts)
+    return "\n".join(parts)
 
 
 def _format_required(node: dict[str, Any]) -> str:
@@ -212,7 +212,7 @@ def _build_table(title: str, anchor: str, rows: list[DocRow]) -> str:
             f"<td>{escape(row.required)}</td>"
             f"<td>{escape(row.description)}</td>"
             f"<td>{escape(row.default)}</td>"
-            f"<td>{escape(row.conditions)}</td>"
+            f'<td style="white-space: pre-line;">{escape(row.conditions)}</td>'
             "</tr>"
         )
     parts.append("</tbody></table>")
