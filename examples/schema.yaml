@@ -1,43 +1,28 @@
-app_config:
-  description: Root schema for multi-level config
-  required: true
+service_name:
+  type: str
+  description: Human-readable service name
 
-subsections:
-  network:
-    description: Networking-related configuration
+port:
+  type: int
+  description: Service port
+  required: false
+  default: 8080
+  value_range: [1, 65535]
+
+mode:
+  type: enum
+  description: Runtime mode
+  required: false
+  default: dev
+  values: [dev, stage, prod]
+
+compile:
+  required: false
+  when:
+    field: mode
+    op: in
+    value: [stage, prod]
+  command:
+    type: str
+    description: Build command for non-dev environments
     required: true
-    subsections:
-      server:
-        description: HTTP server settings
-        required: true
-        fields:
-          host:
-            description: Host address to bind to
-            required: true
-            type: str
-          port:
-            description: Port number
-            required: false
-            default: 8080
-            type: int
-            range: [1, 65535]
-
-  logging:
-    description: Logging settings (optional)
-    required: false
-    fields:
-      level:
-        description: Logging level (e.g., debug, info, warning)
-        required: false
-        default: "info"
-        type: str
-      to_file:
-        description: Whether to log to a file
-        required: false
-        default: false
-        type: bool
-      filepath:
-        description: File path for log output
-        required: false
-        default: "./logs/app.log"
-        type: str

@@ -171,6 +171,49 @@ def evaluate_when(condition: dict | None, context: Dict[str, Any]) -> bool:
     return False
 
 
+def format_when_human(condition: dict | None) -> str:
+    if condition is None:
+        return ""
+
+    kind = condition["kind"]
+    if kind == Combinator.ALL:
+        children = [format_when_human(child) for child in condition["conditions"]]
+        return "all of: " + "; ".join(children)
+    if kind == Combinator.ANY:
+        children = [format_when_human(child) for child in condition["conditions"]]
+        return "any of: " + "; ".join(children)
+    if kind == Combinator.NOT:
+        return "not (" + format_when_human(condition["condition"]) + ")"
+
+    field = condition["field"]
+    op = condition["op"]
+
+    if op == AtomicOp.EXISTS:
+        return f"'{field}' exists"
+    if op == AtomicOp.NOT_EXISTS:
+        return f"'{field}' is missing"
+
+    value = condition.get("value")
+    if op == AtomicOp.EQ:
+        return f"'{field}' is {_format_when_value(value)}"
+    if op == AtomicOp.NE:
+        return f"'{field}' is not {_format_when_value(value)}"
+    if op == AtomicOp.GT:
+        return f"'{field}' is greater than {_format_when_value(value)}"
+    if op == AtomicOp.GE:
+        return f"'{field}' is at least {_format_when_value(value)}"
+    if op == AtomicOp.LT:
+        return f"'{field}' is less than {_format_when_value(value)}"
+    if op == AtomicOp.LE:
+        return f"'{field}' is at most {_format_when_value(value)}"
+    if op == AtomicOp.IN:
+        return f"'{field}' is one of {_format_when_value(value)}"
+    if op == AtomicOp.NOT_IN:
+        return f"'{field}' is not one of {_format_when_value(value)}"
+
+    return str(condition)
+
+
 def _resolve_path(data: Dict[str, Any], field_path: str) -> Tuple[bool, Any]:
     current: Any = data
     for segment in field_path.split("."):
@@ -200,6 +243,14 @@ def _safe_membership(needle: Any, haystack: Any) -> bool:
         return needle in haystack
     except TypeError:
         return False
+
+
+def _format_when_value(value: Any) -> str:
+    if isinstance(value, str):
+        return f"'{value}'"
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return "[" + ", ".join(_format_when_value(v) for v in value) + "]"
+    return str(value)
 
 
 def _normalize_token(value: str) -> str:
