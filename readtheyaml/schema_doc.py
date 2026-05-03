@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 import yaml
 
 from readtheyaml.conditions import parse_when
+from readtheyaml.fields.field_factory import FIELD_FACTORY
 from readtheyaml.schema import Schema
 
 
@@ -87,19 +88,39 @@ def _normalize_for_dump(value: Any) -> Any:
     return value
 
 
+def _field_doc_constraints(name: str, node: dict[str, Any]) -> list[str]:
+    type_name = node.get("type")
+    if not isinstance(type_name, str):
+        return []
+
+    reserved = {"name", "type", "description", "required", "default", "when", "$ref"}
+    extras = {k: v for k, v in node.items() if k not in reserved}
+    try:
+        field = FIELD_FACTORY.create_field(
+            type_name,
+            name,
+            description=str(node.get("description", "")),
+            required=node.get("required", True),
+            default=node.get("default"),
+            when=node.get("when"),
+            **extras,
+        )
+    except Exception:
+        return []
+
+    return field.doc_constraints()
+
+
 def _format_conditions(node: dict[str, Any], *, is_field: bool) -> str:
     parts: list[str] = []
 
     if "when" in node:
         when_repr = _format_when(node.get("when"))
         if when_repr:
-            parts.append(f"when={when_repr}")
+            parts.append(f"Applies when: {when_repr}")
 
-    reserved = {"type", "description", "required", "default", "when", "$ref"}
     if is_field:
-        extras = {k: v for k, v in node.items() if k not in reserved}
-        for key in sorted(extras):
-            parts.append(f"{key}: {extras[key]!r}")
+        parts.extend(_field_doc_constraints(str(node.get("name", "")), node))
 
     return "\n".join(parts)
 
@@ -139,6 +160,7 @@ def _walk_schema(
         description = str(value.get("description", ""))
 
         if "type" in value:
+            value_with_name = {**value, "name": key}
             rows.append(
                 DocRow(
                     path=path,
@@ -146,7 +168,7 @@ def _walk_schema(
                     description=description,
                     required=_format_required(value),
                     default=_format_default(value),
-                    conditions=_format_conditions(value, is_field=True),
+                    conditions=_format_conditions(value_with_name, is_field=True),
                 )
             )
             continue

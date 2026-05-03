@@ -40,6 +40,17 @@ class NumericalField(Field):
 
         return value
 
+    def doc_constraints(self) -> list[str]:
+        parts: list[str] = []
+        if self.min_value is not None and self.max_value is not None:
+            parts.append(f"Must be between {self.min_value} and {self.max_value}")
+            return parts
+        if self.min_value is not None:
+            parts.append(f"Must be at least {self.min_value}")
+        if self.max_value is not None:
+            parts.append(f"Must be at most {self.max_value}")
+        return parts
+
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
         if type_str in {"int", "Int", "INT"}:

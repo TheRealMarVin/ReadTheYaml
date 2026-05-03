@@ -48,8 +48,8 @@ logging:
 
     assert "service" in html
     assert "service name" in html
-    assert "min_length" in html
-    assert "when=" in html
+    assert "Length must be at least 3 characters" in html
+    assert "Applies when:" in html
     assert '<a href="#schema-logging">logging</a>' in html
     assert "Schema: schema.yaml" in html
     assert "Schema: logging" in html

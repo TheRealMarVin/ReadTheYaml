@@ -45,6 +45,9 @@ class Field(metaclass=PostInitMeta):
     def validate_and_build(self, value):
         raise NotImplementedError(f"Field '{self.name}': Each field must implement its own validate method.")
 
+    def doc_constraints(self) -> list[str]:
+        return []
+
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
         raise NotImplementedError("Each field must implement its own from_type_string.")

@@ -15,6 +15,10 @@ class EnumField(Field):
             raise ValidationError(f"Field '{self.name}': Invalid value '{value}', expected one of: {self.choices}")
         return value
 
+    def doc_constraints(self) -> list[str]:
+        values = ", ".join(repr(choice) for choice in self.choices)
+        return [f"Allowed values: {values}"]
+
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
         if type_str in {"enum", "Enum", "ENUM"}:

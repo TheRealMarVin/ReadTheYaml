@@ -42,6 +42,18 @@ class StringField(Field):
             raise ValidationError(f"Field '{self.name}': Value must be at most {self.max_length} characters")
         return value
 
+    def doc_constraints(self) -> list[str]:
+        parts: list[str] = []
+        has_max = self.max_length != -1
+        if self.min_length > 0 and has_max:
+            parts.append(f"Length must be between {self.min_length} and {self.max_length} characters")
+            return parts
+        if self.min_length > 0:
+            parts.append(f"Length must be at least {self.min_length} characters")
+        if has_max:
+            parts.append(f"Length must be at most {self.max_length} characters")
+        return parts
+
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
         if type_str in {"str", "Str", "STR"}:

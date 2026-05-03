@@ -40,6 +40,21 @@ class ListField(Field):
 
         return validated
 
+    def doc_constraints(self) -> list[str]:
+        parts: list[str] = []
+        if self.min_length is not None and self.max_length is not None:
+            parts.append(f"Length must be between {self.min_length} and {self.max_length} items")
+            return parts
+        if self.min_length is not None:
+            parts.append(f"Length must be at least {self.min_length} items")
+        if self.max_length is not None:
+            parts.append(f"Length must be at most {self.max_length} items")
+
+        item_constraints = self.item_field.doc_constraints()
+        for item_constraint in item_constraints:
+            parts.append(f"Each item: {item_constraint}")
+        return parts
+
     @staticmethod
     def from_type_string(type_str, name, factory, **kwargs):
         list_type = extract_types_for_composite(type_str=type_str, type_name="list")
