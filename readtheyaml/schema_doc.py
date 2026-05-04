@@ -9,9 +9,8 @@ from urllib.parse import urlparse
 
 import yaml
 
-from readtheyaml.conditions import parse_when
+from readtheyaml.conditions import format_when_human, parse_when
 from readtheyaml.fields.field_factory import FIELD_FACTORY
-from readtheyaml.fields.field_helpers import normalize_for_doc_dump
 from readtheyaml.schema import Schema
 
 
@@ -72,8 +71,7 @@ def _format_when(value: Any) -> str:
     if value is None:
         return ""
     parsed = parse_when(value, "when")
-    normalized = normalize_for_doc_dump(parsed)
-    return yaml.safe_dump(normalized, sort_keys=False, default_flow_style=True).strip()
+    return format_when_human(parsed)
 
 
 def _field_doc_constraints(name: str, node: dict[str, Any]) -> list[str]:
