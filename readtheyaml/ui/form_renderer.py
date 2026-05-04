@@ -143,6 +143,21 @@ class FormRenderer(ttk.Frame):
             if field_path in self._widgets:
                 self._widgets[field_path].mark_invalid(error_message)
 
+    def focus_field(self, field_path: str):
+        self._reveal_ancestors(field_path)
+        widget = self._widgets.get(_normalize_path(field_path))
+        if widget is None:
+            return
+        control = getattr(widget, "_input_widget", None)
+        if control is not None:
+            try:
+                control.focus_set()
+            except Exception:
+                pass
+
+    def reveal_section(self, section_path: str):
+        self._reveal_ancestors(section_path)
+
     def _render_section(self, parent: ttk.Frame, section: Dict[str, Any]):
         section_path = section.get("path", "")
         title = section_path.split(".")[-1] if section_path else "<root>"
@@ -346,3 +361,34 @@ class FormRenderer(ttk.Frame):
                 control.state(["disabled"])
         except Exception:
             pass
+
+    def _reveal_ancestors(self, path: str):
+        normalized = _normalize_path(path)
+        if not normalized:
+            return
+        parts = normalized.split(".")
+        section_paths = []
+        for i in range(1, len(parts) + 1):
+            section_path = ".".join(parts[:i])
+            if section_path in self._section_views:
+                section_paths.append(section_path)
+
+        for section_path in section_paths:
+            view = self._section_views.get(section_path)
+            if view is None:
+                continue
+            container = view["container"]
+            body = view["body"]
+            collapsed = view["collapsed"]
+            toggle_text = view["toggle_text"]
+            enabled_var = view["enabled_var"]
+            checkbutton = view["enabled_checkbutton"]
+
+            container.pack(fill="x", expand=True, pady=4)
+            if checkbutton is not None:
+                checkbutton.state(["!disabled"])
+            if enabled_var is not None and not enabled_var.get():
+                continue
+            collapsed.set(False)
+            toggle_text.set("[-]")
+            body.grid()

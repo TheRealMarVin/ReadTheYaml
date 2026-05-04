@@ -56,11 +56,11 @@ def flatten_field_paths(section: Union[SectionIntrospection, Dict[str, Any]]) ->
 def _introspect_section(schema: Schema, path: str) -> SectionIntrospection:
     fields = [
         _introspect_field(key, schema.fields[key])
-        for key in sorted(schema.fields)
+        for key in schema.fields
     ]
     subsections = [
         _introspect_section(schema.subsections[key], _join_path(path, key))
-        for key in sorted(schema.subsections)
+        for key in schema.subsections
     ]
     return SectionIntrospection(
         path=path,

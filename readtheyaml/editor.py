@@ -85,6 +85,7 @@ class EditorApp:
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self._build_layout()
+        self._build_schema_tree()
         self._refresh_save_controls()
         self._create_form(config_data)
         self._wire_validation()
@@ -101,8 +102,17 @@ class EditorApp:
         paned.add(self.center, weight=2)
         paned.add(self.right, weight=1)
 
-        ttk.Label(self.left, text="Schema Tree (placeholder)").pack(anchor="w")
-        ttk.Label(self.left, text=f"Fields: {len(self.model.get('fields', []))}").pack(anchor="w")
+        ttk.Label(self.left, text="Schema").pack(anchor="w", pady=(0, 6))
+        self.tree = ttk.Treeview(self.left, columns=("kind",), show="tree headings", selectmode="browse")
+        self.tree.heading("#0", text="Name", anchor="w")
+        self.tree.heading("kind", text="Type", anchor="w")
+        self.tree.column("#0", width=240, stretch=True)
+        self.tree.column("kind", width=90, stretch=False)
+        tree_scroll = ttk.Scrollbar(self.left, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=tree_scroll.set)
+        self.tree.pack(side="left", fill="both", expand=True)
+        tree_scroll.pack(side="right", fill="y")
+        self.tree.bind("<<TreeviewSelect>>", self._on_tree_select)
 
         self.toolbar = ttk.Frame(self.center)
         self.toolbar.pack(fill="x", pady=(0, 6))
@@ -141,6 +151,50 @@ class EditorApp:
 
         self.status = ttk.Label(self.root, anchor="w")
         self.status.grid(row=1, column=0, sticky="ew", padx=8, pady=(0, 8))
+
+    def _build_schema_tree(self):
+        self._tree_item_to_path: Dict[str, tuple[str, str]] = {}
+        self.tree.delete(*self.tree.get_children())
+        root_item = self.tree.insert("", "end", text=self.model.get("name") or "<root>", values=("section",), open=True)
+        self._tree_item_to_path[root_item] = ("section", "")
+        self._add_tree_nodes(root_item, self.model)
+
+    def _add_tree_nodes(self, parent_item: str, section_model: Dict[str, Any]):
+        section_path = self._normalize_path(section_model.get("path", ""))
+        for field in section_model.get("fields", []):
+            field_path = f"{section_path}.{field['key']}" if section_path else field["key"]
+            type_name = field.get("type", "")
+            node = self.tree.insert(parent_item, "end", text=field["key"], values=(type_name,))
+            self._tree_item_to_path[node] = ("field", field_path)
+
+        for subsection in section_model.get("subsections", []):
+            subsection_path = self._normalize_path(subsection.get("path", ""))
+            label = subsection_path.split(".")[-1] if subsection_path else (subsection.get("name") or "<root>")
+            node = self.tree.insert(parent_item, "end", text=label, values=("section",), open=False)
+            self._tree_item_to_path[node] = ("section", subsection_path)
+            self._add_tree_nodes(node, subsection)
+
+    def _on_tree_select(self, _: tk.Event):
+        selection = self.tree.selection()
+        if not selection:
+            return
+        item = selection[0]
+        mapping = self._tree_item_to_path.get(item)
+        if mapping is None:
+            return
+        node_kind, path = mapping
+        if node_kind == "section":
+            self.form_renderer.reveal_section(path)
+            return
+        self.form_renderer.focus_field(path)
+
+    @staticmethod
+    def _normalize_path(path: str) -> str:
+        if not path or path == "<root>":
+            return ""
+        if path.startswith("<root>."):
+            return path[len("<root>."):]
+        return path
 
     def _create_form(self, config_data: Dict[str, Any]):
         for child in self.form_host.winfo_children():
