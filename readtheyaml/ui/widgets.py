@@ -1,18 +1,15 @@
-from __future__ import annotations
-
-from dataclasses import dataclass
 import tkinter as tk
 from tkinter import ttk
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 
 ChangeCallback = Callable[[Any], None]
 
 
-@dataclass(frozen=True)
 class ConversionResult:
-    value: Any
-    error: str | None = None
+    def __init__(self, value: Any, error: Optional[str] = None):
+        self.value = value
+        self.error = error
 
 
 def normalize_str(value: str) -> ConversionResult:
@@ -50,15 +47,7 @@ def normalize_enum(value: str, choices: list[str]) -> ConversionResult:
 
 
 class BaseFieldWidget(ttk.Frame):
-    def __init__(
-        self,
-        parent: tk.Misc,
-        *,
-        label: str,
-        description: str = "",
-        required: bool = False,
-        on_change: ChangeCallback | None = None,
-    ) -> None:
+    def __init__(self, parent: tk.Misc, *, label: str, description: str = "", required: bool = False, on_change: Optional[ChangeCallback] = None):
         super().__init__(parent)
         self.required = required
         self._on_change = on_change
@@ -78,26 +67,26 @@ class BaseFieldWidget(ttk.Frame):
         self.error_widget = ttk.Label(self, textvariable=self._error_message, foreground="#b00020")
         self.error_widget.grid(row=3, column=0, sticky="w")
 
-    def mark_invalid(self, error_message: str) -> None:
+    def mark_invalid(self, error_message: str):
         self._error_message.set(error_message)
         self._set_invalid_style(True)
 
-    def clear_invalid(self) -> None:
+    def clear_invalid(self):
         self._error_message.set("")
         self._set_invalid_style(False)
 
-    def _set_invalid_style(self, is_invalid: bool) -> None:
+    def _set_invalid_style(self, is_invalid: bool):
         # ttk widgets support "invalid" state for style maps.
         if is_invalid:
             self._input_widget.state(["invalid"])
         else:
             self._input_widget.state(["!invalid"])
 
-    def _emit_change(self, value: Any) -> None:
+    def _emit_change(self, value: Any):
         if self._on_change is not None:
             self._on_change(value)
 
-    def set_value(self, value: Any) -> None:
+    def set_value(self, value: Any):
         raise NotImplementedError
 
     def get_value(self) -> Any:
@@ -105,7 +94,7 @@ class BaseFieldWidget(ttk.Frame):
 
 
 class StringFieldWidget(BaseFieldWidget):
-    def __init__(self, parent: tk.Misc, **kwargs: Any) -> None:
+    def __init__(self, parent: tk.Misc, **kwargs: Any):
         super().__init__(parent, **kwargs)
         self._var = tk.StringVar(value="")
         self._input_widget = ttk.Entry(self.input_frame, textvariable=self._var)
@@ -117,12 +106,12 @@ class StringFieldWidget(BaseFieldWidget):
     def convert(raw: str) -> ConversionResult:
         return normalize_str(raw)
 
-    def _on_var_change(self, *_: Any) -> None:
+    def _on_var_change(self, *_: Any):
         result = self.convert(self._var.get())
         self.clear_invalid()
         self._emit_change(result.value)
 
-    def set_value(self, value: Any) -> None:
+    def set_value(self, value: Any):
         self._var.set("" if value is None else str(value))
 
     def get_value(self) -> str:
@@ -130,7 +119,7 @@ class StringFieldWidget(BaseFieldWidget):
 
 
 class IntFieldWidget(BaseFieldWidget):
-    def __init__(self, parent: tk.Misc, **kwargs: Any) -> None:
+    def __init__(self, parent: tk.Misc, **kwargs: Any):
         super().__init__(parent, **kwargs)
         self._var = tk.StringVar(value="")
         self._input_widget = ttk.Entry(self.input_frame, textvariable=self._var)
@@ -142,7 +131,7 @@ class IntFieldWidget(BaseFieldWidget):
     def convert(raw: str) -> ConversionResult:
         return normalize_int(raw)
 
-    def _on_var_change(self, *_: Any) -> None:
+    def _on_var_change(self, *_: Any):
         result = self.convert(self._var.get())
         if result.error:
             self.mark_invalid(result.error)
@@ -151,16 +140,16 @@ class IntFieldWidget(BaseFieldWidget):
         self.clear_invalid()
         self._emit_change(result.value)
 
-    def set_value(self, value: Any) -> None:
+    def set_value(self, value: Any):
         self._var.set("" if value is None else str(value))
 
-    def get_value(self) -> int | None:
+    def get_value(self) -> Optional[int]:
         result = self.convert(self._var.get())
         return result.value
 
 
 class FloatFieldWidget(BaseFieldWidget):
-    def __init__(self, parent: tk.Misc, **kwargs: Any) -> None:
+    def __init__(self, parent: tk.Misc, **kwargs: Any):
         super().__init__(parent, **kwargs)
         self._var = tk.StringVar(value="")
         self._input_widget = ttk.Entry(self.input_frame, textvariable=self._var)
@@ -172,7 +161,7 @@ class FloatFieldWidget(BaseFieldWidget):
     def convert(raw: str) -> ConversionResult:
         return normalize_float(raw)
 
-    def _on_var_change(self, *_: Any) -> None:
+    def _on_var_change(self, *_: Any):
         result = self.convert(self._var.get())
         if result.error:
             self.mark_invalid(result.error)
@@ -181,35 +170,31 @@ class FloatFieldWidget(BaseFieldWidget):
         self.clear_invalid()
         self._emit_change(result.value)
 
-    def set_value(self, value: Any) -> None:
+    def set_value(self, value: Any):
         self._var.set("" if value is None else str(value))
 
-    def get_value(self) -> float | None:
+    def get_value(self) -> Optional[float]:
         result = self.convert(self._var.get())
         return result.value
 
 
 class BoolFieldWidget(BaseFieldWidget):
-    def __init__(self, parent: tk.Misc, **kwargs: Any) -> None:
+    def __init__(self, parent: tk.Misc, **kwargs: Any):
         super().__init__(parent, **kwargs)
         self._var = tk.BooleanVar(value=False)
-        self._input_widget = ttk.Checkbutton(
-            self.input_frame,
-            variable=self._var,
-            command=self._on_toggle,
-        )
+        self._input_widget = ttk.Checkbutton(self.input_frame, variable=self._var, command=self._on_toggle)
         self._input_widget.grid(row=0, column=0, sticky="w")
 
     @staticmethod
     def convert(raw: bool) -> ConversionResult:
         return normalize_bool(raw)
 
-    def _on_toggle(self) -> None:
+    def _on_toggle(self):
         result = self.convert(self._var.get())
         self.clear_invalid()
         self._emit_change(result.value)
 
-    def set_value(self, value: Any) -> None:
+    def set_value(self, value: Any):
         self._var.set(bool(value))
 
     def get_value(self) -> bool:
@@ -217,17 +202,11 @@ class BoolFieldWidget(BaseFieldWidget):
 
 
 class EnumFieldWidget(BaseFieldWidget):
-    def __init__(self, parent: tk.Misc, *, choices: list[str], **kwargs: Any) -> None:
+    def __init__(self, parent: tk.Misc, *, choices: list[str], **kwargs: Any):
         super().__init__(parent, **kwargs)
         self._choices = list(choices)
         self._var = tk.StringVar(value=self._choices[0] if self._choices else "")
-        self._input_widget = ttk.OptionMenu(
-            self.input_frame,
-            self._var,
-            self._var.get(),
-            *self._choices,
-            command=self._on_select,
-        )
+        self._input_widget = ttk.OptionMenu(self.input_frame, self._var, self._var.get(), *self._choices, command=self._on_select)
         self._input_widget.grid(row=0, column=0, sticky="ew")
         self.input_frame.columnconfigure(0, weight=1)
 
@@ -235,7 +214,7 @@ class EnumFieldWidget(BaseFieldWidget):
     def convert(raw: str, choices: list[str]) -> ConversionResult:
         return normalize_enum(raw, choices)
 
-    def _on_select(self, _: str) -> None:
+    def _on_select(self, _: str):
         result = self.convert(self._var.get(), self._choices)
         if result.error:
             self.mark_invalid(result.error)
@@ -244,10 +223,9 @@ class EnumFieldWidget(BaseFieldWidget):
         self.clear_invalid()
         self._emit_change(result.value)
 
-    def set_value(self, value: Any) -> None:
+    def set_value(self, value: Any):
         self._var.set("" if value is None else str(value))
 
-    def get_value(self) -> str | None:
+    def get_value(self) -> Optional[str]:
         result = self.convert(self._var.get(), self._choices)
         return result.value
-

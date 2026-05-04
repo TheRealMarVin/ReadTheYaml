@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 from copy import deepcopy
 from dataclasses import asdict, dataclass
-from typing import Any
+from typing import Any, Dict, List, Optional, Union
 
 from readtheyaml.fields.base.any_field import AnyField
 from readtheyaml.fields.base.bool_field import BoolField
@@ -25,8 +23,8 @@ class FieldIntrospection:
     has_default: bool
     default: Any
     description: str
-    constraints: dict[str, Any]
-    when: dict[str, Any] | None
+    constraints: Dict[str, Any]
+    when: Optional[Dict[str, Any]]
 
 
 @dataclass(frozen=True)
@@ -36,20 +34,20 @@ class SectionIntrospection:
     required: bool
     has_default: bool
     default: Any
-    when: dict[str, Any] | None
-    fields: list[FieldIntrospection]
-    subsections: list["SectionIntrospection"]
+    when: Optional[Dict[str, Any]]
+    fields: List[FieldIntrospection]
+    subsections: List["SectionIntrospection"]
 
 
 def introspect_schema(schema: Schema) -> SectionIntrospection:
     return _introspect_section(schema=schema, path=schema.name or "<root>")
 
 
-def introspect_schema_dict(schema: Schema) -> dict[str, Any]:
+def introspect_schema_dict(schema: Schema) -> Dict[str, Any]:
     return asdict(introspect_schema(schema))
 
 
-def flatten_field_paths(section: SectionIntrospection | dict[str, Any]) -> list[str]:
+def flatten_field_paths(section: Union[SectionIntrospection, Dict[str, Any]]) -> List[str]:
     if isinstance(section, dict):
         return _flatten_field_paths_from_dict(section)
     return _flatten_field_paths_from_dataclass(section)
@@ -119,8 +117,8 @@ def _field_type_string(field: Any) -> str:
     return field.__class__.__name__
 
 
-def _field_constraints(field: Any) -> dict[str, Any]:
-    constraints: dict[str, Any] = {}
+def _field_constraints(field: Any) -> Dict[str, Any]:
+    constraints: Dict[str, Any] = {}
     if isinstance(field, NumericalField):
         if field.min_value is not None:
             constraints["min"] = field.min_value
@@ -141,8 +139,8 @@ def _field_constraints(field: Any) -> dict[str, Any]:
     return constraints
 
 
-def _flatten_field_paths_from_dataclass(section: SectionIntrospection) -> list[str]:
-    paths: list[str] = []
+def _flatten_field_paths_from_dataclass(section: SectionIntrospection) -> List[str]:
+    paths: List[str] = []
     for field in section.fields:
         paths.append(_join_path(section.path, field.key))
     for subsection in section.subsections:
@@ -150,8 +148,8 @@ def _flatten_field_paths_from_dataclass(section: SectionIntrospection) -> list[s
     return paths
 
 
-def _flatten_field_paths_from_dict(section: dict[str, Any]) -> list[str]:
-    paths: list[str] = []
+def _flatten_field_paths_from_dict(section: Dict[str, Any]) -> List[str]:
+    paths: List[str] = []
     for field in section.get("fields", []):
         paths.append(_join_path(section["path"], field["key"]))
     for subsection in section.get("subsections", []):
@@ -163,4 +161,3 @@ def _join_path(prefix: str, key: str) -> str:
     if not prefix:
         return key
     return f"{prefix}.{key}"
-
