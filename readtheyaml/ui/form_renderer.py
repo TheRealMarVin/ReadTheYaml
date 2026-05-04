@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any, Callable, Dict, Optional
 
+from readtheyaml.conditions import evaluate_when
 from readtheyaml.ui.widgets import INVALID_INPUT, BoolFieldWidget, EnumFieldWidget, FloatFieldWidget, IntFieldWidget, StringFieldWidget
 
 
@@ -80,6 +81,35 @@ def _normalize_path(path: str) -> str:
     return path
 
 
+def evaluate_visibility_map(section_model: Dict[str, Any], draft_config: Dict[str, Any]) -> Dict[str, bool]:
+    visibility: Dict[str, bool] = {}
+    _collect_visibility_recursive(section_model, draft_config, parent_active=True, visibility=visibility)
+    return visibility
+
+
+def resolve_display_value(field_model: Dict[str, Any], draft_config: Dict[str, Any], field_path: str) -> Any:
+    current = get_value_at_path(draft_config, field_path, default=None)
+    if current is not None:
+        return current
+    if field_model.get("has_default", False):
+        return deepcopy(field_model.get("default"))
+    return None
+
+
+def _collect_visibility_recursive(section_model: Dict[str, Any], draft_config: Dict[str, Any], parent_active: bool, visibility: Dict[str, bool]):
+    section_path = _normalize_path(section_model.get("path", ""))
+    section_active = parent_active and evaluate_when(section_model.get("when"), draft_config)
+    if section_path:
+        visibility[section_path] = section_active
+
+    for field in section_model.get("fields", []):
+        field_path = _join_path(section_path, field["key"])
+        visibility[field_path] = section_active and evaluate_when(field.get("when"), draft_config)
+
+    for subsection in section_model.get("subsections", []):
+        _collect_visibility_recursive(subsection, draft_config, parent_active=section_active, visibility=visibility)
+
+
 class FormRenderer(ttk.Frame):
     def __init__(self, parent: tk.Misc, introspection_model: Dict[str, Any], current_config: Dict[str, Any], strict: bool = True, on_change: Optional[Callable[[Dict[str, Any]], None]] = None):
         super().__init__(parent)
@@ -87,6 +117,7 @@ class FormRenderer(ttk.Frame):
         self._strict = strict
         self._on_change = on_change
         self._widgets = {}
+        self._section_views: Dict[str, Dict[str, Any]] = {}
         self._initializing = True
         if strict:
             self._draft_config = project_known_config(current_config, introspection_model)
@@ -95,6 +126,7 @@ class FormRenderer(ttk.Frame):
 
         self.columnconfigure(0, weight=1)
         self._render_section(self, introspection_model)
+        self._refresh_when_visibility()
         self._initializing = False
 
     def get_current_config_dict(self) -> Dict[str, Any]:
@@ -145,6 +177,7 @@ class FormRenderer(ttk.Frame):
 
         is_required = bool(section.get("required", True))
         enabled_var = None
+        optional_checkbutton = None
         if not is_required and section_path:
             enabled_var = tk.BooleanVar(value=(get_value_at_path(self._draft_config, section_path, None) is not None))
 
@@ -161,13 +194,24 @@ class FormRenderer(ttk.Frame):
                     body.grid_remove()
                     toggle_text.set("[+]")
                     collapsed.set(True)
+                self._refresh_when_visibility()
                 self._emit_change()
 
-            ttk.Checkbutton(header, text="enabled", variable=enabled_var, command=on_toggle_optional).grid(row=0, column=2, sticky="w")
+            optional_checkbutton = ttk.Checkbutton(header, text="enabled", variable=enabled_var, command=on_toggle_optional)
+            optional_checkbutton.grid(row=0, column=2, sticky="w")
             if not enabled_var.get():
                 body.grid_remove()
                 toggle_text.set("[+]")
                 collapsed.set(True)
+
+        self._section_views[section_path] = {
+            "container": container,
+            "body": body,
+            "collapsed": collapsed,
+            "toggle_text": toggle_text,
+            "enabled_var": enabled_var,
+            "enabled_checkbutton": optional_checkbutton,
+        }
 
         for field in section.get("fields", []):
             field_path = _join_path(section_path, field["key"])
@@ -186,7 +230,7 @@ class FormRenderer(ttk.Frame):
         widget_cls, kwargs = self._resolve_widget_type(field_type, field)
         on_change = lambda value, p=field_path: self._on_widget_change(p, value)
         widget = widget_cls(parent, label=label, description=description, required=required, on_change=on_change, **kwargs)
-        initial = get_value_at_path(self._draft_config, field_path, None)
+        initial = resolve_display_value(field, self._draft_config, field_path)
         widget.set_value(initial)
         return widget
 
@@ -209,13 +253,16 @@ class FormRenderer(ttk.Frame):
             return
         if value is INVALID_INPUT:
             self._remove_path(field_path)
+            self._refresh_when_visibility()
             self._emit_change()
             return
         if value is None:
             self._remove_path(field_path)
+            self._refresh_when_visibility()
             self._emit_change()
             return
         set_value_at_path(self._draft_config, field_path, value)
+        self._refresh_when_visibility()
         self._emit_change()
 
     def _remove_path(self, dotted_path: str):
@@ -241,3 +288,61 @@ class FormRenderer(ttk.Frame):
     def _emit_change(self):
         if self._on_change is not None:
             self._on_change(self.get_current_config_dict())
+
+    def _refresh_when_visibility(self):
+        # Hidden-value policy: retain hidden values in the in-memory draft, but treat visibility as
+        # advisory UI state and exclude inactive branches from save payload construction.
+        visibility = evaluate_visibility_map(self._introspection_model, self._draft_config)
+        for path, widget in self._widgets.items():
+            is_active = visibility.get(path, True)
+            if is_active:
+                widget.pack(fill="x", expand=True, pady=2)
+            else:
+                widget.pack_forget()
+            self._set_widget_enabled(widget, is_active)
+
+        for section_path, view in self._section_views.items():
+            if not section_path:
+                continue
+            is_active = visibility.get(section_path, True)
+            container = view["container"]
+            body = view["body"]
+            collapsed = view["collapsed"]
+            toggle_text = view["toggle_text"]
+            enabled_var = view["enabled_var"]
+            checkbutton = view["enabled_checkbutton"]
+
+            if is_active:
+                container.pack(fill="x", expand=True, pady=4)
+                if checkbutton is not None:
+                    checkbutton.state(["!disabled"])
+                is_optional_enabled = True if enabled_var is None else bool(enabled_var.get())
+                if is_optional_enabled:
+                    if collapsed.get():
+                        body.grid_remove()
+                        toggle_text.set("[+]")
+                    else:
+                        body.grid()
+                        toggle_text.set("[-]")
+                else:
+                    body.grid_remove()
+                    toggle_text.set("[+]")
+            else:
+                container.pack_forget()
+                body.grid_remove()
+                if checkbutton is not None:
+                    checkbutton.state(["disabled"])
+                toggle_text.set("[+]")
+
+    @staticmethod
+    def _set_widget_enabled(widget: Any, enabled: bool):
+        control = getattr(widget, "_input_widget", None)
+        if control is None:
+            return
+        try:
+            if enabled:
+                control.state(["!disabled"])
+            else:
+                control.state(["disabled"])
+        except Exception:
+            pass

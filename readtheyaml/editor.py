@@ -182,7 +182,12 @@ class EditorApp:
                 self.validation_state.data_with_default,
                 schema_model=self.model,
             )
-            full_payload = get_save_payload(SAVE_MODE_FULL, draft, self.validation_state.data_with_default)
+            full_payload = get_save_payload(
+                SAVE_MODE_FULL,
+                draft,
+                self.validation_state.data_with_default,
+                schema_model=self.model,
+            )
             export_yaml = serialize_yaml(export_payload)
             full_yaml = serialize_yaml(full_payload)
         else:

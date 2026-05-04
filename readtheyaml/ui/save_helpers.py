@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import yaml
 
+from readtheyaml.conditions import evaluate_when
 
 SAVE_MODE_EXPORT = "export"
 SAVE_MODE_FULL = "full"
@@ -29,14 +30,20 @@ def get_save_payload(
 ) -> Dict[str, Any]:
     if mode == SAVE_MODE_EXPORT:
         if data_with_default is None:
-            return draft_config
+            payload = draft_config
+            if schema_model is not None:
+                payload = _exclude_inactive_branches(payload, schema_model)
+            return payload
         if schema_model is None:
             return data_with_default
-        return _remove_schema_defaults(data_with_default, schema_model)
+        filtered = _exclude_inactive_branches(data_with_default, schema_model)
+        return _remove_schema_defaults(filtered, schema_model)
     if mode == SAVE_MODE_FULL:
         if data_with_default is None:
             raise ValueError("Validated data_with_default is not available.")
-        return data_with_default
+        if schema_model is None:
+            return data_with_default
+        return _exclude_inactive_branches(data_with_default, schema_model)
     raise ValueError(f"Unknown save mode: {mode}")
 
 
@@ -85,3 +92,33 @@ def _normalize_path(path: str) -> str:
     if path.startswith("<root>."):
         return path[len("<root>."):]
     return path
+
+
+def _exclude_inactive_branches(data: Dict[str, Any], section_model: Dict[str, Any]) -> Dict[str, Any]:
+    pruned = deepcopy(data)
+    _prune_inactive_section(pruned, section_model, root_data=pruned)
+    return pruned
+
+
+def _prune_inactive_section(section_data: Any, section_model: Dict[str, Any], root_data: Dict[str, Any]):
+    if not isinstance(section_data, dict):
+        return
+
+    for field in section_model.get("fields", []):
+        if evaluate_when(field.get("when"), root_data):
+            continue
+        section_data.pop(field["key"], None)
+
+    for subsection in section_model.get("subsections", []):
+        subsection_key = _subsection_key(section_model, subsection)
+        if subsection_key not in section_data:
+            continue
+        if not evaluate_when(subsection.get("when"), root_data):
+            del section_data[subsection_key]
+            continue
+        child = section_data.get(subsection_key)
+        if not isinstance(child, dict):
+            continue
+        _prune_inactive_section(child, subsection, root_data=root_data)
+        if not child:
+            del section_data[subsection_key]
