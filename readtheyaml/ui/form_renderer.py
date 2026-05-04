@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any, Callable, Dict, Optional
 
-from readtheyaml.ui.widgets import BoolFieldWidget, EnumFieldWidget, FloatFieldWidget, IntFieldWidget, StringFieldWidget
+from readtheyaml.ui.widgets import INVALID_INPUT, BoolFieldWidget, EnumFieldWidget, FloatFieldWidget, IntFieldWidget, StringFieldWidget
 
 
 def get_value_at_path(data: Dict[str, Any], dotted_path: str, default: Any = None) -> Any:
@@ -87,6 +87,7 @@ class FormRenderer(ttk.Frame):
         self._strict = strict
         self._on_change = on_change
         self._widgets = {}
+        self._initializing = True
         if strict:
             self._draft_config = project_known_config(current_config, introspection_model)
         else:
@@ -94,6 +95,7 @@ class FormRenderer(ttk.Frame):
 
         self.columnconfigure(0, weight=1)
         self._render_section(self, introspection_model)
+        self._initializing = False
 
     def get_current_config_dict(self) -> Dict[str, Any]:
         return deepcopy(self._draft_config)
@@ -203,6 +205,16 @@ class FormRenderer(ttk.Frame):
         return StringFieldWidget, {}
 
     def _on_widget_change(self, field_path: str, value: Any):
+        if self._initializing:
+            return
+        if value is INVALID_INPUT:
+            self._remove_path(field_path)
+            self._emit_change()
+            return
+        if value is None:
+            self._remove_path(field_path)
+            self._emit_change()
+            return
         set_value_at_path(self._draft_config, field_path, value)
         self._emit_change()
 

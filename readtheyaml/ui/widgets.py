@@ -4,6 +4,7 @@ from typing import Any, Callable, Optional
 
 
 ChangeCallback = Callable[[Any], None]
+INVALID_INPUT = object()
 
 
 class ConversionResult:
@@ -12,24 +13,32 @@ class ConversionResult:
         self.error = error
 
 
-def normalize_str(value: str) -> ConversionResult:
+def normalize_str(value: str, required: bool = False) -> ConversionResult:
+    if value.strip() == "":
+        if required:
+            return ConversionResult(value=None, error="Value is required.")
+        return ConversionResult(value=None)
     return ConversionResult(value=value)
 
 
-def normalize_int(value: str) -> ConversionResult:
+def normalize_int(value: str, required: bool = False) -> ConversionResult:
     text = value.strip()
     if text == "":
-        return ConversionResult(value=None, error="Value is required.")
+        if required:
+            return ConversionResult(value=None, error="Value is required.")
+        return ConversionResult(value=None)
     try:
         return ConversionResult(value=int(text))
     except ValueError:
         return ConversionResult(value=None, error="Expected an integer.")
 
 
-def normalize_float(value: str) -> ConversionResult:
+def normalize_float(value: str, required: bool = False) -> ConversionResult:
     text = value.strip()
     if text == "":
-        return ConversionResult(value=None, error="Value is required.")
+        if required:
+            return ConversionResult(value=None, error="Value is required.")
+        return ConversionResult(value=None)
     try:
         return ConversionResult(value=float(text))
     except ValueError:
@@ -103,11 +112,15 @@ class StringFieldWidget(BaseFieldWidget):
         self._var.trace_add("write", self._on_var_change)
 
     @staticmethod
-    def convert(raw: str) -> ConversionResult:
-        return normalize_str(raw)
+    def convert(raw: str, required: bool = False) -> ConversionResult:
+        return normalize_str(raw, required=required)
 
     def _on_var_change(self, *_: Any):
-        result = self.convert(self._var.get())
+        result = self.convert(self._var.get(), required=self.required)
+        if result.error:
+            self.mark_invalid(result.error)
+            self._emit_change(INVALID_INPUT)
+            return
         self.clear_invalid()
         self._emit_change(result.value)
 
@@ -115,7 +128,7 @@ class StringFieldWidget(BaseFieldWidget):
         self._var.set("" if value is None else str(value))
 
     def get_value(self) -> str:
-        return self.convert(self._var.get()).value
+        return self.convert(self._var.get(), required=self.required).value
 
 
 class IntFieldWidget(BaseFieldWidget):
@@ -128,14 +141,14 @@ class IntFieldWidget(BaseFieldWidget):
         self._var.trace_add("write", self._on_var_change)
 
     @staticmethod
-    def convert(raw: str) -> ConversionResult:
-        return normalize_int(raw)
+    def convert(raw: str, required: bool = False) -> ConversionResult:
+        return normalize_int(raw, required=required)
 
     def _on_var_change(self, *_: Any):
-        result = self.convert(self._var.get())
+        result = self.convert(self._var.get(), required=self.required)
         if result.error:
             self.mark_invalid(result.error)
-            self._emit_change(None)
+            self._emit_change(INVALID_INPUT)
             return
         self.clear_invalid()
         self._emit_change(result.value)
@@ -144,7 +157,7 @@ class IntFieldWidget(BaseFieldWidget):
         self._var.set("" if value is None else str(value))
 
     def get_value(self) -> Optional[int]:
-        result = self.convert(self._var.get())
+        result = self.convert(self._var.get(), required=self.required)
         return result.value
 
 
@@ -158,14 +171,14 @@ class FloatFieldWidget(BaseFieldWidget):
         self._var.trace_add("write", self._on_var_change)
 
     @staticmethod
-    def convert(raw: str) -> ConversionResult:
-        return normalize_float(raw)
+    def convert(raw: str, required: bool = False) -> ConversionResult:
+        return normalize_float(raw, required=required)
 
     def _on_var_change(self, *_: Any):
-        result = self.convert(self._var.get())
+        result = self.convert(self._var.get(), required=self.required)
         if result.error:
             self.mark_invalid(result.error)
-            self._emit_change(None)
+            self._emit_change(INVALID_INPUT)
             return
         self.clear_invalid()
         self._emit_change(result.value)
@@ -174,7 +187,7 @@ class FloatFieldWidget(BaseFieldWidget):
         self._var.set("" if value is None else str(value))
 
     def get_value(self) -> Optional[float]:
-        result = self.convert(self._var.get())
+        result = self.convert(self._var.get(), required=self.required)
         return result.value
 
 
