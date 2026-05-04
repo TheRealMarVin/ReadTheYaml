@@ -7,6 +7,9 @@ from readtheyaml.schema import Schema
 
 FIELD_ERROR_PATTERN = re.compile(r"^Field '([^']+)':\s*(.+)$")
 MISSING_FIELD_PATTERN = re.compile(r"^Missing required field '([^']+)'$")
+AT_LEAST_PATTERN = re.compile(r"at least\s+(-?\d+(?:\.\d+)?)", re.IGNORECASE)
+AT_MOST_PATTERN = re.compile(r"at most\s+(-?\d+(?:\.\d+)?)", re.IGNORECASE)
+TYPE_NAME_PATTERN = re.compile(r"Expected\s+([A-Za-z_][A-Za-z0-9_]*)", re.IGNORECASE)
 
 
 class ValidationState:
@@ -35,6 +38,67 @@ def parse_validation_error(message: str) -> Tuple[Dict[str, str], List[str]]:
 
     global_errors.append(message)
     return field_errors, global_errors
+
+
+def build_fix_hints(field_errors: Dict[str, str], global_errors: List[str]) -> List[str]:
+    hints: List[str] = []
+
+    for field_path, message in field_errors.items():
+        lower = message.lower()
+
+        if "missing required field" in lower:
+            hints.append(f"Add required key '{field_path}' to your config.")
+            continue
+
+        min_match = AT_LEAST_PATTERN.search(message)
+        max_match = AT_MOST_PATTERN.search(message)
+        if min_match or max_match:
+            if min_match and max_match:
+                hints.append(f"Set '{field_path}' within bounds {min_match.group(1)}..{max_match.group(1)}.")
+            elif min_match:
+                hints.append(f"Set '{field_path}' to be at least {min_match.group(1)}.")
+            else:
+                hints.append(f"Set '{field_path}' to be at most {max_match.group(1)}.")
+            continue
+
+        if "must be of type" in lower or "expected" in lower:
+            expected = _extract_expected_type(message)
+            if expected:
+                hints.append(f"Use value type '{expected}' for '{field_path}'.")
+            else:
+                hints.append(f"Adjust '{field_path}' to the expected type.")
+            continue
+
+    for message in global_errors:
+        missing_match = MISSING_FIELD_PATTERN.match(message)
+        if missing_match:
+            hints.append(f"Add required key '{missing_match.group(1)}' to your config.")
+            continue
+
+        min_match = AT_LEAST_PATTERN.search(message)
+        max_match = AT_MOST_PATTERN.search(message)
+        if min_match or max_match:
+            if min_match and max_match:
+                hints.append(f"Update value within bounds {min_match.group(1)}..{max_match.group(1)}.")
+            elif min_match:
+                hints.append(f"Update value to be at least {min_match.group(1)}.")
+            else:
+                hints.append(f"Update value to be at most {max_match.group(1)}.")
+            continue
+
+    return hints
+
+
+def _extract_expected_type(message: str) -> Optional[str]:
+    if "must be of type" in message.lower():
+        parts = message.split("Must be of type", 1)
+        if len(parts) == 2:
+            return parts[1].strip().rstrip(".")
+
+    type_match = TYPE_NAME_PATTERN.search(message)
+    if type_match:
+        return type_match.group(1)
+    return None
 
 
 class ValidationController:

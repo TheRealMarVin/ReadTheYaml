@@ -12,7 +12,7 @@ from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.schema import Schema
 from readtheyaml.ui.form_renderer import FormRenderer
 from readtheyaml.ui.schema_introspect import introspect_schema_dict
-from readtheyaml.ui.validation import ValidationController, ValidationState
+from readtheyaml.ui.validation import ValidationController, ValidationState, build_fix_hints
 
 
 def _parse_bool(value: str) -> bool:
@@ -98,12 +98,17 @@ def _build_editor_window(schema_path: str, config_path: Optional[str], strict: b
     form_renderer = FormRenderer(center, model, config_data, strict=strict)
     form_renderer.pack(fill="both", expand=True)
 
-    validation_status = ttk.Label(right, text="Validation: pending", anchor="w")
-    validation_status.pack(fill="x", pady=(0, 6))
-    error_label = ttk.Label(right, text="Errors", anchor="w")
+    badge = tk.Label(right, text="PENDING", bg="#888888", fg="white", padx=8, pady=4)
+    badge.pack(anchor="w", pady=(0, 8))
+
+    error_label = ttk.Label(right, text="Global Errors", anchor="w")
     error_label.pack(fill="x")
     error_text = tk.Text(right, height=8, wrap="word")
     error_text.pack(fill="x", pady=(0, 8))
+    hint_label = ttk.Label(right, text="How to fix", anchor="w")
+    hint_label.pack(fill="x")
+    hint_text = tk.Text(right, height=6, wrap="word")
+    hint_text.pack(fill="x", pady=(0, 8))
     output_label = ttk.Label(right, text="Built Output", anchor="w")
     output_label.pack(fill="x")
     output_text = tk.Text(right, height=10, wrap="word")
@@ -118,18 +123,21 @@ def _build_editor_window(schema_path: str, config_path: Optional[str], strict: b
     def on_validation_state(state: ValidationState):
         form_renderer.apply_field_errors(state.field_errors)
         if state.is_valid:
-            validation_status.configure(text="Validation: valid")
+            badge.configure(text="VALID", bg="#1f7a1f")
             set_text(error_text, "")
+            set_text(hint_text, "")
             built_output = yaml.safe_dump(state.built_output, sort_keys=False)
             with_default = yaml.safe_dump(state.data_with_default, sort_keys=False)
             set_text(output_text, f"built_output:\n{built_output}\n---\ndata_with_default:\n{with_default}")
             return
 
-        validation_status.configure(text="Validation: invalid")
+        badge.configure(text="INVALID", bg="#a32121")
         errors = list(state.global_errors)
         for path, msg in sorted(state.field_errors.items()):
             errors.append(f"{path}: {msg}")
         set_text(error_text, "\n".join(errors))
+        hints = build_fix_hints(state.field_errors, state.global_errors)
+        set_text(hint_text, "\n".join(hints))
         set_text(output_text, "")
 
     controller = ValidationController(
