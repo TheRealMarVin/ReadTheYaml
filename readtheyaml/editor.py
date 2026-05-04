@@ -1,16 +1,16 @@
 import argparse
 import sys
 from pathlib import Path
-from typing import Any, Optional, Tuple, Dict
+from typing import Any, Dict, Optional, Tuple
 
 import tkinter as tk
-from tkinter import messagebox, ttk
-import yaml
+from tkinter import filedialog, messagebox, ttk
 
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.schema import Schema
 from readtheyaml.ui.form_renderer import FormRenderer
+from readtheyaml.ui.save_helpers import SAVE_MODE_DRAFT, SAVE_MODE_VALIDATED, can_save, get_save_payload, serialize_yaml
 from readtheyaml.ui.schema_introspect import introspect_schema_dict
 from readtheyaml.ui.validation import ValidationController, ValidationState, build_fix_hints
 
@@ -28,12 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Launch the ReadTheYAML Tkinter editor.")
     parser.add_argument("--schema", required=True, help="Path to the YAML schema definition file")
     parser.add_argument("--config", help="Path to a YAML config file")
-    parser.add_argument(
-        "--strict",
-        type=_parse_bool,
-        default=True,
-        help="Strict validation mode (true|false, default: true)",
-    )
+    parser.add_argument("--strict", type=_parse_bool, default=True, help="Strict validation mode (true|false, default: true)")
     return parser
 
 
@@ -42,6 +37,7 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
 
 
 def load_schema_and_config(schema_path: str, config_path: Optional[str], strict: bool) -> Tuple[Schema, Dict[str, Any]]:
+    _ = strict
     schema = Schema.from_yaml(schema_path)
     if config_path is None:
         config_data: Any = {}
@@ -50,16 +46,12 @@ def load_schema_and_config(schema_path: str, config_path: Optional[str], strict:
             config_data = Schema._safe_load_yaml(handle.read(), str(config_path))
         if config_data is None:
             config_data = {}
-
     if not isinstance(config_data, dict):
         raise ValidationError(f"Config root must be a mapping/dictionary, got {type(config_data).__name__}")
-
-    # Editor startup should allow partial/incomplete configs so users can fix them in the UI.
-    # Full validation is expected to run during explicit validation actions inside the editor.
     return schema, config_data
 
 
-def _show_startup_error(message: str) -> None:
+def _show_startup_error(message: str):
     try:
         root = tk.Tk()
         root.withdraw()
@@ -69,97 +61,256 @@ def _show_startup_error(message: str) -> None:
         pass
 
 
-def _build_editor_window(schema_path: str, config_path: Optional[str], strict: bool, schema: Schema, config_data: Dict[str, Any]) -> tk.Tk:
-    schema_name = Path(schema_path).name
-    config_name = Path(config_path).name if config_path else "<none>"
+class EditorApp:
+    def __init__(self, schema_path: str, config_path: Optional[str], strict: bool, schema: Schema, config_data: Dict[str, Any]):
+        self.schema_path = schema_path
+        self.config_path = config_path
+        self.strict = strict
+        self.schema = schema
+        self.model = introspect_schema_dict(schema)
 
-    root = tk.Tk()
-    root.title(f"ReadTheYAML Editor - schema: {schema_name} | config: {config_name}")
-    root.geometry("1100x700")
+        self.dirty = False
+        self.validation_state = ValidationState(
+            is_valid=False,
+            built_output=None,
+            data_with_default=None,
+            field_errors={},
+            global_errors=["Validation pending..."],
+        )
 
-    root.columnconfigure(0, weight=1)
-    root.rowconfigure(0, weight=1)
+        self.root = tk.Tk()
+        self.root.geometry("1200x760")
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(0, weight=1)
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
-    paned = ttk.PanedWindow(root, orient=tk.HORIZONTAL)
-    paned.grid(row=0, column=0, sticky="nsew")
+        self._build_layout()
+        self._refresh_save_controls()
+        self._create_form(config_data)
+        self._wire_validation()
+        self._refresh_title_status()
 
-    left = ttk.Frame(paned, padding=8)
-    center = ttk.Frame(paned, padding=8)
-    right = ttk.Frame(paned, padding=8)
-    paned.add(left, weight=1)
-    paned.add(center, weight=2)
-    paned.add(right, weight=1)
+    def _build_layout(self):
+        paned = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
+        paned.grid(row=0, column=0, sticky="nsew")
 
-    model = introspect_schema_dict(schema)
+        self.left = ttk.Frame(paned, padding=8)
+        self.center = ttk.Frame(paned, padding=8)
+        self.right = ttk.Frame(paned, padding=8)
+        paned.add(self.left, weight=1)
+        paned.add(self.center, weight=2)
+        paned.add(self.right, weight=1)
 
-    ttk.Label(left, text="Schema Tree (placeholder)").pack(anchor="w")
-    ttk.Label(left, text=f"Fields: {len(model.get('fields', []))}").pack(anchor="w")
+        ttk.Label(self.left, text="Schema Tree (placeholder)").pack(anchor="w")
+        ttk.Label(self.left, text=f"Fields: {len(self.model.get('fields', []))}").pack(anchor="w")
 
-    form_renderer = FormRenderer(center, model, config_data, strict=strict)
-    form_renderer.pack(fill="both", expand=True)
+        self.toolbar = ttk.Frame(self.center)
+        self.toolbar.pack(fill="x", pady=(0, 6))
+        ttk.Button(self.toolbar, text="Load config", command=self._on_load_config).pack(side="left", padx=(0, 6))
+        self.save_button = ttk.Button(self.toolbar, text="Save", command=self._on_save)
+        self.save_button.pack(side="left", padx=(0, 6))
+        self.save_as_button = ttk.Button(self.toolbar, text="Save As", command=self._on_save_as)
+        self.save_as_button.pack(side="left")
 
-    badge = tk.Label(right, text="PENDING", bg="#888888", fg="white", padx=8, pady=4)
-    badge.pack(anchor="w", pady=(0, 8))
+        self.form_host = ttk.Frame(self.center)
+        self.form_host.pack(fill="both", expand=True)
 
-    error_label = ttk.Label(right, text="Global Errors", anchor="w")
-    error_label.pack(fill="x")
-    error_text = tk.Text(right, height=8, wrap="word")
-    error_text.pack(fill="x", pady=(0, 8))
-    hint_label = ttk.Label(right, text="How to fix", anchor="w")
-    hint_label.pack(fill="x")
-    hint_text = tk.Text(right, height=6, wrap="word")
-    hint_text.pack(fill="x", pady=(0, 8))
-    output_label = ttk.Label(right, text="Built Output", anchor="w")
-    output_label.pack(fill="x")
-    output_text = tk.Text(right, height=10, wrap="word")
-    output_text.pack(fill="both", expand=True)
+        self.badge = tk.Label(self.right, text="PENDING", bg="#888888", fg="white", padx=8, pady=4)
+        self.badge.pack(anchor="w", pady=(0, 8))
 
-    def set_text(widget: tk.Text, value: str):
+        ttk.Label(self.right, text="Global Errors", anchor="w").pack(fill="x")
+        self.error_text = tk.Text(self.right, height=8, wrap="word")
+        self.error_text.pack(fill="x", pady=(0, 8))
+
+        ttk.Label(self.right, text="How to fix", anchor="w").pack(fill="x")
+        self.hint_text = tk.Text(self.right, height=6, wrap="word")
+        self.hint_text.pack(fill="x", pady=(0, 8))
+
+        self.preview_tabs = ttk.Notebook(self.right)
+        self.preview_tabs.pack(fill="both", expand=True)
+        draft_tab = ttk.Frame(self.preview_tabs)
+        validated_tab = ttk.Frame(self.preview_tabs)
+        self.preview_tabs.add(draft_tab, text="Draft YAML")
+        self.preview_tabs.add(validated_tab, text="Validated YAML")
+
+        self.draft_text = tk.Text(draft_tab, wrap="none")
+        self.draft_text.pack(fill="both", expand=True)
+        self.validated_text = tk.Text(validated_tab, wrap="none")
+        self.validated_text.pack(fill="both", expand=True)
+
+        self.status = ttk.Label(self.root, anchor="w")
+        self.status.grid(row=1, column=0, sticky="ew", padx=8, pady=(0, 8))
+
+    def _create_form(self, config_data: Dict[str, Any]):
+        for child in self.form_host.winfo_children():
+            child.destroy()
+        self.form_renderer = FormRenderer(self.form_host, self.model, config_data, strict=self.strict)
+        self.form_renderer.pack(fill="both", expand=True)
+        self.form_renderer.set_on_change(self._on_form_change)
+
+    def _wire_validation(self):
+        self.controller = ValidationController(
+            schema=self.schema,
+            strict=self.strict,
+            schedule_callback=lambda delay, cb: self.root.after(delay, cb),
+            cancel_callback=lambda token: self.root.after_cancel(token),
+            state_callback=self._on_validation_state,
+            debounce_ms=300,
+        )
+        self.controller.request_validation(self.form_renderer.get_current_config_dict())
+
+    def _set_text(self, widget: tk.Text, value: str):
         widget.configure(state="normal")
         widget.delete("1.0", "end")
         widget.insert("1.0", value)
         widget.configure(state="disabled")
 
-    def on_validation_state(state: ValidationState):
-        form_renderer.apply_field_errors(state.field_errors)
+    def _refresh_title_status(self):
+        schema_name = Path(self.schema_path).name
+        config_name = Path(self.config_path).name if self.config_path else "<none>"
+        dirty_mark = "*" if self.dirty else ""
+        self.root.title(f"ReadTheYAML Editor - schema: {schema_name} | config: {config_name}{dirty_mark}")
+        self.status.configure(text=f"Schema: {schema_name}    Config: {config_name}{dirty_mark}    Strict: {self.strict}")
+
+    def _refresh_previews(self):
+        draft_yaml = serialize_yaml(self.form_renderer.get_current_config_dict())
+        self._set_text(self.draft_text, draft_yaml)
+        if self.validation_state.is_valid and self.validation_state.data_with_default is not None:
+            validated_yaml = serialize_yaml(self.validation_state.data_with_default)
+        else:
+            validated_yaml = ""
+        self._set_text(self.validated_text, validated_yaml)
+
+    def _on_form_change(self, _: Dict[str, Any]):
+        self.dirty = True
+        self._refresh_title_status()
+        self._refresh_previews()
+        self.controller.request_validation(self.form_renderer.get_current_config_dict())
+
+    def _refresh_save_controls(self):
+        state = "normal" if self.validation_state.is_valid else "disabled"
+        self.save_button.configure(state=state)
+        self.save_as_button.configure(state=state)
+
+    def _show_save_blocked(self):
+        ok, reason = can_save(self.validation_state.is_valid)
+        if ok:
+            return False
+        errors = list(self.validation_state.global_errors)
+        for field_path, msg in sorted(self.validation_state.field_errors.items()):
+            errors.append(f"{field_path}: {msg}")
+        hints = build_fix_hints(self.validation_state.field_errors, self.validation_state.global_errors)
+        detail = "\n".join(errors + [""] + hints).strip()
+        message = reason or "Cannot save."
+        if detail:
+            message += f"\n\n{detail}"
+        messagebox.showerror("Save blocked", message)
+        return True
+
+    def _on_validation_state(self, state: ValidationState):
+        self.validation_state = state
+        self.form_renderer.apply_field_errors(state.field_errors)
+        self._refresh_save_controls()
+
         if state.is_valid:
-            badge.configure(text="VALID", bg="#1f7a1f")
-            set_text(error_text, "")
-            set_text(hint_text, "")
-            built_output = yaml.safe_dump(state.built_output, sort_keys=False)
-            with_default = yaml.safe_dump(state.data_with_default, sort_keys=False)
-            set_text(output_text, f"built_output:\n{built_output}\n---\ndata_with_default:\n{with_default}")
+            self.badge.configure(text="VALID", bg="#1f7a1f")
+            self._set_text(self.error_text, "")
+            self._set_text(self.hint_text, "")
+        else:
+            self.badge.configure(text="INVALID", bg="#a32121")
+            errors = list(state.global_errors)
+            for path, msg in sorted(state.field_errors.items()):
+                errors.append(f"{path}: {msg}")
+            self._set_text(self.error_text, "\n".join(errors))
+            self._set_text(self.hint_text, "\n".join(build_fix_hints(state.field_errors, state.global_errors)))
+        self._refresh_previews()
+
+    def _load_config_from_path(self, path: str):
+        with open(path, "r", encoding="utf-8", newline="") as handle:
+            data = Schema._safe_load_yaml(handle.read(), path)
+        if data is None:
+            data = {}
+        if not isinstance(data, dict):
+            raise ValidationError(f"Config root must be a mapping/dictionary, got {type(data).__name__}")
+        self.config_path = path
+        self.dirty = False
+        self._create_form(data)
+        self._wire_validation()
+        self._refresh_title_status()
+        self._refresh_previews()
+
+    def _on_load_config(self):
+        path = filedialog.askopenfilename(title="Load YAML config", filetypes=[("YAML files", "*.yaml *.yml"), ("All files", "*.*")])
+        if not path:
             return
+        try:
+            self._load_config_from_path(path)
+        except (FormatError, ValidationError, FileNotFoundError) as exc:
+            messagebox.showerror("Load config", f"Failed to load config: {exc}")
 
-        badge.configure(text="INVALID", bg="#a32121")
-        errors = list(state.global_errors)
-        for path, msg in sorted(state.field_errors.items()):
-            errors.append(f"{path}: {msg}")
-        set_text(error_text, "\n".join(errors))
-        hints = build_fix_hints(state.field_errors, state.global_errors)
-        set_text(hint_text, "\n".join(hints))
-        set_text(output_text, "")
+    def _save_to_path(self, path: str):
+        if self._show_save_blocked():
+            return False
 
-    controller = ValidationController(
-        schema=schema,
-        strict=strict,
-        schedule_callback=lambda delay, cb: root.after(delay, cb),
-        cancel_callback=lambda token: root.after_cancel(token),
-        state_callback=on_validation_state,
-        debounce_ms=300,
-    )
+        choice = messagebox.askyesnocancel(
+            "Save mode",
+            "Save validated config with defaults?\n\nYes = data_with_default\nNo = current draft\nCancel = abort",
+        )
+        if choice is None:
+            return False
+        mode = SAVE_MODE_VALIDATED if choice else SAVE_MODE_DRAFT
+        payload = get_save_payload(mode, self.form_renderer.get_current_config_dict(), self.validation_state.data_with_default)
+        content = serialize_yaml(payload)
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(content)
+        self.config_path = path
+        self.dirty = False
+        self._refresh_title_status()
+        return True
 
-    def on_form_change(_: Dict[str, Any]):
-        controller.request_validation(form_renderer.get_current_config_dict())
+    def _on_save(self):
+        if self._show_save_blocked():
+            return
+        path = self.config_path
+        if not path:
+            self._on_save_as()
+            return
+        try:
+            self._save_to_path(path)
+        except OSError as exc:
+            messagebox.showerror("Save", f"Failed to save file: {exc}")
 
-    form_renderer.set_on_change(on_form_change)
-    controller.request_validation(form_renderer.get_current_config_dict())
+    def _on_save_as(self):
+        if self._show_save_blocked():
+            return
+        path = filedialog.asksaveasfilename(
+            title="Save YAML config",
+            defaultextension=".yaml",
+            filetypes=[("YAML files", "*.yaml *.yml"), ("All files", "*.*")],
+        )
+        if not path:
+            return
+        try:
+            self._save_to_path(path)
+        except OSError as exc:
+            messagebox.showerror("Save As", f"Failed to save file: {exc}")
 
-    status_text = f"Schema: {schema_name}    Config: {config_name}    Strict: {strict}"
-    status = ttk.Label(root, text=status_text, anchor="w")
-    status.grid(row=1, column=0, sticky="ew", padx=8, pady=(0, 8))
+    def _on_close(self):
+        if not self.dirty:
+            self.root.destroy()
+            return
+        choice = messagebox.askyesnocancel("Unsaved changes", "You have unsaved changes. Save before closing?")
+        if choice is None:
+            return
+        if choice:
+            self._on_save()
+            if self.dirty:
+                return
+        self.root.destroy()
 
-    return root
+    def run(self):
+        self._refresh_previews()
+        self.root.mainloop()
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -171,9 +322,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(message, file=sys.stderr)
         _show_startup_error(message)
         return 1
-
-    root = _build_editor_window(args.schema, args.config, args.strict, schema, config_data)
-    root.mainloop()
+    app = EditorApp(args.schema, args.config, args.strict, schema, config_data)
+    app.run()
     return 0
 
 
