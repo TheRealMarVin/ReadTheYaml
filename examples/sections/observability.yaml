@@ -1,0 +1,19 @@
+log_level:
+  type: enum
+  description: Log verbosity level
+  required: false
+  default: info
+  values: [debug, info, warning, error]
+
+emit_json_logs:
+  type: bool
+  description: Emit structured JSON logs
+  required: false
+  default: false
+
+trace_sampling_rate:
+  type: float
+  description: Fraction of traces to sample
+  required: false
+  default: 0.1
+  value_range: [0.0, 1.0]

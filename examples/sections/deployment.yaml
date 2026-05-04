@@ -1,0 +1,11 @@
+strategy:
+  type: enum
+  description: Deployment strategy for non-dev environments
+  values: [rolling, blue-green]
+
+max_unavailable:
+  type: int
+  description: Max unavailable instances during rollout
+  required: false
+  default: 1
+  value_range: [0, 10]

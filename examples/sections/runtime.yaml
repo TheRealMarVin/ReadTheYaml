@@ -1,0 +1,26 @@
+retries:
+  type: int
+  description: Number of retry attempts
+  required: false
+  default: 3
+  value_range: [0, 10]
+
+retry_delay_seconds:
+  type: int
+  description: Delay between retries in seconds
+  required: false
+  default: 1
+  value_range: [0, 30]
+
+request_timeout_seconds:
+  type: float
+  description: Request timeout in seconds
+  required: false
+  default: 5.0
+  value_range: [0.1, 120.0]
+
+tags:
+  type: list[str]
+  description: Runtime labels used by deployment tooling
+  required: false
+  default: []

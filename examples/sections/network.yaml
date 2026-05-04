@@ -1,0 +1,10 @@
+host:
+  type: str
+  description: Host or IP address to bind
+
+port:
+  type: int
+  description: Service port
+  required: false
+  default: 8080
+  value_range: [1, 65535]

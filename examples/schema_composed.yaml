@@ -1,0 +1,30 @@
+service_name:
+  type: str
+  description: Human-readable service name
+
+environment:
+  type: enum
+  description: Deployment environment
+  required: false
+  default: dev
+  values: [dev, stage, prod]
+
+network:
+  $ref: ./sections/network.yaml
+  required: true
+
+observability:
+  $ref: ./sections/observability.yaml
+  required: false
+
+runtime:
+  $ref: ./sections/runtime.yaml
+  required: false
+
+deployment:
+  $ref: ./sections/deployment.yaml
+  required: true
+  when:
+    field: environment
+    op: in
+    value: [stage, prod]
