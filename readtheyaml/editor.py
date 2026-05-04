@@ -10,7 +10,7 @@ from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.schema import Schema
 from readtheyaml.ui.form_renderer import FormRenderer
-from readtheyaml.ui.save_helpers import SAVE_MODE_DRAFT, SAVE_MODE_VALIDATED, can_save, get_save_payload, serialize_yaml
+from readtheyaml.ui.save_helpers import SAVE_MODE_EXPORT, SAVE_MODE_FULL, can_save, get_save_payload, serialize_yaml
 from readtheyaml.ui.schema_introspect import introspect_schema_dict
 from readtheyaml.ui.validation import ValidationController, ValidationState, build_fix_hints
 
@@ -128,15 +128,16 @@ class EditorApp:
 
         self.preview_tabs = ttk.Notebook(self.right)
         self.preview_tabs.pack(fill="both", expand=True)
-        draft_tab = ttk.Frame(self.preview_tabs)
-        validated_tab = ttk.Frame(self.preview_tabs)
-        self.preview_tabs.add(draft_tab, text="Draft YAML")
-        self.preview_tabs.add(validated_tab, text="Validated YAML")
+        export_tab = ttk.Frame(self.preview_tabs)
+        full_tab = ttk.Frame(self.preview_tabs)
+        self.preview_tabs.add(export_tab, text="Export YAML")
+        self.preview_tabs.add(full_tab, text="Full YAML (with defaults)")
+        self.preview_tabs.select(0)
 
-        self.draft_text = tk.Text(draft_tab, wrap="none")
-        self.draft_text.pack(fill="both", expand=True)
-        self.validated_text = tk.Text(validated_tab, wrap="none")
-        self.validated_text.pack(fill="both", expand=True)
+        self.export_text = tk.Text(export_tab, wrap="none")
+        self.export_text.pack(fill="both", expand=True)
+        self.full_text = tk.Text(full_tab, wrap="none")
+        self.full_text.pack(fill="both", expand=True)
 
         self.status = ttk.Label(self.root, anchor="w")
         self.status.grid(row=1, column=0, sticky="ew", padx=8, pady=(0, 8))
@@ -173,13 +174,22 @@ class EditorApp:
         self.status.configure(text=f"Schema: {schema_name}    Config: {config_name}{dirty_mark}    Strict: {self.strict}")
 
     def _refresh_previews(self):
-        draft_yaml = serialize_yaml(self.form_renderer.get_current_config_dict())
-        self._set_text(self.draft_text, draft_yaml)
+        draft = self.form_renderer.get_current_config_dict()
         if self.validation_state.is_valid and self.validation_state.data_with_default is not None:
-            validated_yaml = serialize_yaml(self.validation_state.data_with_default)
+            export_payload = get_save_payload(
+                SAVE_MODE_EXPORT,
+                draft,
+                self.validation_state.data_with_default,
+                schema_model=self.model,
+            )
+            full_payload = get_save_payload(SAVE_MODE_FULL, draft, self.validation_state.data_with_default)
+            export_yaml = serialize_yaml(export_payload)
+            full_yaml = serialize_yaml(full_payload)
         else:
-            validated_yaml = ""
-        self._set_text(self.validated_text, validated_yaml)
+            export_yaml = serialize_yaml(draft)
+            full_yaml = ""
+        self._set_text(self.export_text, export_yaml)
+        self._set_text(self.full_text, full_yaml)
 
     def _on_form_change(self, _: Dict[str, Any]):
         self.dirty = True
@@ -254,12 +264,17 @@ class EditorApp:
 
         choice = messagebox.askyesnocancel(
             "Save mode",
-            "Save validated config with defaults?\n\nYes = data_with_default\nNo = current draft\nCancel = abort",
+            "Save full config with schema defaults?\n\nYes = full config\nNo = export config (default view)\nCancel = abort",
         )
         if choice is None:
             return False
-        mode = SAVE_MODE_VALIDATED if choice else SAVE_MODE_DRAFT
-        payload = get_save_payload(mode, self.form_renderer.get_current_config_dict(), self.validation_state.data_with_default)
+        mode = SAVE_MODE_FULL if choice else SAVE_MODE_EXPORT
+        payload = get_save_payload(
+            mode,
+            self.form_renderer.get_current_config_dict(),
+            self.validation_state.data_with_default,
+            schema_model=self.model,
+        )
         content = serialize_yaml(payload)
         with open(path, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(content)
