@@ -119,6 +119,7 @@ class FormRenderer(ttk.Frame):
         self._widgets = {}
         self._section_views: Dict[str, Dict[str, Any]] = {}
         self._initializing = True
+        self._suppress_widget_events = False
         if strict:
             self._draft_config = project_known_config(current_config, introspection_model)
         else:
@@ -148,6 +149,28 @@ class FormRenderer(ttk.Frame):
             widget.pack(fill="x", expand=True, pady=2)
             self._set_widget_enabled(widget, True)
             widget.mark_invalid(error_message)
+
+    def set_field_value(self, field_path: str, value: Any):
+        normalized = _normalize_path(field_path)
+        if not normalized:
+            return
+
+        if value is None:
+            self._remove_path(normalized)
+        else:
+            set_value_at_path(self._draft_config, normalized, value)
+
+        widget = self._widgets.get(normalized)
+        if widget is not None:
+            self._suppress_widget_events = True
+            try:
+                widget.set_value(value)
+                widget.clear_invalid()
+            finally:
+                self._suppress_widget_events = False
+
+        self._refresh_when_visibility()
+        self._emit_change()
 
     def focus_field(self, field_path: str):
         self._reveal_ancestors(field_path)
@@ -240,6 +263,8 @@ class FormRenderer(ttk.Frame):
 
     def _on_widget_change(self, field_path: str, value: Any):
         if self._initializing:
+            return
+        if self._suppress_widget_events:
             return
         if value is INVALID_INPUT:
             self._remove_path(field_path)

@@ -13,6 +13,7 @@ from readtheyaml.ui.form_renderer import FormRenderer, evaluate_visibility_map
 from readtheyaml.ui.save_helpers import SAVE_MODE_EXPORT, SAVE_MODE_FULL, can_save, get_save_payload, serialize_yaml
 from readtheyaml.ui.schema_introspect import introspect_schema_dict
 from readtheyaml.ui.validation import ValidationController, ValidationState, build_fix_hints
+from readtheyaml.ui.widgets import normalize_enum, normalize_float, normalize_int, normalize_str
 
 
 def _parse_bool(value: str) -> bool:
@@ -115,6 +116,7 @@ class EditorApp:
         self.tree.pack(side="left", fill="both", expand=True)
         tree_scroll.pack(side="right", fill="y")
         self.tree.bind("<<TreeviewSelect>>", self._on_tree_select)
+        self.tree.bind("<Double-1>", self._on_tree_double_click)
         self.tree.tag_configure("missing_required", foreground="#b00020")
         self.tree.tag_configure("valid_value", foreground="#1f7a1f")
         self.tree.tag_configure("inactive", foreground="#808080")
@@ -162,6 +164,7 @@ class EditorApp:
         self._field_path_to_item: Dict[str, str] = {}
         self._field_required: Dict[str, bool] = {}
         self._field_defaults: Dict[str, tuple[bool, Any]] = {}
+        self._field_meta: Dict[str, Dict[str, Any]] = {}
         self._section_path_to_item: Dict[str, str] = {}
         self.tree.delete(*self.tree.get_children())
         root_item = self.tree.insert("", "end", text=self.model.get("name") or "<root>", values=("section", ""), open=True)
@@ -179,6 +182,7 @@ class EditorApp:
             self._field_path_to_item[field_path] = node
             self._field_required[field_path] = bool(field.get("required", True))
             self._field_defaults[field_path] = (bool(field.get("has_default", False)), field.get("default"))
+            self._field_meta[field_path] = field
 
         for subsection in section_model.get("subsections", []):
             subsection_path = self._normalize_path(subsection.get("path", ""))
@@ -201,6 +205,18 @@ class EditorApp:
             self.form_renderer.reveal_section(path)
             return
         self.form_renderer.focus_field(path)
+
+    def _on_tree_double_click(self, event: tk.Event):
+        item_id = self.tree.identify_row(event.y)
+        if not item_id:
+            return
+        mapping = self._tree_item_to_path.get(item_id)
+        if mapping is None:
+            return
+        node_kind, field_path = mapping
+        if node_kind != "field":
+            return
+        self._open_tree_edit_dialog(field_path)
 
     @staticmethod
     def _normalize_path(path: str) -> str:
@@ -375,6 +391,157 @@ class EditorApp:
                 value_text = f"{self._format_tree_value(default_value)} (default)" if has_default else ""
             kind_text = self.tree.set(item_id, "kind")
             self.tree.item(item_id, values=(kind_text, value_text))
+
+    def _open_tree_edit_dialog(self, field_path: str):
+        field = self._field_meta.get(field_path)
+        if field is None:
+            return
+
+        draft = self.form_renderer.get_current_config_dict()
+        has_explicit_value = self._path_exists(draft, field_path)
+        current_value = self._get_path_value(draft, field_path) if has_explicit_value else None
+        has_default, default_value = self._field_defaults.get(field_path, (False, None))
+        start_value = current_value if has_explicit_value else (default_value if has_default else None)
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title(f"Edit value: {field_path}")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        dialog.resizable(False, False)
+        dialog.columnconfigure(0, weight=1)
+
+        body = ttk.Frame(dialog, padding=12)
+        body.grid(row=0, column=0, sticky="nsew")
+        body.columnconfigure(0, weight=1)
+
+        ttk.Label(body, text=field_path).grid(row=0, column=0, sticky="w")
+        ttk.Label(body, text=f"Type: {field.get('type', '')}").grid(row=1, column=0, sticky="w", pady=(2, 0))
+
+        description = field.get("description", "") or "-"
+        ttk.Label(body, text=f"Description: {description}", wraplength=520, justify="left").grid(row=2, column=0, sticky="w", pady=(8, 0))
+        ttk.Label(body, text=f"Conditions: {self._format_when_text(field.get('when'))}", wraplength=520, justify="left").grid(row=3, column=0, sticky="w", pady=(4, 0))
+        ttk.Label(body, text=f"Constraints: {self._format_constraints_text(field)}", wraplength=520, justify="left").grid(row=4, column=0, sticky="w", pady=(4, 0))
+
+        input_frame = ttk.Frame(body)
+        input_frame.grid(row=5, column=0, sticky="ew", pady=(10, 0))
+        input_frame.columnconfigure(0, weight=1)
+
+        field_type = str(field.get("type", "str"))
+        required = bool(field.get("required", True))
+        constraints = field.get("constraints", {})
+        enum_choices = list(constraints.get("enum_values", []))
+
+        error_var = tk.StringVar(value="")
+        parsed_value_holder: Dict[str, Any] = {"value": None}
+
+        ok_button: Optional[ttk.Button] = None
+
+        def set_validation(is_valid: bool, error: str = "", parsed: Any = None):
+            error_var.set(error)
+            parsed_value_holder["value"] = parsed
+            if ok_button is not None:
+                ok_button.configure(state="normal" if is_valid else "disabled")
+
+        if field_type == "bool":
+            var = tk.BooleanVar(value=bool(start_value))
+            control = ttk.Checkbutton(input_frame, text="Enabled", variable=var)
+            control.grid(row=0, column=0, sticky="w")
+
+            def validate_bool(*_: Any):
+                set_validation(True, "", bool(var.get()))
+
+            var.trace_add("write", validate_bool)
+            validate_bool()
+        elif field_type == "enum":
+            var = tk.StringVar(value="" if start_value is None else str(start_value))
+            control = ttk.Combobox(input_frame, textvariable=var, values=enum_choices, state="readonly")
+            control.grid(row=0, column=0, sticky="ew")
+
+            def validate_enum(*_: Any):
+                result = normalize_enum(var.get(), enum_choices)
+                if result.error:
+                    set_validation(False, result.error, None)
+                    return
+                set_validation(True, "", result.value)
+
+            var.trace_add("write", validate_enum)
+            validate_enum()
+        else:
+            var = tk.StringVar(value="" if start_value is None else str(start_value))
+            control = ttk.Entry(input_frame, textvariable=var)
+            control.grid(row=0, column=0, sticky="ew")
+
+            def validate_entry(*_: Any):
+                text_value = var.get()
+                if field_type == "int":
+                    result = normalize_int(text_value, required=required)
+                elif field_type == "float":
+                    result = normalize_float(text_value, required=required)
+                else:
+                    result = normalize_str(text_value, required=required)
+                if result.error:
+                    set_validation(False, result.error, None)
+                    return
+                set_validation(True, "", result.value)
+
+            var.trace_add("write", validate_entry)
+            validate_entry()
+
+        ttk.Label(body, textvariable=error_var, foreground="#b00020").grid(row=6, column=0, sticky="w", pady=(8, 0))
+
+        button_bar = ttk.Frame(body)
+        button_bar.grid(row=7, column=0, sticky="e", pady=(12, 0))
+        ttk.Button(button_bar, text="Cancel", command=dialog.destroy).pack(side="right")
+
+        def on_ok():
+            self.form_renderer.set_field_value(field_path, parsed_value_holder["value"])
+            self.form_renderer.focus_field(field_path)
+            dialog.destroy()
+
+        ok_button = ttk.Button(button_bar, text="OK", command=on_ok, state="disabled")
+        ok_button.pack(side="right", padx=(0, 8))
+
+        # Run once again now that ok_button exists.
+        if field_type == "bool":
+            set_validation(True, "", bool(var.get()))
+        elif field_type == "enum":
+            result = normalize_enum(var.get(), enum_choices)
+            set_validation(result.error is None, result.error or "", result.value if result.error is None else None)
+        else:
+            text_value = var.get()
+            if field_type == "int":
+                result = normalize_int(text_value, required=required)
+            elif field_type == "float":
+                result = normalize_float(text_value, required=required)
+            else:
+                result = normalize_str(text_value, required=required)
+            set_validation(result.error is None, result.error or "", result.value if result.error is None else None)
+
+        control.focus_set()
+        dialog.wait_window()
+
+    @staticmethod
+    def _format_when_text(when: Any) -> str:
+        if not when:
+            return "Always active"
+        if isinstance(when, dict):
+            field = when.get("field", "?")
+            op = when.get("op", "?")
+            value = when.get("value", None)
+            return f"{field} {op} {value!r}"
+        return str(when)
+
+    @staticmethod
+    def _format_constraints_text(field: Dict[str, Any]) -> str:
+        constraints = field.get("constraints", {}) or {}
+        items = [f"{key}={value!r}" for key, value in sorted(constraints.items())]
+        if field.get("required", True):
+            items.insert(0, "required=True")
+        else:
+            items.insert(0, "required=False")
+            if field.get("has_default", False):
+                items.append(f"default={field.get('default')!r}")
+        return ", ".join(items) if items else "-"
 
     @staticmethod
     def _get_path_value(data: Dict[str, Any], dotted_path: str) -> Any:
