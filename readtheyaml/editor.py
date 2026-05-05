@@ -10,6 +10,7 @@ from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.conditions import format_when_human, parse_when
 from readtheyaml.schema import Schema
+from readtheyaml.schema_doc import format_field_constraints_for_display
 from readtheyaml.ui.form_renderer import FormRenderer, evaluate_visibility_map
 from readtheyaml.ui.save_helpers import SAVE_MODE_EXPORT, SAVE_MODE_FULL, can_save, get_save_payload, serialize_yaml
 from readtheyaml.ui.schema_introspect import introspect_schema_dict
@@ -39,7 +40,6 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
 
 
 def load_schema_and_config(schema_path: str, config_path: Optional[str], strict: bool) -> Tuple[Schema, Dict[str, Any]]:
-    _ = strict
     schema = Schema.from_yaml(schema_path)
     if config_path is None:
         config_data: Any = {}
@@ -238,13 +238,16 @@ class EditorApp:
         next_row = 3
         if when:
             when_text = self._format_when_text(when)
-            ttk.Label(body, text=f"Conditions: Applies when: {when_text}", wraplength=520, justify="left").grid(row=next_row, column=0, sticky="w", pady=(4, 0))
-            next_row += 1
+            if when_text:
+                ttk.Label(body, text=f"Conditions: {when_text}", wraplength=520, justify="left").grid(row=next_row, column=0, sticky="w", pady=(4, 0))
+                next_row += 1
 
         button_bar = ttk.Frame(body)
         button_bar.grid(row=next_row + 1, column=0, sticky="e", pady=(12, 0))
         ttk.Button(button_bar, text="OK", command=dialog.destroy).pack(side="right")
 
+        dialog.update_idletasks()
+        dialog.geometry(f"720x{dialog.winfo_reqheight()}")
         dialog.wait_window()
 
     @staticmethod
@@ -417,7 +420,10 @@ class EditorApp:
                 value_text = self._format_tree_value(value)
             else:
                 has_default, default_value = self._field_defaults.get(field_path, (False, None))
-                value_text = f"{self._format_tree_value(default_value)} (default)" if has_default else ""
+                if has_default and default_value is not None:
+                    value_text = f"{self._format_tree_value(default_value)} (default)"
+                else:
+                    value_text = ""
             kind_text = self.tree.set(item_id, "kind")
             self.tree.item(item_id, values=(kind_text, value_text))
 
@@ -452,15 +458,16 @@ class EditorApp:
         next_row = 3
         if field.get("when"):
             when_text = self._format_when_text(field.get("when"))
-            ttk.Label(body, text=f"Conditions: Applies when: {when_text}", wraplength=520, justify="left").grid(row=next_row, column=0, sticky="w", pady=(4, 0))
-            next_row += 1
+            if when_text:
+                ttk.Label(body, text=f"Conditions: {when_text}", wraplength=520, justify="left").grid(row=next_row, column=0, sticky="w", pady=(4, 0))
+                next_row += 1
         constraints_text = self._format_constraints_text(field)
         if constraints_text:
             ttk.Label(body, text=f"Constraints: {constraints_text}", wraplength=520, justify="left").grid(row=next_row, column=0, sticky="w", pady=(4, 0))
             next_row += 1
 
         input_row = next_row
-        if field.get("has_default", False):
+        if field.get("has_default", False) and field.get("default") is not None:
             ttk.Label(body, text=f"Default: {self._format_default_text(field)}", wraplength=520, justify="left").grid(row=input_row, column=0, sticky="w", pady=(4, 0))
             input_row += 1
 
@@ -559,6 +566,8 @@ class EditorApp:
             set_validation(result.error is None, result.error or "", result.value if result.error is None else None)
 
         control.focus_set()
+        dialog.update_idletasks()
+        dialog.geometry(f"720x{dialog.winfo_reqheight()}")
         dialog.wait_window()
 
     @staticmethod
@@ -566,29 +575,46 @@ class EditorApp:
         if not when:
             return ""
         try:
-            return format_when_human(parse_when(when, "when"))
+            if isinstance(when, dict) and "kind" in when:
+                human = format_when_human(when)
+            else:
+                human = format_when_human(parse_when(when, "when"))
+            return f"Applies when: {human}" if human else ""
         except Exception:
-            return str(when)
-
-    def _format_constraints_text(self, field: Dict[str, Any]) -> str:
-        constraints = dict(field.get("constraints", {}) or {})
-        type_name = str(field.get("type", ""))
-        if type_name == "enum":
-            constraints.pop("enum_values", None)
-        if not constraints:
             return ""
 
-        labels = {
-            "min": "Minimum value",
-            "max": "Maximum value",
-            "min_length": "Minimum length",
-            "max_length": "Maximum length",
+    def _format_constraints_text(self, field: Dict[str, Any]) -> str:
+        type_name = str(field.get("type", ""))
+        constraints = dict(field.get("constraints", {}) or {})
+
+        doc_node: Dict[str, Any] = {
+            "name": str(field.get("key", "")),
+            "type": type_name,
+            "description": str(field.get("description", "")),
+            "required": bool(field.get("required", True)),
+            "default": field.get("default"),
+            "when": field.get("when"),
         }
-        lines = []
-        for key, value in sorted(constraints.items()):
-            label = labels.get(key, key.replace("_", " ").capitalize())
-            lines.append(f"{label}: {value!r}")
-        return "\n".join(lines)
+        if field.get("has_default", False) is False:
+            doc_node.pop("default")
+
+        # Introspection uses normalized constraint keys; schema-doc formatter expects schema keys.
+        if "min" in constraints:
+            doc_node["min_value"] = constraints["min"]
+        if "max" in constraints:
+            doc_node["max_value"] = constraints["max"]
+        if "min_length" in constraints:
+            doc_node["min_length"] = constraints["min_length"]
+        if "max_length" in constraints:
+            doc_node["max_length"] = constraints["max_length"]
+        if "enum_values" in constraints:
+            doc_node["values"] = list(constraints["enum_values"])
+
+        return format_field_constraints_for_display(
+            str(field.get("key", "")),
+            doc_node,
+            hide_allowed_values=(type_name == "enum"),
+        )
 
     @staticmethod
     def _format_default_text(field: Dict[str, Any]) -> str:

@@ -97,6 +97,13 @@ def _field_doc_constraints(name: str, node: dict[str, Any]) -> list[str]:
     return field.doc_constraints()
 
 
+def format_field_constraints_for_display(name: str, node: dict[str, Any], *, hide_allowed_values: bool = False) -> str:
+    lines = _field_doc_constraints(name, node)
+    if hide_allowed_values:
+        lines = [line for line in lines if not line.startswith("Allowed values:")]
+    return "\n".join(lines)
+
+
 def _format_conditions(node: dict[str, Any], *, is_field: bool) -> str:
     parts: list[str] = []
 
