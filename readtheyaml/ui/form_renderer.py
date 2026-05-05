@@ -190,42 +190,11 @@ class FormRenderer(ttk.Frame):
         ttk.Button(header, textvariable=toggle_text, width=3, command=toggle).grid(row=0, column=0, sticky="w")
         ttk.Label(header, text=title).grid(row=0, column=1, sticky="w", padx=(4, 8))
 
-        is_required = bool(section.get("required", True))
-        enabled_var = None
-        optional_checkbutton = None
-        if not is_required and section_path:
-            enabled_var = tk.BooleanVar(value=(get_value_at_path(self._draft_config, section_path, None) is not None))
-
-            def on_toggle_optional():
-                if enabled_var is None:
-                    return
-                if enabled_var.get():
-                    materialize_section_path(self._draft_config, section_path)
-                    body.grid()
-                    toggle_text.set("[-]")
-                    collapsed.set(False)
-                else:
-                    self._remove_path(section_path)
-                    body.grid_remove()
-                    toggle_text.set("[+]")
-                    collapsed.set(True)
-                self._refresh_when_visibility()
-                self._emit_change()
-
-            optional_checkbutton = ttk.Checkbutton(header, text="enabled", variable=enabled_var, command=on_toggle_optional)
-            optional_checkbutton.grid(row=0, column=2, sticky="w")
-            if not enabled_var.get():
-                body.grid_remove()
-                toggle_text.set("[+]")
-                collapsed.set(True)
-
         self._section_views[section_path] = {
             "container": container,
             "body": body,
             "collapsed": collapsed,
             "toggle_text": toggle_text,
-            "enabled_var": enabled_var,
-            "enabled_checkbutton": optional_checkbutton,
         }
 
         for field in section.get("fields", []):
@@ -324,29 +293,18 @@ class FormRenderer(ttk.Frame):
             body = view["body"]
             collapsed = view["collapsed"]
             toggle_text = view["toggle_text"]
-            enabled_var = view["enabled_var"]
-            checkbutton = view["enabled_checkbutton"]
 
             if is_active:
                 container.pack(fill="x", expand=True, pady=4)
-                if checkbutton is not None:
-                    checkbutton.state(["!disabled"])
-                is_optional_enabled = True if enabled_var is None else bool(enabled_var.get())
-                if is_optional_enabled:
-                    if collapsed.get():
-                        body.grid_remove()
-                        toggle_text.set("[+]")
-                    else:
-                        body.grid()
-                        toggle_text.set("[-]")
-                else:
+                if collapsed.get():
                     body.grid_remove()
                     toggle_text.set("[+]")
+                else:
+                    body.grid()
+                    toggle_text.set("[-]")
             else:
                 container.pack_forget()
                 body.grid_remove()
-                if checkbutton is not None:
-                    checkbutton.state(["disabled"])
                 toggle_text.set("[+]")
 
     @staticmethod
@@ -381,14 +339,8 @@ class FormRenderer(ttk.Frame):
             body = view["body"]
             collapsed = view["collapsed"]
             toggle_text = view["toggle_text"]
-            enabled_var = view["enabled_var"]
-            checkbutton = view["enabled_checkbutton"]
 
             container.pack(fill="x", expand=True, pady=4)
-            if checkbutton is not None:
-                checkbutton.state(["!disabled"])
-            if enabled_var is not None and not enabled_var.get():
-                continue
             collapsed.set(False)
             toggle_text.set("[-]")
             body.grid()

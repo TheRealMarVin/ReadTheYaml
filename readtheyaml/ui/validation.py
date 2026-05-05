@@ -267,6 +267,9 @@ class ValidationController:
                 if is_required_subsection:
                     for required_path in self._required_field_paths_for_section(subsection):
                         errors[required_path] = "Missing required field."
+                else:
+                    # Active optional sections still enforce required nested fields.
+                    self._collect_missing_required_recursive(subsection, {}, condition_context, errors)
                 continue
 
             if isinstance(subsection_data, dict):
