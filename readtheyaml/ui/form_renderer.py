@@ -140,8 +140,14 @@ class FormRenderer(ttk.Frame):
             _ = field_path
             widget.clear_invalid()
         for field_path, error_message in field_errors.items():
-            if field_path in self._widgets:
-                self._widgets[field_path].mark_invalid(error_message)
+            target_path = self._resolve_widget_path(field_path)
+            if target_path is None:
+                continue
+            self._reveal_ancestors(target_path)
+            widget = self._widgets[target_path]
+            widget.pack(fill="x", expand=True, pady=2)
+            self._set_widget_enabled(widget, True)
+            widget.mark_invalid(error_message)
 
     def focus_field(self, field_path: str):
         self._reveal_ancestors(field_path)
@@ -344,3 +350,23 @@ class FormRenderer(ttk.Frame):
             collapsed.set(False)
             toggle_text.set("[-]")
             body.grid()
+
+    def _resolve_widget_path(self, field_path: str) -> Optional[str]:
+        normalized = _normalize_path(field_path)
+        if normalized in self._widgets:
+            return normalized
+        if field_path in self._widgets:
+            return field_path
+
+        leaf = normalized.split(".")[-1] if normalized else ""
+        if not leaf:
+            return None
+        candidates = [
+            widget_path for widget_path in self._widgets
+            if widget_path == leaf or widget_path.endswith(f".{leaf}")
+        ]
+        if len(candidates) == 1:
+            return candidates[0]
+        if leaf in self._widgets:
+            return leaf
+        return None

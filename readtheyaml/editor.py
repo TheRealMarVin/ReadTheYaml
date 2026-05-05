@@ -113,6 +113,8 @@ class EditorApp:
         self.tree.pack(side="left", fill="both", expand=True)
         tree_scroll.pack(side="right", fill="y")
         self.tree.bind("<<TreeviewSelect>>", self._on_tree_select)
+        self.tree.tag_configure("missing_required", foreground="#b00020")
+        self.tree.tag_configure("valid_value", foreground="#1f7a1f")
 
         self.toolbar = ttk.Frame(self.center)
         self.toolbar.pack(fill="x", pady=(0, 6))
@@ -154,6 +156,8 @@ class EditorApp:
 
     def _build_schema_tree(self):
         self._tree_item_to_path: Dict[str, tuple[str, str]] = {}
+        self._field_path_to_item: Dict[str, str] = {}
+        self._field_required: Dict[str, bool] = {}
         self.tree.delete(*self.tree.get_children())
         root_item = self.tree.insert("", "end", text=self.model.get("name") or "<root>", values=("section",), open=True)
         self._tree_item_to_path[root_item] = ("section", "")
@@ -166,6 +170,8 @@ class EditorApp:
             type_name = field.get("type", "")
             node = self.tree.insert(parent_item, "end", text=field["key"], values=(type_name,))
             self._tree_item_to_path[node] = ("field", field_path)
+            self._field_path_to_item[field_path] = node
+            self._field_required[field_path] = bool(field.get("required", True))
 
         for subsection in section_model.get("subsections", []):
             subsection_path = self._normalize_path(subsection.get("path", ""))
@@ -279,6 +285,7 @@ class EditorApp:
     def _on_validation_state(self, state: ValidationState):
         self.validation_state = state
         self.form_renderer.apply_field_errors(state.field_errors)
+        self._refresh_tree_node_colors()
         self._refresh_save_controls()
 
         if state.is_valid:
@@ -293,6 +300,59 @@ class EditorApp:
             self._set_text(self.error_text, "\n".join(errors))
             self._set_text(self.hint_text, "\n".join(build_fix_hints(state.field_errors, state.global_errors)))
         self._refresh_previews()
+
+    def _refresh_tree_node_colors(self):
+        draft = self.form_renderer.get_current_config_dict()
+        normalized_errors: Dict[str, str] = {}
+        for raw_path, message in self.validation_state.field_errors.items():
+            normalized = self._normalize_path(raw_path)
+            resolved = self._resolve_tree_field_path(normalized)
+            if resolved is None:
+                normalized_errors[normalized] = message
+            else:
+                normalized_errors[resolved] = message
+
+        for field_path, item_id in self._field_path_to_item.items():
+            self.tree.item(item_id, tags=())
+
+            has_value = self._path_exists(draft, field_path)
+            error = normalized_errors.get(field_path, "")
+            is_missing_required_error = error.strip().lower() == "missing required field."
+
+            if is_missing_required_error and self._field_required.get(field_path, False):
+                self.tree.item(item_id, tags=("missing_required",))
+                continue
+
+            if has_value and field_path not in normalized_errors:
+                self.tree.item(item_id, tags=("valid_value",))
+
+    def _resolve_tree_field_path(self, field_path: str) -> Optional[str]:
+        if field_path in self._field_path_to_item:
+            return field_path
+
+        leaf = field_path.split(".")[-1] if field_path else ""
+        if not leaf:
+            return None
+        candidates = [
+            path for path in self._field_path_to_item
+            if path == leaf or path.endswith(f".{leaf}")
+        ]
+        if len(candidates) == 1:
+            return candidates[0]
+        if leaf in self._field_path_to_item:
+            return leaf
+        return None
+
+    @staticmethod
+    def _path_exists(data: Dict[str, Any], dotted_path: str) -> bool:
+        if not dotted_path:
+            return True
+        current: Any = data
+        for part in dotted_path.split("."):
+            if not isinstance(current, dict) or part not in current:
+                return False
+            current = current[part]
+        return True
 
     def _load_config_from_path(self, path: str):
         with open(path, "r", encoding="utf-8", newline="") as handle:

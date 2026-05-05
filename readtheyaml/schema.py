@@ -83,6 +83,10 @@ class Schema:
                 if subsection.has_default:
                     built_data[section_name] = copy.deepcopy(subsection.default)
                     data_with_default[section_name] = copy.deepcopy(subsection.default)
+                elif subsection.when is not None:
+                    # For when-gated optional subsections: once active, nested required
+                    # members must still be validated even if the subsection key is absent.
+                    subsection.build_and_validate({}, strict=strict, _condition_context=_condition_context)
                 else:
                     # Missing optional subsection without explicit default is inactive:
                     # do not materialize/validate nested required fields.

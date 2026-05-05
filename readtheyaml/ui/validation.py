@@ -116,15 +116,20 @@ class ValidationController:
         self.debounce_ms = debounce_ms
         self._pending_token = None
         self._pending_config: Optional[Dict[str, Any]] = None
+        self._request_seq = 0
 
     def request_validation(self, draft_config: Dict[str, Any]):
         self._pending_config = draft_config
+        self._request_seq += 1
+        seq = self._request_seq
         if self._pending_token is not None:
             self.cancel_callback(self._pending_token)
             self._pending_token = None
-        self._pending_token = self.schedule_callback(self.debounce_ms, self._run_validation)
+        self._pending_token = self.schedule_callback(self.debounce_ms, lambda s=seq: self._run_validation(s))
 
-    def _run_validation(self):
+    def _run_validation(self, seq: int):
+        if seq != self._request_seq:
+            return
         self._pending_token = None
         draft_config = self._pending_config or {}
         try:
@@ -157,6 +162,8 @@ class ValidationController:
                 field_errors={},
                 global_errors=[f"Validation crashed: {exc}"],
             )
+        if seq != self._request_seq:
+            return
         self.state_callback(state)
 
     def _resolve_unscoped_field_paths(self, field_errors: Dict[str, str], draft_config: Dict[str, Any]) -> Dict[str, str]:

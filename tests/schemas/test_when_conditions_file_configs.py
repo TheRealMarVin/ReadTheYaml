@@ -72,6 +72,37 @@ def test_when_file_config_active_subsection_is_validated(create_schema_examples)
         schema.validate_file(files["config.yaml"], strict=True)
 
 
+def test_when_file_config_active_optional_subsection_missing_key_is_validated(create_schema_examples):
+    files = create_schema_examples(
+        {
+            "schema.yaml": """
+                compile_enabled:
+                  type: bool
+                  description: Compile toggle
+                  required: false
+                  default: false
+                compile:
+                  required: false
+                  when:
+                    field: compile_enabled
+                    op: eq
+                    value: true
+                  command:
+                    type: str
+                    description: Compile command
+                    required: true
+            """,
+            "config.yaml": """
+                compile_enabled: true
+            """,
+        }
+    )
+
+    schema = Schema.from_yaml(str(files["schema.yaml"]))
+    with pytest.raises(ValidationError, match="Missing required field 'command'"):
+        schema.validate_file(files["config.yaml"], strict=True)
+
+
 def test_when_file_config_combinators_work(create_schema_examples):
     files = create_schema_examples(
         {
