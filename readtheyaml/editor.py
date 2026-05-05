@@ -103,11 +103,13 @@ class EditorApp:
         paned.add(self.right, weight=1)
 
         ttk.Label(self.left, text="Schema").pack(anchor="w", pady=(0, 6))
-        self.tree = ttk.Treeview(self.left, columns=("kind",), show="tree headings", selectmode="browse")
+        self.tree = ttk.Treeview(self.left, columns=("kind", "value"), show="tree headings", selectmode="browse")
         self.tree.heading("#0", text="Name", anchor="w")
         self.tree.heading("kind", text="Type", anchor="w")
+        self.tree.heading("value", text="Value", anchor="w")
         self.tree.column("#0", width=240, stretch=True)
         self.tree.column("kind", width=90, stretch=False)
+        self.tree.column("value", width=220, stretch=True)
         tree_scroll = ttk.Scrollbar(self.left, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=tree_scroll.set)
         self.tree.pack(side="left", fill="both", expand=True)
@@ -159,9 +161,10 @@ class EditorApp:
         self._tree_item_to_path: Dict[str, tuple[str, str]] = {}
         self._field_path_to_item: Dict[str, str] = {}
         self._field_required: Dict[str, bool] = {}
+        self._field_defaults: Dict[str, tuple[bool, Any]] = {}
         self._section_path_to_item: Dict[str, str] = {}
         self.tree.delete(*self.tree.get_children())
-        root_item = self.tree.insert("", "end", text=self.model.get("name") or "<root>", values=("section",), open=True)
+        root_item = self.tree.insert("", "end", text=self.model.get("name") or "<root>", values=("section", ""), open=True)
         self._tree_item_to_path[root_item] = ("section", "")
         self._section_path_to_item[""] = root_item
         self._add_tree_nodes(root_item, self.model)
@@ -171,15 +174,16 @@ class EditorApp:
         for field in section_model.get("fields", []):
             field_path = f"{section_path}.{field['key']}" if section_path else field["key"]
             type_name = field.get("type", "")
-            node = self.tree.insert(parent_item, "end", text=field["key"], values=(type_name,))
+            node = self.tree.insert(parent_item, "end", text=field["key"], values=(type_name, ""))
             self._tree_item_to_path[node] = ("field", field_path)
             self._field_path_to_item[field_path] = node
             self._field_required[field_path] = bool(field.get("required", True))
+            self._field_defaults[field_path] = (bool(field.get("has_default", False)), field.get("default"))
 
         for subsection in section_model.get("subsections", []):
             subsection_path = self._normalize_path(subsection.get("path", ""))
             label = subsection_path.split(".")[-1] if subsection_path else (subsection.get("name") or "<root>")
-            node = self.tree.insert(parent_item, "end", text=label, values=("section",), open=False)
+            node = self.tree.insert(parent_item, "end", text=label, values=("section", ""), open=False)
             self._tree_item_to_path[node] = ("section", subsection_path)
             self._section_path_to_item[subsection_path] = node
             self._add_tree_nodes(node, subsection)
@@ -212,6 +216,7 @@ class EditorApp:
         self.form_renderer = FormRenderer(self.form_host, self.model, config_data, strict=self.strict)
         self.form_renderer.pack(fill="both", expand=True)
         self.form_renderer.set_on_change(self._on_form_change)
+        self._refresh_tree_values()
 
     def _wire_validation(self):
         self.controller = ValidationController(
@@ -263,6 +268,7 @@ class EditorApp:
     def _on_form_change(self, _: Dict[str, Any]):
         self.dirty = True
         self._refresh_title_status()
+        self._refresh_tree_values()
         self._refresh_previews()
         self.controller.request_validation(self.form_renderer.get_current_config_dict())
 
@@ -289,6 +295,7 @@ class EditorApp:
     def _on_validation_state(self, state: ValidationState):
         self.validation_state = state
         self.form_renderer.apply_field_errors(state.field_errors)
+        self._refresh_tree_values()
         self._refresh_tree_node_colors()
         self._refresh_save_controls()
 
@@ -355,6 +362,38 @@ class EditorApp:
         if leaf in self._field_path_to_item:
             return leaf
         return None
+
+    def _refresh_tree_values(self):
+        draft = self.form_renderer.get_current_config_dict()
+        for field_path, item_id in self._field_path_to_item.items():
+            has_value = self._path_exists(draft, field_path)
+            if has_value:
+                value = self._get_path_value(draft, field_path)
+                value_text = self._format_tree_value(value)
+            else:
+                has_default, default_value = self._field_defaults.get(field_path, (False, None))
+                value_text = f"{self._format_tree_value(default_value)} (default)" if has_default else ""
+            kind_text = self.tree.set(item_id, "kind")
+            self.tree.item(item_id, values=(kind_text, value_text))
+
+    @staticmethod
+    def _get_path_value(data: Dict[str, Any], dotted_path: str) -> Any:
+        current: Any = data
+        for part in dotted_path.split("."):
+            if not isinstance(current, dict) or part not in current:
+                return None
+            current = current[part]
+        return current
+
+    @staticmethod
+    def _format_tree_value(value: Any) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        if isinstance(value, (int, float, str)):
+            return str(value)
+        return serialize_yaml(value).strip().replace("\n", " ")
 
     @staticmethod
     def _path_exists(data: Dict[str, Any], dotted_path: str) -> bool:
