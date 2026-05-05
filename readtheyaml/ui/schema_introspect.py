@@ -31,6 +31,7 @@ class FieldIntrospection:
 class SectionIntrospection:
     path: str
     name: str
+    description: str
     required: bool
     has_default: bool
     default: Any
@@ -65,6 +66,7 @@ def _introspect_section(schema: Schema, path: str) -> SectionIntrospection:
     return SectionIntrospection(
         path=path,
         name=schema.name or "",
+        description=schema.description or "",
         required=schema.required,
         has_default=schema.has_default,
         default=deepcopy(schema.default) if schema.has_default else None,

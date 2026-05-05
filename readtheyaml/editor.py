@@ -8,6 +8,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
+from readtheyaml.conditions import format_when_human, parse_when
 from readtheyaml.schema import Schema
 from readtheyaml.ui.form_renderer import FormRenderer, evaluate_visibility_map
 from readtheyaml.ui.save_helpers import SAVE_MODE_EXPORT, SAVE_MODE_FULL, can_save, get_save_payload, serialize_yaml
@@ -162,11 +163,13 @@ class EditorApp:
         self._field_required: Dict[str, bool] = {}
         self._field_defaults: Dict[str, tuple[bool, Any]] = {}
         self._field_meta: Dict[str, Dict[str, Any]] = {}
+        self._section_meta: Dict[str, Dict[str, Any]] = {}
         self._section_path_to_item: Dict[str, str] = {}
         self.tree.delete(*self.tree.get_children())
         root_item = self.tree.insert("", "end", text=self.model.get("name") or "<root>", values=("section", ""), open=True)
         self._tree_item_to_path[root_item] = ("section", "")
         self._section_path_to_item[""] = root_item
+        self._section_meta[""] = self.model
         self._add_tree_nodes(root_item, self.model)
 
     def _add_tree_nodes(self, parent_item: str, section_model: Dict[str, Any]):
@@ -187,6 +190,7 @@ class EditorApp:
             node = self.tree.insert(parent_item, "end", text=label, values=("section", ""), open=False)
             self._tree_item_to_path[node] = ("section", subsection_path)
             self._section_path_to_item[subsection_path] = node
+            self._section_meta[subsection_path] = subsection
             self._add_tree_nodes(node, subsection)
 
     def _on_tree_double_click(self, event: tk.Event):
@@ -196,10 +200,52 @@ class EditorApp:
         mapping = self._tree_item_to_path.get(item_id)
         if mapping is None:
             return
-        node_kind, field_path = mapping
+        node_kind, path = mapping
+        if node_kind == "section":
+            self._open_section_info_dialog(path)
+            return
         if node_kind != "field":
             return
-        self._open_tree_edit_dialog(field_path)
+        self._open_tree_edit_dialog(path)
+
+    def _open_section_info_dialog(self, section_path: str):
+        section = self._section_meta.get(section_path)
+        if section is None:
+            return
+
+        display_name = section.get("name") or (section_path.split(".")[-1] if section_path else "<root>")
+        required_text = "required" if bool(section.get("required", True)) else "optional"
+        display_path = section_path or "<root>"
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title(f"Section: {display_name}")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        dialog.resizable(False, False)
+        dialog.columnconfigure(0, weight=1)
+
+        body = ttk.Frame(dialog, padding=12)
+        body.grid(row=0, column=0, sticky="nsew")
+        body.columnconfigure(0, weight=1)
+
+        ttk.Label(body, text=f"{display_name} ({required_text})").grid(row=0, column=0, sticky="w")
+        ttk.Label(body, text=f"Path: {display_path}").grid(row=1, column=0, sticky="w", pady=(2, 0))
+
+        description = section.get("description", "") or "-"
+        ttk.Label(body, text=f"Description: {description}", wraplength=520, justify="left").grid(row=2, column=0, sticky="w", pady=(8, 0))
+
+        when = section.get("when")
+        next_row = 3
+        if when:
+            when_text = self._format_when_text(when)
+            ttk.Label(body, text=f"Conditions: Applies when: {when_text}", wraplength=520, justify="left").grid(row=next_row, column=0, sticky="w", pady=(4, 0))
+            next_row += 1
+
+        button_bar = ttk.Frame(body)
+        button_bar.grid(row=next_row + 1, column=0, sticky="e", pady=(12, 0))
+        ttk.Button(button_bar, text="OK", command=dialog.destroy).pack(side="right")
+
+        dialog.wait_window()
 
     @staticmethod
     def _normalize_path(path: str) -> str:
@@ -405,7 +451,8 @@ class EditorApp:
         ttk.Label(body, text=f"Description: {description}", wraplength=520, justify="left").grid(row=2, column=0, sticky="w", pady=(8, 0))
         next_row = 3
         if field.get("when"):
-            ttk.Label(body, text=f"Conditions: {self._format_when_text(field.get('when'))}", wraplength=520, justify="left").grid(row=next_row, column=0, sticky="w", pady=(4, 0))
+            when_text = self._format_when_text(field.get("when"))
+            ttk.Label(body, text=f"Conditions: Applies when: {when_text}", wraplength=520, justify="left").grid(row=next_row, column=0, sticky="w", pady=(4, 0))
             next_row += 1
         constraints_text = self._format_constraints_text(field)
         if constraints_text:
@@ -517,21 +564,31 @@ class EditorApp:
     @staticmethod
     def _format_when_text(when: Any) -> str:
         if not when:
-            return "Always active"
-        if isinstance(when, dict):
-            field = when.get("field", "?")
-            op = when.get("op", "?")
-            value = when.get("value", None)
-            return f"{field} {op} {value!r}"
-        return str(when)
+            return ""
+        try:
+            return format_when_human(parse_when(when, "when"))
+        except Exception:
+            return str(when)
 
-    @staticmethod
-    def _format_constraints_text(field: Dict[str, Any]) -> str:
+    def _format_constraints_text(self, field: Dict[str, Any]) -> str:
         constraints = dict(field.get("constraints", {}) or {})
-        if field.get("type") == "enum":
+        type_name = str(field.get("type", ""))
+        if type_name == "enum":
             constraints.pop("enum_values", None)
-        items = [f"{key}={value!r}" for key, value in sorted(constraints.items())]
-        return ", ".join(items)
+        if not constraints:
+            return ""
+
+        labels = {
+            "min": "Minimum value",
+            "max": "Maximum value",
+            "min_length": "Minimum length",
+            "max_length": "Maximum length",
+        }
+        lines = []
+        for key, value in sorted(constraints.items()):
+            label = labels.get(key, key.replace("_", " ").capitalize())
+            lines.append(f"{label}: {value!r}")
+        return "\n".join(lines)
 
     @staticmethod
     def _format_default_text(field: Dict[str, Any]) -> str:
