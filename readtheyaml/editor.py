@@ -97,11 +97,17 @@ class EditorApp:
         paned.grid(row=0, column=0, sticky="nsew")
 
         self.left = ttk.Frame(paned, padding=8)
-        self.center = ttk.Frame(paned, padding=8)
         self.right = ttk.Frame(paned, padding=8)
         paned.add(self.left, weight=1)
-        paned.add(self.center, weight=2)
         paned.add(self.right, weight=1)
+
+        self.toolbar = ttk.Frame(self.left)
+        self.toolbar.pack(fill="x", pady=(0, 6))
+        ttk.Button(self.toolbar, text="Load config", command=self._on_load_config).pack(side="left", padx=(0, 6))
+        self.save_button = ttk.Button(self.toolbar, text="Save", command=self._on_save)
+        self.save_button.pack(side="left", padx=(0, 6))
+        self.save_as_button = ttk.Button(self.toolbar, text="Save As", command=self._on_save_as)
+        self.save_as_button.pack(side="left")
 
         ttk.Label(self.left, text="Schema").pack(anchor="w", pady=(0, 6))
         self.tree = ttk.Treeview(self.left, columns=("kind", "value"), show="tree headings", selectmode="browse")
@@ -121,16 +127,8 @@ class EditorApp:
         self.tree.tag_configure("valid_value", foreground="#1f7a1f")
         self.tree.tag_configure("inactive", foreground="#808080")
 
-        self.toolbar = ttk.Frame(self.center)
-        self.toolbar.pack(fill="x", pady=(0, 6))
-        ttk.Button(self.toolbar, text="Load config", command=self._on_load_config).pack(side="left", padx=(0, 6))
-        self.save_button = ttk.Button(self.toolbar, text="Save", command=self._on_save)
-        self.save_button.pack(side="left", padx=(0, 6))
-        self.save_as_button = ttk.Button(self.toolbar, text="Save As", command=self._on_save_as)
-        self.save_as_button.pack(side="left")
-
-        self.form_host = ttk.Frame(self.center)
-        self.form_host.pack(fill="both", expand=True)
+        # Hidden host for form/state management; editing now happens from the tree.
+        self.form_host = ttk.Frame(self.root)
 
         self.badge = tk.Label(self.right, text="PENDING", bg="#888888", fg="white", padx=8, pady=4)
         self.badge.pack(anchor="w", pady=(0, 8))
