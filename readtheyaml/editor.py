@@ -9,7 +9,7 @@ from tkinter import filedialog, messagebox, ttk
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.schema import Schema
-from readtheyaml.ui.form_renderer import FormRenderer
+from readtheyaml.ui.form_renderer import FormRenderer, evaluate_visibility_map
 from readtheyaml.ui.save_helpers import SAVE_MODE_EXPORT, SAVE_MODE_FULL, can_save, get_save_payload, serialize_yaml
 from readtheyaml.ui.schema_introspect import introspect_schema_dict
 from readtheyaml.ui.validation import ValidationController, ValidationState, build_fix_hints
@@ -115,6 +115,7 @@ class EditorApp:
         self.tree.bind("<<TreeviewSelect>>", self._on_tree_select)
         self.tree.tag_configure("missing_required", foreground="#b00020")
         self.tree.tag_configure("valid_value", foreground="#1f7a1f")
+        self.tree.tag_configure("inactive", foreground="#808080")
 
         self.toolbar = ttk.Frame(self.center)
         self.toolbar.pack(fill="x", pady=(0, 6))
@@ -158,9 +159,11 @@ class EditorApp:
         self._tree_item_to_path: Dict[str, tuple[str, str]] = {}
         self._field_path_to_item: Dict[str, str] = {}
         self._field_required: Dict[str, bool] = {}
+        self._section_path_to_item: Dict[str, str] = {}
         self.tree.delete(*self.tree.get_children())
         root_item = self.tree.insert("", "end", text=self.model.get("name") or "<root>", values=("section",), open=True)
         self._tree_item_to_path[root_item] = ("section", "")
+        self._section_path_to_item[""] = root_item
         self._add_tree_nodes(root_item, self.model)
 
     def _add_tree_nodes(self, parent_item: str, section_model: Dict[str, Any]):
@@ -178,6 +181,7 @@ class EditorApp:
             label = subsection_path.split(".")[-1] if subsection_path else (subsection.get("name") or "<root>")
             node = self.tree.insert(parent_item, "end", text=label, values=("section",), open=False)
             self._tree_item_to_path[node] = ("section", subsection_path)
+            self._section_path_to_item[subsection_path] = node
             self._add_tree_nodes(node, subsection)
 
     def _on_tree_select(self, _: tk.Event):
@@ -303,6 +307,7 @@ class EditorApp:
 
     def _refresh_tree_node_colors(self):
         draft = self.form_renderer.get_current_config_dict()
+        visibility = evaluate_visibility_map(self.model, draft)
         normalized_errors: Dict[str, str] = {}
         for raw_path, message in self.validation_state.field_errors.items():
             normalized = self._normalize_path(raw_path)
@@ -312,8 +317,16 @@ class EditorApp:
             else:
                 normalized_errors[resolved] = message
 
+        for section_path, item_id in self._section_path_to_item.items():
+            self.tree.item(item_id, tags=())
+            if section_path and visibility.get(section_path, True) is False:
+                self.tree.item(item_id, tags=("inactive",))
+
         for field_path, item_id in self._field_path_to_item.items():
             self.tree.item(item_id, tags=())
+            if visibility.get(field_path, True) is False:
+                self.tree.item(item_id, tags=("inactive",))
+                continue
 
             has_value = self._path_exists(draft, field_path)
             error = normalized_errors.get(field_path, "")
