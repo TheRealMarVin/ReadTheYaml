@@ -29,15 +29,12 @@ def get_save_payload(
     schema_model: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     if mode == SAVE_MODE_EXPORT:
-        if data_with_default is None:
-            payload = draft_config
-            if schema_model is not None:
-                payload = _exclude_inactive_branches(payload, schema_model)
-            return payload
-        if schema_model is None:
-            return data_with_default
-        filtered = _exclude_inactive_branches(data_with_default, schema_model)
-        return _remove_schema_defaults(filtered, schema_model)
+        payload: Dict[str, Any] = draft_config
+        if schema_model is not None:
+            payload = _exclude_inactive_branches(payload, schema_model)
+            if data_with_default is not None:
+                payload = _remove_schema_defaults(payload, schema_model)
+        return payload
     if mode == SAVE_MODE_FULL:
         if data_with_default is None:
             raise ValueError("Validated data_with_default is not available.")

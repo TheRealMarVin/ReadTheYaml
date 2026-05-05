@@ -50,6 +50,14 @@ def load_schema_and_config(schema_path: str, config_path: Optional[str], strict:
             config_data = {}
     if not isinstance(config_data, dict):
         raise ValidationError(f"Config root must be a mapping/dictionary, got {type(config_data).__name__}")
+    try:
+        schema.build_and_validate(config_data, strict=strict)
+    except ValidationError as exc:
+        # Editor startup must allow partial configs (missing required fields/sections)
+        # so users can complete values interactively.
+        msg = str(exc)
+        if not (msg.startswith("Missing required field ") or msg.startswith("Missing required section ")):
+            raise
     return schema, config_data
 
 

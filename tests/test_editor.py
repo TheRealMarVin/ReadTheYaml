@@ -30,6 +30,7 @@ def test_load_schema_and_config_without_config_uses_empty_dict(tmp_path: Path):
         "name: sample\n"
         "optional_text:\n"
         "  type: str\n"
+        "  description: Optional text\n"
         "  required: false\n"
         "  default: hello\n",
     )
@@ -45,7 +46,8 @@ def test_load_schema_and_config_loads_config_and_validates(tmp_path: Path):
         schema_path,
         "name: sample\n"
         "count:\n"
-        "  type: int\n",
+        "  type: int\n"
+        "  description: Count\n",
     )
     _write_text(config_path, "count: 3\n")
 
@@ -60,7 +62,8 @@ def test_load_schema_and_config_invalid_config_raises_validation_error(tmp_path:
         schema_path,
         "name: sample\n"
         "count:\n"
-        "  type: int\n",
+        "  type: int\n"
+        "  description: Count\n",
     )
     _write_text(config_path, "count: nope\n")
 
@@ -75,7 +78,8 @@ def test_load_schema_and_config_allows_partial_config_missing_required_fields(tm
         schema_path,
         "name: sample\n"
         "service_name:\n"
-        "  type: str\n",
+        "  type: str\n"
+        "  description: Service name\n",
     )
     _write_text(config_path, "{}\n")
 

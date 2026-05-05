@@ -109,7 +109,7 @@ class ValidationController:
         self.schema = schema
         self.strict = strict
         self._schema_model = introspect_schema_dict(schema)
-        self._all_field_paths = flatten_field_paths(self._schema_model)
+        self._all_field_paths = [self._normalize_path(path) for path in flatten_field_paths(self._schema_model)]
         self.schedule_callback = schedule_callback
         self.cancel_callback = cancel_callback
         self.state_callback = state_callback
@@ -168,7 +168,8 @@ class ValidationController:
 
     def _resolve_unscoped_field_paths(self, field_errors: Dict[str, str], draft_config: Dict[str, Any]) -> Dict[str, str]:
         resolved: Dict[str, str] = {}
-        for path, message in field_errors.items():
+        for raw_path, message in field_errors.items():
+            path = self._normalize_path(raw_path)
             if "." in path:
                 resolved[path] = message
                 continue
