@@ -397,17 +397,28 @@ class EditorApp:
         body.grid(row=0, column=0, sticky="nsew")
         body.columnconfigure(0, weight=1)
 
-        ttk.Label(body, text=field_path).grid(row=0, column=0, sticky="w")
+        required_text = "required" if bool(field.get("required", True)) else "optional"
+        ttk.Label(body, text=f"{field_path} ({required_text})").grid(row=0, column=0, sticky="w")
         ttk.Label(body, text=f"Type: {field.get('type', '')}").grid(row=1, column=0, sticky="w", pady=(2, 0))
 
         description = field.get("description", "") or "-"
         ttk.Label(body, text=f"Description: {description}", wraplength=520, justify="left").grid(row=2, column=0, sticky="w", pady=(8, 0))
-        ttk.Label(body, text=f"Conditions: {self._format_when_text(field.get('when'))}", wraplength=520, justify="left").grid(row=3, column=0, sticky="w", pady=(4, 0))
-        ttk.Label(body, text=f"Constraints: {self._format_constraints_text(field)}", wraplength=520, justify="left").grid(row=4, column=0, sticky="w", pady=(4, 0))
-        ttk.Label(body, text=f"Default: {self._format_default_text(field)}", wraplength=520, justify="left").grid(row=5, column=0, sticky="w", pady=(4, 0))
+        next_row = 3
+        if field.get("when"):
+            ttk.Label(body, text=f"Conditions: {self._format_when_text(field.get('when'))}", wraplength=520, justify="left").grid(row=next_row, column=0, sticky="w", pady=(4, 0))
+            next_row += 1
+        constraints_text = self._format_constraints_text(field)
+        if constraints_text:
+            ttk.Label(body, text=f"Constraints: {constraints_text}", wraplength=520, justify="left").grid(row=next_row, column=0, sticky="w", pady=(4, 0))
+            next_row += 1
+
+        input_row = next_row
+        if field.get("has_default", False):
+            ttk.Label(body, text=f"Default: {self._format_default_text(field)}", wraplength=520, justify="left").grid(row=input_row, column=0, sticky="w", pady=(4, 0))
+            input_row += 1
 
         input_frame = ttk.Frame(body)
-        input_frame.grid(row=6, column=0, sticky="ew", pady=(10, 0))
+        input_frame.grid(row=input_row, column=0, sticky="ew", pady=(10, 0))
         input_frame.columnconfigure(0, weight=1)
 
         field_type = str(field.get("type", "str"))
@@ -471,10 +482,10 @@ class EditorApp:
             var.trace_add("write", validate_entry)
             validate_entry()
 
-        ttk.Label(body, textvariable=error_var, foreground="#b00020").grid(row=7, column=0, sticky="w", pady=(8, 0))
+        ttk.Label(body, textvariable=error_var, foreground="#b00020").grid(row=input_row + 1, column=0, sticky="w", pady=(8, 0))
 
         button_bar = ttk.Frame(body)
-        button_bar.grid(row=8, column=0, sticky="e", pady=(12, 0))
+        button_bar.grid(row=input_row + 2, column=0, sticky="e", pady=(12, 0))
         ttk.Button(button_bar, text="Cancel", command=dialog.destroy).pack(side="right")
 
         def on_ok():
@@ -520,11 +531,7 @@ class EditorApp:
         if field.get("type") == "enum":
             constraints.pop("enum_values", None)
         items = [f"{key}={value!r}" for key, value in sorted(constraints.items())]
-        if field.get("required", True):
-            items.insert(0, "required=True")
-        else:
-            items.insert(0, "required=False")
-        return ", ".join(items) if items else "-"
+        return ", ".join(items)
 
     @staticmethod
     def _format_default_text(field: Dict[str, Any]) -> str:
