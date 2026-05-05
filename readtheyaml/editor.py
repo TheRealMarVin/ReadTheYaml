@@ -121,7 +121,6 @@ class EditorApp:
         self.tree.configure(yscrollcommand=tree_scroll.set)
         self.tree.pack(side="left", fill="both", expand=True)
         tree_scroll.pack(side="right", fill="y")
-        self.tree.bind("<<TreeviewSelect>>", self._on_tree_select)
         self.tree.bind("<Double-1>", self._on_tree_double_click)
         self.tree.tag_configure("missing_required", foreground="#b00020")
         self.tree.tag_configure("valid_value", foreground="#1f7a1f")
@@ -189,20 +188,6 @@ class EditorApp:
             self._tree_item_to_path[node] = ("section", subsection_path)
             self._section_path_to_item[subsection_path] = node
             self._add_tree_nodes(node, subsection)
-
-    def _on_tree_select(self, _: tk.Event):
-        selection = self.tree.selection()
-        if not selection:
-            return
-        item = selection[0]
-        mapping = self._tree_item_to_path.get(item)
-        if mapping is None:
-            return
-        node_kind, path = mapping
-        if node_kind == "section":
-            self.form_renderer.reveal_section(path)
-            return
-        self.form_renderer.focus_field(path)
 
     def _on_tree_double_click(self, event: tk.Event):
         item_id = self.tree.identify_row(event.y)
@@ -419,9 +404,10 @@ class EditorApp:
         ttk.Label(body, text=f"Description: {description}", wraplength=520, justify="left").grid(row=2, column=0, sticky="w", pady=(8, 0))
         ttk.Label(body, text=f"Conditions: {self._format_when_text(field.get('when'))}", wraplength=520, justify="left").grid(row=3, column=0, sticky="w", pady=(4, 0))
         ttk.Label(body, text=f"Constraints: {self._format_constraints_text(field)}", wraplength=520, justify="left").grid(row=4, column=0, sticky="w", pady=(4, 0))
+        ttk.Label(body, text=f"Default: {self._format_default_text(field)}", wraplength=520, justify="left").grid(row=5, column=0, sticky="w", pady=(4, 0))
 
         input_frame = ttk.Frame(body)
-        input_frame.grid(row=5, column=0, sticky="ew", pady=(10, 0))
+        input_frame.grid(row=6, column=0, sticky="ew", pady=(10, 0))
         input_frame.columnconfigure(0, weight=1)
 
         field_type = str(field.get("type", "str"))
@@ -485,15 +471,14 @@ class EditorApp:
             var.trace_add("write", validate_entry)
             validate_entry()
 
-        ttk.Label(body, textvariable=error_var, foreground="#b00020").grid(row=6, column=0, sticky="w", pady=(8, 0))
+        ttk.Label(body, textvariable=error_var, foreground="#b00020").grid(row=7, column=0, sticky="w", pady=(8, 0))
 
         button_bar = ttk.Frame(body)
-        button_bar.grid(row=7, column=0, sticky="e", pady=(12, 0))
+        button_bar.grid(row=8, column=0, sticky="e", pady=(12, 0))
         ttk.Button(button_bar, text="Cancel", command=dialog.destroy).pack(side="right")
 
         def on_ok():
             self.form_renderer.set_field_value(field_path, parsed_value_holder["value"])
-            self.form_renderer.focus_field(field_path)
             dialog.destroy()
 
         ok_button = ttk.Button(button_bar, text="OK", command=on_ok, state="disabled")
@@ -531,15 +516,21 @@ class EditorApp:
 
     @staticmethod
     def _format_constraints_text(field: Dict[str, Any]) -> str:
-        constraints = field.get("constraints", {}) or {}
+        constraints = dict(field.get("constraints", {}) or {})
+        if field.get("type") == "enum":
+            constraints.pop("enum_values", None)
         items = [f"{key}={value!r}" for key, value in sorted(constraints.items())]
         if field.get("required", True):
             items.insert(0, "required=True")
         else:
             items.insert(0, "required=False")
-            if field.get("has_default", False):
-                items.append(f"default={field.get('default')!r}")
         return ", ".join(items) if items else "-"
+
+    @staticmethod
+    def _format_default_text(field: Dict[str, Any]) -> str:
+        if not field.get("has_default", False):
+            return "-"
+        return repr(field.get("default"))
 
     @staticmethod
     def _get_path_value(data: Dict[str, Any], dotted_path: str) -> Any:
