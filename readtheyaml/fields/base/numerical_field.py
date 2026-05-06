@@ -2,7 +2,6 @@ from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
 from readtheyaml.fields.field_validation_helpers import find_and_validate_bounds
-from readtheyaml.ui.widgets import FloatFieldWidget, IntFieldWidget, StringFieldWidget
 
 
 class NumericalField(Field):
@@ -42,6 +41,7 @@ class NumericalField(Field):
         return value
 
     def ui_widget_type(self):
+        from readtheyaml.ui.widgets import FloatFieldWidget, IntFieldWidget, StringFieldWidget
         if self.value_type is int:
             return IntFieldWidget
         if self.value_type is float:

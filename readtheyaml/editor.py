@@ -17,7 +17,7 @@ from readtheyaml.ui.form_renderer import FormRenderer, evaluate_visibility_map
 from readtheyaml.ui.save_helpers import SAVE_MODE_EXPORT, SAVE_MODE_FULL, can_save, get_save_payload, serialize_yaml
 from readtheyaml.ui.schema_introspect import introspect_schema_dict
 from readtheyaml.ui.validation import ValidationController, ValidationState, build_fix_hints
-from readtheyaml.ui.widgets import normalize_enum, normalize_float, normalize_int, normalize_str
+from readtheyaml.ui.widgets import EnumFieldWidget, FloatFieldWidget, IntFieldWidget, StringFieldWidget
 
 
 def _parse_bool(value: str) -> bool:
@@ -509,7 +509,7 @@ class EditorApp:
             control.grid(row=0, column=0, sticky="ew")
 
             def validate_enum(*_: Any):
-                result = normalize_enum(var.get(), enum_choices)
+                result = EnumFieldWidget.convert(var.get(), enum_choices)
                 if result.error:
                     set_validation(False, result.error, None)
                     return
@@ -525,11 +525,11 @@ class EditorApp:
             def validate_entry(*_: Any):
                 text_value = var.get()
                 if field_type == "int":
-                    result = normalize_int(text_value, required=required)
+                    result = IntFieldWidget.convert(text_value, required=required)
                 elif field_type == "float":
-                    result = normalize_float(text_value, required=required)
+                    result = FloatFieldWidget.convert(text_value, required=required)
                 else:
-                    result = normalize_str(text_value, required=required)
+                    result = StringFieldWidget.convert(text_value, required=required)
                 if result.error:
                     set_validation(False, result.error, None)
                     return
@@ -555,16 +555,16 @@ class EditorApp:
         if field_type == "bool":
             set_validation(True, "", bool(var.get()))
         elif field_type == "enum":
-            result = normalize_enum(var.get(), enum_choices)
+            result = EnumFieldWidget.convert(var.get(), enum_choices)
             set_validation(result.error is None, result.error or "", result.value if result.error is None else None)
         else:
             text_value = var.get()
             if field_type == "int":
-                result = normalize_int(text_value, required=required)
+                result = IntFieldWidget.convert(text_value, required=required)
             elif field_type == "float":
-                result = normalize_float(text_value, required=required)
+                result = FloatFieldWidget.convert(text_value, required=required)
             else:
-                result = normalize_str(text_value, required=required)
+                result = StringFieldWidget.convert(text_value, required=required)
             set_validation(result.error is None, result.error or "", result.value if result.error is None else None)
 
         control.focus_set()

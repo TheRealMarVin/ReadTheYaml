@@ -3,7 +3,6 @@ from functools import partial
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
-from readtheyaml.ui.widgets import EnumFieldWidget
 
 
 class EnumField(Field):
@@ -19,6 +18,7 @@ class EnumField(Field):
         return value
 
     def ui_widget_type(self):
+        from readtheyaml.ui.widgets import EnumFieldWidget
         return partial(EnumFieldWidget, choices=list(self.choices))
 
     def constraint_specs(self):

@@ -1,7 +1,6 @@
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
-from readtheyaml.ui.widgets import StringFieldWidget
 
 
 class StringField(Field):
@@ -44,6 +43,7 @@ class StringField(Field):
         return value
 
     def ui_widget_type(self):
+        from readtheyaml.ui.widgets import StringFieldWidget
         return StringFieldWidget
 
     def constraint_specs(self):

@@ -1,6 +1,5 @@
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
-from readtheyaml.ui.widgets import BoolFieldWidget
 
 
 class BoolField(Field):
@@ -22,6 +21,7 @@ class BoolField(Field):
         return value
 
     def ui_widget_type(self):
+        from readtheyaml.ui.widgets import BoolFieldWidget
         return BoolFieldWidget
 
     @staticmethod

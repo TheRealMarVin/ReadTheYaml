@@ -3,7 +3,6 @@ from functools import partial
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.conditions import parse_when
-from readtheyaml.ui.widgets import StringFieldWidget
 
 
 class PostInitMeta(type):
@@ -51,6 +50,7 @@ class Field(metaclass=PostInitMeta):
         return {}
 
     def ui_widget_type(self):
+        from readtheyaml.ui.widgets import StringFieldWidget
         return StringFieldWidget
 
     def field_type(self):
