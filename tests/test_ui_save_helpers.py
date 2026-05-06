@@ -17,6 +17,16 @@ def test_serialize_yaml_supports_timedelta():
     assert "seconds: 30" in text
 
 
+def test_serialize_yaml_keeps_tuple_as_literal_string():
+    text = serialize_yaml({"pair": (1, "alpha")})
+    assert "pair: (1, 'alpha')" in text
+
+
+def test_serialize_yaml_keeps_list_as_yaml_list():
+    text = serialize_yaml({"items": [1, 2, 3]})
+    assert "items: [1, 2, 3]" in text
+
+
 def test_can_save_blocks_invalid():
     allowed, reason = can_save(False)
     assert allowed is False

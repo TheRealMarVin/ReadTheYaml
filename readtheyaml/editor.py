@@ -621,6 +621,9 @@ class EditorApp:
             return ""
         if isinstance(value, bool):
             return "true" if value else "false"
+        if isinstance(value, (list, tuple)):
+            # Keep preview formatting aligned with the modal editor input display.
+            return str(value)
         if isinstance(value, (int, float, str)):
             return str(value)
         return serialize_yaml(value).strip().replace("\n", " ")

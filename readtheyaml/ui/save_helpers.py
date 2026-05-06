@@ -11,6 +11,30 @@ SAVE_MODE_EXPORT = "export"
 SAVE_MODE_FULL = "full"
 
 
+class _PlainScalar(str):
+    pass
+
+
+class _FlowList(list):
+    pass
+
+
+class _InlineDumper(yaml.SafeDumper):
+    pass
+
+
+def _represent_plain_scalar(dumper: yaml.SafeDumper, data: _PlainScalar):
+    return dumper.represent_scalar("tag:yaml.org,2002:str", str(data), style="")
+
+
+def _represent_flow_list(dumper: yaml.SafeDumper, data: _FlowList):
+    return dumper.represent_sequence("tag:yaml.org,2002:seq", list(data), flow_style=True)
+
+
+_InlineDumper.add_representer(_PlainScalar, _represent_plain_scalar)
+_InlineDumper.add_representer(_FlowList, _represent_flow_list)
+
+
 def _to_yaml_friendly(value: Any) -> Any:
     if value is None or isinstance(value, (bool, int, float, str)):
         return value
@@ -25,8 +49,11 @@ def _to_yaml_friendly(value: Any) -> Any:
     if isinstance(value, dict):
         return {k: _to_yaml_friendly(v) for k, v in value.items()}
 
-    if isinstance(value, (list, tuple, set)):
-        return [_to_yaml_friendly(item) for item in value]
+    if isinstance(value, tuple):
+        return _PlainScalar(str(value))
+
+    if isinstance(value, (list, set)):
+        return _FlowList(_to_yaml_friendly(item) for item in value)
 
     object_state = getattr(value, "__dict__", None)
     if isinstance(object_state, dict) and object_state:
@@ -36,7 +63,7 @@ def _to_yaml_friendly(value: Any) -> Any:
 
 
 def serialize_yaml(data: Any):
-    text = yaml.safe_dump(_to_yaml_friendly(data), sort_keys=False, allow_unicode=True)
+    text = yaml.dump(_to_yaml_friendly(data), Dumper=_InlineDumper, sort_keys=False, allow_unicode=True)
     if not text.endswith("\n"):
         text += "\n"
     return text
