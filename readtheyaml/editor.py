@@ -524,12 +524,8 @@ class EditorApp:
 
             def validate_entry(*_: Any):
                 text_value = var.get()
-                if field_type == "int":
-                    result = IntFieldWidget.convert(text_value, required=required)
-                elif field_type == "float":
-                    result = FloatFieldWidget.convert(text_value, required=required)
-                else:
-                    result = StringFieldWidget.convert(text_value, required=required)
+                result = StringFieldWidget.convert(text_value, required=required)
+
                 if result.error:
                     set_validation(False, result.error, None)
                     return
@@ -559,12 +555,7 @@ class EditorApp:
             set_validation(result.error is None, result.error or "", result.value if result.error is None else None)
         else:
             text_value = var.get()
-            if field_type == "int":
-                result = IntFieldWidget.convert(text_value, required=required)
-            elif field_type == "float":
-                result = FloatFieldWidget.convert(text_value, required=required)
-            else:
-                result = StringFieldWidget.convert(text_value, required=required)
+            result = StringFieldWidget.convert(text_value, required=required)
             set_validation(result.error is None, result.error or "", result.value if result.error is None else None)
 
         control.focus_set()
