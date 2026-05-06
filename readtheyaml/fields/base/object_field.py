@@ -117,6 +117,16 @@ class ObjectField(Field):
         except Exception:
             return False
 
+    def ui_widget_type(self):
+        from readtheyaml.ui.widgets.object_field_widget import ObjectFieldWidget
+
+        return ObjectFieldWidget
+
+    def constraint_specs(self):
+        return {
+            "object_class_path": self.class_path,
+        }
+
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs):
         object_type = extract_types_for_composite(type_str=type_str, type_name="object")

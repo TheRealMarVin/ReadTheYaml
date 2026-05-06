@@ -135,7 +135,17 @@ class FormRenderer(ttk.Frame):
         required = bool(field.get("required", True))
         widget_ctor = self._resolve_widget_type(field_type, field.get("widget_type"))
         on_change = lambda value, p=field_path: self._on_widget_change(p, value)
-        widget = widget_ctor(parent, label=label, description=description, required=required, on_change=on_change)
+        widget_kwargs: Dict[str, Any] = {
+            "label": label,
+            "description": description,
+            "required": required,
+            "on_change": on_change,
+        }
+        constraints = field.get("constraints", {}) or {}
+        if field_type.startswith("object"):
+            widget_kwargs["parameters"] = list(constraints.get("object_parameters", []))
+            widget_kwargs["class_path"] = constraints.get("object_class_path")
+        widget = widget_ctor(parent, **widget_kwargs)
         initial = resolve_display_value(field, self._draft_config, field_path)
         widget.set_value(initial)
         return widget

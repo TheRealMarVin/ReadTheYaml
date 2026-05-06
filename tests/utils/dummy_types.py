@@ -23,3 +23,12 @@ class UnrelatedDummyType():
         super().__init__(value)
         self.value = value
         self.second = second
+
+
+class GenericInitConcreteNew:
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    def __new__(cls, value: int, label: str = "x"):
+        return super().__new__(cls)

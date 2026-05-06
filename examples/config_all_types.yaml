@@ -14,6 +14,13 @@ delay:
   year: 2026
   month: 6
   day: 1
+dummy_payload:
+  _type_: readtheyaml.fields.base.string_field.StringField
+  name: demo_config
+  description: Demo config field
+  required: false
+  default: world
+  min_length: 2
 
 marching:
   mode: sequential

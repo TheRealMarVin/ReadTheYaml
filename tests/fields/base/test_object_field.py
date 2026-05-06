@@ -6,6 +6,7 @@ from readtheyaml.fields.base.numerical_field import NumericalField
 from readtheyaml.fields.base.object_field import ObjectField
 from readtheyaml.fields.field_factory import FIELD_FACTORY
 from readtheyaml.schema import Schema
+from readtheyaml.ui.widgets.object_field_widget import ObjectFieldWidget
 
 
 class SimpleUser:
@@ -92,6 +93,19 @@ def test_object_field_uses_typed_field_for_typed_constructor_params():
     )
 
     assert isinstance(field.subfields["age"], NumericalField)
+
+
+def test_object_field_ui_widget_type_and_constraints_include_constructor_parameters():
+    field = ObjectField(
+        name="user",
+        description="user object",
+        factory=FIELD_FACTORY,
+        class_path="tests.fields.base.test_object_field.SimpleUser",
+    )
+
+    assert field.ui_widget_type() is ObjectFieldWidget
+    constraints = field.constraint_specs()
+    assert constraints["object_class_path"] == "tests.fields.base.test_object_field.SimpleUser"
 
 
 def test_object_field_validates_optional_parameter_type():

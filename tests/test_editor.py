@@ -4,6 +4,7 @@ import pytest
 
 from readtheyaml.editor import EditorApp, load_schema_and_config, parse_args
 from readtheyaml.exceptions.validation_error import ValidationError
+from readtheyaml.ui.widgets.object_field_widget import ObjectFieldWidget
 
 
 def _write_text(path: Path, content: str) -> None:
@@ -160,3 +161,43 @@ def test_convert_tree_input_value_parses_union_tuple_literal():
 )
 def test_should_hide_field_information_for_none_types(field_type: str, expected: bool):
     assert EditorApp._should_hide_field_information(field_type) is expected
+
+
+def test_convert_object_tree_value_validates_typed_constructor_parameters():
+    field = {
+        "field_type": "object[tests.fields.base.test_object_field.SimpleUser]",
+        "required": True,
+        "constraints": {},
+    }
+    ok, value, error = EditorApp._convert_object_tree_value(field, {"name": "Alice", "age": 21})
+    assert ok is True
+    assert error == ""
+    assert value == {"name": "Alice", "age": 21}
+
+
+def test_convert_object_tree_value_rejects_invalid_typed_constructor_parameters():
+    field = {
+        "field_type": "object[tests.fields.base.test_object_field.SimpleUser]",
+        "required": True,
+        "constraints": {},
+    }
+    ok, value, error = EditorApp._convert_object_tree_value(field, {"name": "Alice", "age": "oops"})
+    assert ok is False
+    assert value is None
+    assert "type int" in error.lower()
+
+
+def test_inspect_object_constructor_parameters_uses_python_signature():
+    params = ObjectFieldWidget.inspect_constructor_parameters("tests.fields.base.test_object_field.SimpleUser")
+    assert params == [
+        {"name": "name", "required": True, "has_default": False, "default": None, "type": "str"},
+        {"name": "age", "required": False, "has_default": True, "default": 18, "type": "int"},
+    ]
+
+
+def test_inspect_object_constructor_parameters_falls_back_from_generic_init_to_new():
+    params = ObjectFieldWidget.inspect_constructor_parameters("tests.utils.dummy_types.GenericInitConcreteNew")
+    assert params == [
+        {"name": "value", "required": True, "has_default": False, "default": None, "type": "int"},
+        {"name": "label", "required": False, "has_default": True, "default": "x", "type": "str"},
+    ]

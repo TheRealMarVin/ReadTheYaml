@@ -22,6 +22,7 @@ from readtheyaml.ui.save_helpers import SAVE_MODE_EXPORT, SAVE_MODE_FULL, can_sa
 from readtheyaml.ui.schema_introspect import introspect_schema_dict
 from readtheyaml.ui.validation import ValidationController, ValidationState, build_fix_hints
 from readtheyaml.ui.widgets import EnumFieldWidget
+from readtheyaml.ui.widgets.object_field_widget import ObjectFieldWidget
 
 
 def _parse_bool(value: str) -> bool:
@@ -528,6 +529,139 @@ class EditorApp:
 
             var.trace_add("write", validate_enum)
             validate_enum()
+        elif field_type.startswith("object"):
+            constraints_model = field.get("constraints", {}) or {}
+            class_path = constraints_model.get("object_class_path") or self._extract_object_class_path_from_field_type(field_type)
+            params = ObjectFieldWidget.inspect_constructor_parameters(class_path) if class_path else []
+
+            tree = ttk.Treeview(input_frame, columns=("type", "value"), show="tree headings", height=max(3, min(10, len(params) + 1)))
+            tree.heading("#0", text="Parameter", anchor="w")
+            tree.heading("type", text="Type", anchor="w")
+            tree.heading("value", text="Value", anchor="w")
+            tree.column("#0", width=180, stretch=True)
+            tree.column("type", width=140, stretch=False)
+            tree.column("value", width=180, stretch=True)
+            tree.grid(row=0, column=0, sticky="nsew")
+            input_frame.rowconfigure(0, weight=1)
+
+            editor_row = ttk.Frame(input_frame)
+            editor_row.grid(row=1, column=0, sticky="ew", pady=(8, 0))
+            editor_row.columnconfigure(1, weight=1)
+            ttk.Label(editor_row, text="Selected value").grid(row=0, column=0, sticky="w")
+            selected_var = tk.StringVar(value="")
+            selected_entry = ttk.Entry(editor_row, textvariable=selected_var)
+            selected_entry.grid(row=0, column=1, sticky="ew", padx=(8, 0))
+
+            object_values = dict(start_value) if isinstance(start_value, dict) else {}
+            known_param_names = {str(p.get("name", "")) for p in params}
+            extra_kwargs = {k: v for k, v in object_values.items() if k not in known_param_names}
+            for key in list(extra_kwargs.keys()):
+                object_values.pop(key, None)
+            selected_param = {"name": None}
+
+            def _refresh_object_tree():
+                for item in tree.get_children():
+                    tree.delete(item)
+                for param in params:
+                    name = str(param.get("name", ""))
+                    required_flag = bool(param.get("required", True))
+                    display_name = f"{name} *" if required_flag else name
+                    type_display = str(param.get("type", "any"))
+                    value = object_values.get(name, param.get("default"))
+                    value_display = "" if value is None else str(value)
+                    tree.insert("", "end", iid=name, text=display_name, values=(type_display, value_display))
+
+            def _validate_object():
+                merged = dict(extra_kwargs)
+                merged.update(object_values)
+                ok, parsed, error = self._convert_object_tree_value(field, merged)
+                if ok:
+                    set_validation(True, "", parsed)
+                else:
+                    set_validation(False, error or "Invalid object value.", None)
+
+            def _on_tree_select(*_: Any):
+                selected = tree.selection()
+                if not selected:
+                    selected_param["name"] = None
+                    selected_var.set("")
+                    return
+                name = selected[0]
+                selected_param["name"] = name
+                current = object_values.get(name)
+                selected_var.set("" if current is None else str(current))
+
+            def _on_selected_change(*_: Any):
+                name = selected_param["name"]
+                if not name:
+                    return
+                param_model = next((p for p in params if str(p.get("name", "")) == name), None)
+                if param_model is None:
+                    return
+
+                raw = selected_var.get()
+                required_flag = bool(param_model.get("required", True))
+                if raw.strip() == "":
+                    if required_flag:
+                        set_validation(False, f"Parameter '{name}' is required.", None)
+                        return
+                    object_values.pop(name, None)
+                    tree.set(name, "value", "")
+                    _validate_object()
+                    return
+
+                type_name = str(param_model.get("type", "any"))
+                local_field = {
+                    "field_type": type_name,
+                    "required": required_flag,
+                    "constraints": {},
+                }
+                ok, value, error = self._convert_tree_input_value(local_field, raw)
+                if not ok:
+                    set_validation(False, f"{name}: {error}", None)
+                    return
+
+                object_values[name] = value
+                tree.set(name, "value", str(value))
+                _validate_object()
+
+            tree.bind("<<TreeviewSelect>>", _on_tree_select)
+            selected_var.trace_add("write", _on_selected_change)
+            _refresh_object_tree()
+
+            ttk.Label(input_frame, text="Extra kwargs (YAML mapping)").grid(row=2, column=0, sticky="w", pady=(8, 0))
+            kwargs_text = tk.Text(input_frame, height=4, wrap="none")
+            kwargs_text.grid(row=3, column=0, sticky="ew")
+            if extra_kwargs:
+                kwargs_text.insert("1.0", serialize_yaml(extra_kwargs))
+
+            def _parse_extra_kwargs() -> Tuple[bool, Dict[str, Any], str]:
+                raw = kwargs_text.get("1.0", "end").strip()
+                if raw == "":
+                    return True, {}, ""
+                try:
+                    parsed = yaml.safe_load(raw)
+                except yaml.YAMLError:
+                    return False, {}, "Extra kwargs must be valid YAML."
+                if parsed is None:
+                    return True, {}, ""
+                if not isinstance(parsed, dict):
+                    return False, {}, "Extra kwargs must be a YAML mapping (key/value object)."
+                return True, parsed, ""
+
+            def _on_kwargs_change(*_: Any):
+                ok_extra, parsed_extra, error_extra = _parse_extra_kwargs()
+                if not ok_extra:
+                    set_validation(False, error_extra, None)
+                    return
+                extra_kwargs.clear()
+                extra_kwargs.update(parsed_extra)
+                _validate_object()
+
+            kwargs_text.bind("<KeyRelease>", _on_kwargs_change)
+            kwargs_text.bind("<FocusOut>", _on_kwargs_change)
+            _validate_object()
+            control = selected_entry
         else:
             var = tk.StringVar(value="" if start_value is None else str(start_value))
             control = ttk.Entry(input_frame, textvariable=var)
@@ -564,6 +698,11 @@ class EditorApp:
         elif field_type == "enum":
             result = EnumFieldWidget.convert(var.get(), enum_choices)
             set_validation(result.error is None, result.error or "", result.value if result.error is None else None)
+        elif field_type.startswith("object"):
+            merged = dict(extra_kwargs)
+            merged.update(object_values)
+            ok, parsed_value, error = self._convert_object_tree_value(field, merged)
+            set_validation(ok, error or "", parsed_value if ok else None)
         else:
             ok, parsed_value, error = self._convert_tree_input_value(field, var.get())
             set_validation(ok, error or "", parsed_value if ok else None)
@@ -713,11 +852,43 @@ class EditorApp:
             return False, None, message or "Invalid value."
 
     @staticmethod
+    def _convert_object_tree_value(field: Dict[str, Any], value: Dict[str, Any]) -> Tuple[bool, Any, str]:
+        type_name = str(field.get("field_type", field.get("type", "object")))
+        required = bool(field.get("required", True))
+        if not isinstance(value, dict):
+            return False, None, "Object value must be a mapping."
+        if not value and not required:
+            return True, None, ""
+
+        try:
+            validator = FIELD_FACTORY.create_field(
+                type_name,
+                "__ui__",
+                description="",
+                required=required,
+                ignore_post=True,
+            )
+            validator.validate_and_build(dict(value))
+            return True, dict(value), ""
+        except (ValidationError, ValueError, TypeError) as exc:
+            message = EditorApp._clean_ui_validation_error(str(exc))
+            return False, None, message or "Invalid object value."
+
+    @staticmethod
     def _clean_ui_validation_error(message: str) -> str:
         cleaned = message.strip()
         cleaned = re.sub(r"Field '__ui__':\s*", "", cleaned)
         cleaned = re.sub(r"Field 'item':\s*", "", cleaned)
         return cleaned.strip()
+
+    @staticmethod
+    def _extract_object_class_path_from_field_type(field_type: str) -> Optional[str]:
+        text = str(field_type or "").strip()
+        match = re.fullmatch(r"object[\[\(](.*)[\]\)]", text)
+        if not match:
+            return None
+        inner = match.group(1).strip()
+        return inner or None
 
     @staticmethod
     def _should_hide_field_information(field_type: str) -> bool:
