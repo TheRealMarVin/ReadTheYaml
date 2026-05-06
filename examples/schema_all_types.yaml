@@ -44,10 +44,10 @@ deprecated_since:
   default: null
 
 regions:
-  type: list[str]
+  type: list[int]
   description: Target regions
   required: false
-  default: [ca-central-1, us-east-1]
+  default: [1, 2]
 
 window:
   type: tuple[int, int]
