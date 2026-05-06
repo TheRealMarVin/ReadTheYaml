@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from readtheyaml.editor import load_schema_and_config, parse_args
+from readtheyaml.editor import EditorApp, load_schema_and_config, parse_args
 from readtheyaml.exceptions.validation_error import ValidationError
 
 
@@ -85,3 +85,39 @@ def test_load_schema_and_config_allows_partial_config_missing_required_fields(tm
 
     _, config = load_schema_and_config(str(schema_path), str(config_path), strict=True)
     assert config == {}
+
+
+def test_convert_tree_input_value_parses_and_validates_list_int():
+    field = {
+        "field_type": "list(int)",
+        "required": False,
+        "constraints": {},
+    }
+    ok, value, error = EditorApp._convert_tree_input_value(field, "[1, 2, 3]")
+    assert ok is True
+    assert error == ""
+    assert value == [1, 2, 3]
+
+
+def test_convert_tree_input_value_rejects_invalid_list_int():
+    field = {
+        "field_type": "list(int)",
+        "required": False,
+        "constraints": {},
+    }
+    ok, value, error = EditorApp._convert_tree_input_value(field, "[1, nope]")
+    assert ok is False
+    assert value is None
+    assert error
+
+
+def test_convert_tree_input_value_parses_and_validates_tuple_int():
+    field = {
+        "field_type": "tuple(int, int)",
+        "required": False,
+        "constraints": {},
+    }
+    ok, value, error = EditorApp._convert_tree_input_value(field, "(1, 2)")
+    assert ok is True
+    assert error == ""
+    assert value == (1, 2)

@@ -5,10 +5,12 @@ from typing import Any, Dict, Optional, Tuple
 
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
+import yaml
 
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.conditions import format_when_human, parse_when
+from readtheyaml.fields.field_factory import FIELD_FACTORY
 from readtheyaml.ui.constants import ROOT_PATH
 from readtheyaml.ui.path_helpers import get_path_value, normalize_path, path_exists
 from readtheyaml.schema import Schema
@@ -17,7 +19,7 @@ from readtheyaml.ui.form_renderer import FormRenderer, evaluate_visibility_map
 from readtheyaml.ui.save_helpers import SAVE_MODE_EXPORT, SAVE_MODE_FULL, can_save, get_save_payload, serialize_yaml
 from readtheyaml.ui.schema_introspect import introspect_schema_dict
 from readtheyaml.ui.validation import ValidationController, ValidationState, build_fix_hints
-from readtheyaml.ui.widgets import EnumFieldWidget, StringFieldWidget
+from readtheyaml.ui.widgets import EnumFieldWidget
 
 
 def _parse_bool(value: str) -> bool:
@@ -523,13 +525,11 @@ class EditorApp:
             control.grid(row=0, column=0, sticky="ew")
 
             def validate_entry(*_: Any):
-                text_value = var.get()
-                result = StringFieldWidget.convert(text_value, required=required)
-
-                if result.error:
-                    set_validation(False, result.error, None)
+                ok, parsed_value, error = self._convert_tree_input_value(field, var.get())
+                if not ok:
+                    set_validation(False, error or "Invalid value.", None)
                     return
-                set_validation(True, "", result.value)
+                set_validation(True, "", parsed_value)
 
             var.trace_add("write", validate_entry)
             validate_entry()
@@ -554,9 +554,8 @@ class EditorApp:
             result = EnumFieldWidget.convert(var.get(), enum_choices)
             set_validation(result.error is None, result.error or "", result.value if result.error is None else None)
         else:
-            text_value = var.get()
-            result = StringFieldWidget.convert(text_value, required=required)
-            set_validation(result.error is None, result.error or "", result.value if result.error is None else None)
+            ok, parsed_value, error = self._convert_tree_input_value(field, var.get())
+            set_validation(ok, error or "", parsed_value if ok else None)
 
         control.focus_set()
         dialog.update_idletasks()
@@ -624,6 +623,59 @@ class EditorApp:
         if isinstance(value, (int, float, str)):
             return str(value)
         return serialize_yaml(value).strip().replace("\n", " ")
+
+    @staticmethod
+    def _convert_tree_input_value(field: Dict[str, Any], raw_text: str) -> Tuple[bool, Any, str]:
+        required = bool(field.get("required", True))
+        type_name = str(field.get("field_type", field.get("type", "str")))
+        text_value = raw_text.strip()
+
+        if text_value == "":
+            if required:
+                return False, None, "Value is required."
+            return True, None, ""
+
+        parsed_value: Any = raw_text
+        if type_name.startswith("list("):
+            try:
+                parsed_value = yaml.safe_load(raw_text)
+            except yaml.YAMLError:
+                return False, None, "Invalid YAML list value."
+        elif type_name.startswith("tuple("):
+            if not (text_value.startswith("(") and text_value.endswith(")")):
+                try:
+                    candidate = yaml.safe_load(raw_text)
+                except yaml.YAMLError:
+                    candidate = raw_text
+                if isinstance(candidate, (list, tuple)):
+                    parsed_value = tuple(candidate)
+                else:
+                    parsed_value = raw_text
+
+        field_kwargs: Dict[str, Any] = {
+            "description": "",
+            "required": required,
+            "ignore_post": True,
+        }
+        constraints = field.get("constraints", {}) or {}
+        if "min" in constraints:
+            field_kwargs["min_value"] = constraints["min"]
+        if "max" in constraints:
+            field_kwargs["max_value"] = constraints["max"]
+        if "min_length" in constraints:
+            field_kwargs["min_length"] = constraints["min_length"]
+        if "max_length" in constraints:
+            field_kwargs["max_length"] = constraints["max_length"]
+        if "enum_values" in constraints:
+            field_kwargs["values"] = list(constraints["enum_values"])
+
+        try:
+            validator = FIELD_FACTORY.create_field(type_name, "__ui__", **field_kwargs)
+            value = validator.validate_and_build(parsed_value)
+            return True, value, ""
+        except (ValidationError, ValueError, TypeError) as exc:
+            message = str(exc).removeprefix("Field '__ui__': ").strip()
+            return False, None, message or "Invalid value."
 
     def _load_config_from_path(self, path: str):
         with open(path, "r", encoding="utf-8", newline="") as handle:
