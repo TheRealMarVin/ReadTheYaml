@@ -1,0 +1,85 @@
+service_name:
+  type: str
+  description: Service name
+
+enabled:
+  type: bool
+  description: Feature toggle
+  required: false
+  default: true
+
+replicas:
+  type: int
+  description: Number of instances
+  required: false
+  default: 2
+  value_range: [1, 20]
+
+cpu_limit:
+  type: float
+  description: CPU limit
+  required: false
+  default: 1.5
+  value_range: [0.1, 64.0]
+
+environment:
+  type: enum
+  description: Environment
+  required: false
+  default: dev
+  values: [dev, stage, prod]
+
+metadata:
+  type: any
+  description: Free-form metadata
+  required: false
+  default:
+    owner: platform
+    source: ci
+
+deprecated_since:
+  type: None
+  description: Optional null marker
+  required: false
+  default: null
+
+regions:
+  type: list[str]
+  description: Target regions
+  required: false
+  default: [ca-central-1, us-east-1]
+
+window:
+  type: tuple[int, int]
+  description: Start and end hour
+  required: false
+  default: "(9, 17)"
+
+owner_id:
+  type: int | str
+  description: Numeric id or username
+  required: false
+  default: platform-team
+
+delay:
+  type: object[datetime.timedelta]
+  description: Delay object from Python stdlib
+  required: false
+  default:
+    seconds: 30
+
+marching:
+  required: false
+  description: Marching rollout config
+  mode:
+    type: enum
+    description: Marching execution mode
+    values: [sequential, parallel]
+    required: false
+    default: sequential
+  step_seconds:
+    type: int
+    description: Delay between marching steps
+    required: false
+    default: 30
+    value_range: [1, 3600]

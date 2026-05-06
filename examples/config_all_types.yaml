@@ -1,0 +1,18 @@
+service_name: billing-api
+enabled: true
+replicas: 3
+cpu_limit: 2.0
+environment: stage
+metadata:
+  owner: sre
+  source: release
+deprecated_since: null
+regions: [ca-central-1, us-east-1]
+window: "(8, 18)"
+owner_id: team-platform
+delay:
+  seconds: 45
+
+marching:
+  mode: sequential
+  step_seconds: 60

@@ -1,17 +1,6 @@
 service_name: api-gateway
-environment: prod
+port: 9090
+mode: prod
 
-network:
-  host: 0.0.0.0
-
-observability:
-  log_level: debug
-  emit_json_logs: true
-
-runtime:
-  retries: 5
-  retry_delay_seconds: 3
-  tags: [edge, public]
-
-deployment:
-  strategy: rolling
+compile:
+  command: make build
