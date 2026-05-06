@@ -11,7 +11,9 @@ regions: [ca-central-1, us-east-1]
 window: "(8, 18)"
 owner_id: team-platform
 delay:
-  seconds: 45
+  year: 2026
+  month: 6
+  day: 1
 
 marching:
   mode: sequential

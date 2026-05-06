@@ -62,11 +62,13 @@ owner_id:
   default: platform-team
 
 delay:
-  type: object[datetime.timedelta]
-  description: Delay object from Python stdlib
+  type: object[datetime.date]
+  description: Date object from Python stdlib
   required: false
   default:
-    seconds: 30
+    year: 2026
+    month: 5
+    day: 6
 
 marching:
   required: false
