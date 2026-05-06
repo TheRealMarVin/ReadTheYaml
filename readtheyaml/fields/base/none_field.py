@@ -12,6 +12,10 @@ class NoneField(Field):
 
         raise ValidationError(f"Field '{self.name}': must be null/None")
 
+    def ui_widget_type(self):
+        from readtheyaml.ui.widgets import NoneFieldWidget
+        return NoneFieldWidget
+
     @staticmethod
     def from_type_string(type_str: str, name: str, factory, **kwargs):
         if type_str in {"None", "none", "NONE"}:

@@ -145,3 +145,18 @@ def test_convert_tree_input_value_parses_union_tuple_literal():
     assert ok is True
     assert error == ""
     assert value == (9, 17)
+
+
+@pytest.mark.parametrize(
+    ("field_type", "expected"),
+    [
+        ("none", True),
+        ("union(int, none)", True),
+        ("tuple(str, none)", True),
+        ("list(none)", True),
+        ("str", False),
+        ("union(int, str)", False),
+    ],
+)
+def test_should_hide_field_information_for_none_types(field_type: str, expected: bool):
+    assert EditorApp._should_hide_field_information(field_type) is expected

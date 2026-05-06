@@ -457,20 +457,24 @@ class EditorApp:
 
         required_text = "required" if bool(field.get("required", True)) else "optional"
         ttk.Label(body, text=f"{field_path} ({required_text})").grid(row=0, column=0, sticky="w")
-        ttk.Label(body, text=f"Type: {field.get('field_type', field.get('type', ''))}").grid(row=1, column=0, sticky="w", pady=(2, 0))
+        field_type = str(field.get("field_type", field.get("type", "str")))
+        ttk.Label(body, text=f"Type: {field_type}").grid(row=1, column=0, sticky="w", pady=(2, 0))
 
-        description = field.get("description", "") or "-"
-        ttk.Label(body, text=f"Description: {description}", wraplength=520, justify="left").grid(row=2, column=0, sticky="w", pady=(8, 0))
-        next_row = 3
-        if field.get("when"):
-            when_text = self._format_when_text(field.get("when"))
-            if when_text:
-                ttk.Label(body, text=f"Conditions: {when_text}", wraplength=520, justify="left").grid(row=next_row, column=0, sticky="w", pady=(4, 0))
-                next_row += 1
-        constraints_text = self._format_constraints_text(field)
-        if constraints_text:
-            ttk.Label(body, text=f"Constraints: {constraints_text}", wraplength=520, justify="left").grid(row=next_row, column=0, sticky="w", pady=(4, 0))
+        hide_field_info = self._should_hide_field_information(field_type)
+        next_row = 2
+        if not hide_field_info:
+            description = field.get("description", "") or "-"
+            ttk.Label(body, text=f"Description: {description}", wraplength=520, justify="left").grid(row=next_row, column=0, sticky="w", pady=(8, 0))
             next_row += 1
+            if field.get("when"):
+                when_text = self._format_when_text(field.get("when"))
+                if when_text:
+                    ttk.Label(body, text=f"Conditions: {when_text}", wraplength=520, justify="left").grid(row=next_row, column=0, sticky="w", pady=(4, 0))
+                    next_row += 1
+            constraints_text = self._format_constraints_text(field)
+            if constraints_text:
+                ttk.Label(body, text=f"Constraints: {constraints_text}", wraplength=520, justify="left").grid(row=next_row, column=0, sticky="w", pady=(4, 0))
+                next_row += 1
 
         input_row = next_row
         if field.get("has_default", False) and field.get("default") is not None:
@@ -481,7 +485,6 @@ class EditorApp:
         input_frame.grid(row=input_row, column=0, sticky="ew", pady=(10, 0))
         input_frame.columnconfigure(0, weight=1)
 
-        field_type = str(field.get("field_type", field.get("type", "str")))
         required = bool(field.get("required", True))
         constraints = field.get("constraints", {})
         enum_choices = list(constraints.get("enum_values", []))
@@ -497,7 +500,11 @@ class EditorApp:
             if ok_button is not None:
                 ok_button.configure(state="normal" if is_valid else "disabled")
 
-        if field_type == "bool":
+        if field_type == "none":
+            control = ttk.Label(input_frame, text="Fixed value: null")
+            control.grid(row=0, column=0, sticky="w")
+            set_validation(True, "", None)
+        elif field_type == "bool":
             var = tk.BooleanVar(value=bool(start_value))
             control = ttk.Checkbutton(input_frame, text="Enabled", variable=var)
             control.grid(row=0, column=0, sticky="w")
@@ -550,7 +557,9 @@ class EditorApp:
         ok_button.pack(side="right", padx=(0, 8))
 
         # Run once again now that ok_button exists.
-        if field_type == "bool":
+        if field_type == "none":
+            set_validation(True, "", None)
+        elif field_type == "bool":
             set_validation(True, "", bool(var.get()))
         elif field_type == "enum":
             result = EnumFieldWidget.convert(var.get(), enum_choices)
@@ -709,6 +718,13 @@ class EditorApp:
         cleaned = re.sub(r"Field '__ui__':\s*", "", cleaned)
         cleaned = re.sub(r"Field 'item':\s*", "", cleaned)
         return cleaned.strip()
+
+    @staticmethod
+    def _should_hide_field_information(field_type: str) -> bool:
+        normalized = str(field_type or "").strip().lower()
+        if normalized == "none":
+            return True
+        return "none" in normalized and "(" in normalized
 
     def _load_config_from_path(self, path: str):
         with open(path, "r", encoding="utf-8", newline="") as handle:
