@@ -1,4 +1,5 @@
 from copy import deepcopy
+from datetime import timedelta
 from typing import Any, Dict, Optional, Tuple
 
 import yaml
@@ -10,8 +11,32 @@ SAVE_MODE_EXPORT = "export"
 SAVE_MODE_FULL = "full"
 
 
-def serialize_yaml(data: Dict[str, Any]):
-    text = yaml.safe_dump(data, sort_keys=False, allow_unicode=True)
+def _to_yaml_friendly(value: Any) -> Any:
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+
+    if isinstance(value, timedelta):
+        return {
+            "days": value.days,
+            "seconds": value.seconds,
+            "microseconds": value.microseconds,
+        }
+
+    if isinstance(value, dict):
+        return {k: _to_yaml_friendly(v) for k, v in value.items()}
+
+    if isinstance(value, (list, tuple, set)):
+        return [_to_yaml_friendly(item) for item in value]
+
+    object_state = getattr(value, "__dict__", None)
+    if isinstance(object_state, dict) and object_state:
+        return {k: _to_yaml_friendly(v) for k, v in object_state.items()}
+
+    return str(value)
+
+
+def serialize_yaml(data: Any):
+    text = yaml.safe_dump(_to_yaml_friendly(data), sort_keys=False, allow_unicode=True)
     if not text.endswith("\n"):
         text += "\n"
     return text

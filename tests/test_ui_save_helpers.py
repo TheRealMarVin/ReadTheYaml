@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import pytest
 
 from readtheyaml.ui.save_helpers import SAVE_MODE_EXPORT, SAVE_MODE_FULL, can_save, get_save_payload, serialize_yaml
@@ -7,6 +9,12 @@ def test_serialize_yaml_ends_with_newline():
     text = serialize_yaml({"name": "demo"})
     assert text.endswith("\n")
     assert "name: demo" in text
+
+
+def test_serialize_yaml_supports_timedelta():
+    text = serialize_yaml({"delay": timedelta(seconds=30)})
+    assert "delay:" in text
+    assert "seconds: 30" in text
 
 
 def test_can_save_blocks_invalid():
