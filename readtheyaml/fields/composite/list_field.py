@@ -11,7 +11,8 @@ from readtheyaml.utils.type_utils import extract_types_for_composite
 class ListField(Field):
     def __init__(self, item_field, min_length=None, max_length=None, length_range=None, *, when=None, **kwargs):
         sig = inspect.signature(get_target_class(item_field).__init__)
-        super().__init__(when=when, additional_allowed_kwargs=set(sig.parameters), **kwargs)
+        list_field_type = f"list({item_field.field_type()})"
+        super().__init__(when=when, field_type=list_field_type, additional_allowed_kwargs=set(sig.parameters), **kwargs)
 
         self.item_field = item_field
 
@@ -40,20 +41,16 @@ class ListField(Field):
 
         return validated
 
-    def doc_constraints(self) -> list[str]:
-        parts: list[str] = []
-        if self.min_length is not None and self.max_length is not None:
-            parts.append(f"Length must be between {self.min_length} and {self.max_length} items")
-            return parts
+    def constraint_specs(self):
+        constraints = {"length_unit": "items"}
         if self.min_length is not None:
-            parts.append(f"Length must be at least {self.min_length} items")
+            constraints["min_length"] = self.min_length
         if self.max_length is not None:
-            parts.append(f"Length must be at most {self.max_length} items")
-
-        item_constraints = self.item_field.doc_constraints()
-        for item_constraint in item_constraints:
-            parts.append(f"Each item: {item_constraint}")
-        return parts
+            constraints["max_length"] = self.max_length
+        item_constraints = self.item_field.constraint_specs()
+        if item_constraints:
+            constraints["item_constraints"] = item_constraints
+        return constraints
 
     @staticmethod
     def from_type_string(type_str, name, factory, **kwargs):

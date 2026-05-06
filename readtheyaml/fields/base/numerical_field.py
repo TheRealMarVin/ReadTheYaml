@@ -2,11 +2,12 @@ from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
 from readtheyaml.fields.field_validation_helpers import find_and_validate_bounds
+from readtheyaml.ui.widgets import FloatFieldWidget, IntFieldWidget, StringFieldWidget
 
 
 class NumericalField(Field):
     def __init__(self, value_type=int, min_value=None, max_value=None, value_range=None, *, when=None, **kwargs):
-        super().__init__(when=when, **kwargs)
+        super().__init__(when=when, field_type=value_type.__name__, **kwargs)
 
         self.value_type = value_type
 
@@ -40,19 +41,23 @@ class NumericalField(Field):
 
         return value
 
-    def doc_constraints(self) -> list[str]:
-        parts: list[str] = []
-        if self.min_value is not None and self.max_value is not None:
-            parts.append(f"Must be between {self.min_value} and {self.max_value}")
-            return parts
+    def ui_widget_type(self):
+        if self.value_type is int:
+            return IntFieldWidget
+        if self.value_type is float:
+            return FloatFieldWidget
+        return StringFieldWidget
+
+    def constraint_specs(self):
+        constraints = {}
         if self.min_value is not None:
-            parts.append(f"Must be at least {self.min_value}")
+            constraints["min"] = self.min_value
         if self.max_value is not None:
-            parts.append(f"Must be at most {self.max_value}")
-        return parts
+            constraints["max"] = self.max_value
+        return constraints
 
     @staticmethod
-    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+    def from_type_string(type_str: str, name: str, factory, **kwargs):
         if type_str in {"int", "Int", "INT"}:
             return NumericalField(name=name, value_type=int, **kwargs)
         elif type_str in {"float", "Float", "FLOAT"}:

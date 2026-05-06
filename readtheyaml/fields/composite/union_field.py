@@ -10,7 +10,8 @@ from readtheyaml.utils.type_utils import extract_types_for_composite, split_top_
 
 class UnionField(Field):
     def __init__(self, options, *, when=None, **kwargs):
-        super().__init__(when=when, **kwargs)
+        union_inner = " | ".join(self._option_field_type(option) for option in options)
+        super().__init__(when=when, field_type=f"union({union_inner})", **kwargs)
 
         def get_field_type(opt):
             if isinstance(opt, partial):
@@ -69,7 +70,17 @@ class UnionField(Field):
         raise ValidationError(f"Field '{self.name}': {value!r} does not match any allowed type: {' | '.join(errors)}")
 
     @staticmethod
-    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+    def _option_field_type(option):
+        if isinstance(option, Field):
+            return option.field_type()
+        if isinstance(option, partial):
+            return option.func.__name__
+        if isinstance(option, type):
+            return option.__name__
+        return option.__class__.__name__
+
+    @staticmethod
+    def from_type_string(type_str: str, name: str, factory, **kwargs):
         def build_union_field(parts, split_token):
             parsed_fields = []
             args_copy = copy.deepcopy(kwargs)

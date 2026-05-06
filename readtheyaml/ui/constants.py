@@ -1,0 +1,2 @@
+ROOT_PATH = "<root>"
+ROOT_PATH_PREFIX = f"{ROOT_PATH}."

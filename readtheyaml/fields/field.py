@@ -3,6 +3,7 @@ from functools import partial
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.conditions import parse_when
+from readtheyaml.ui.widgets import StringFieldWidget
 
 
 class PostInitMeta(type):
@@ -16,7 +17,7 @@ class PostInitMeta(type):
 class Field(metaclass=PostInitMeta):
     allowed_kwargs = {"type", "when"}
 
-    def __init__(self, name, description, required=True, default=None, *, when=None, additional_allowed_kwargs=None, ignore_post=False, **kwargs):
+    def __init__(self, name, description, required=True, default=None, *, when=None, field_type=None, additional_allowed_kwargs=None, ignore_post=False, **kwargs):
         self.name = name
         self.required = required
         self.default = default
@@ -24,6 +25,7 @@ class Field(metaclass=PostInitMeta):
         self.description = description
         self.ignore_post = ignore_post
         self.when = parse_when(when, f"when for field '{self.name}'")
+        self._field_type = field_type or self.__class__.__name__
 
         if additional_allowed_kwargs is None:
             additional_allowed_kwargs = set()
@@ -45,11 +47,17 @@ class Field(metaclass=PostInitMeta):
     def validate_and_build(self, value):
         raise NotImplementedError(f"Field '{self.name}': Each field must implement its own validate method.")
 
-    def doc_constraints(self) -> list[str]:
-        return []
+    def constraint_specs(self):
+        return {}
+
+    def ui_widget_type(self):
+        return StringFieldWidget
+
+    def field_type(self):
+        return self._field_type
 
     @staticmethod
-    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+    def from_type_string(type_str: str, name: str, factory, **kwargs):
         raise NotImplementedError("Each field must implement its own from_type_string.")
 
     def _make_partial_field(self, field, suffix):

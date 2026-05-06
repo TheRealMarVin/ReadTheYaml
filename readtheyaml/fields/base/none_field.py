@@ -4,7 +4,7 @@ from readtheyaml.fields.field import Field
 
 class NoneField(Field):
     def __init__(self, *, when=None, **kwargs):
-        super().__init__(when=when, **kwargs)
+        super().__init__(when=when, field_type="none", **kwargs)
 
     def validate_and_build(self, value):
         if str(value).lower() in {"none", "null"}:
@@ -13,7 +13,7 @@ class NoneField(Field):
         raise ValidationError(f"Field '{self.name}': must be null/None")
 
     @staticmethod
-    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+    def from_type_string(type_str: str, name: str, factory, **kwargs):
         if type_str in {"None", "none", "NONE"}:
             return NoneField(name=name, **kwargs)
 

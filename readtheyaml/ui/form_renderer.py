@@ -3,111 +3,9 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any, Callable, Dict, Optional
 
-from readtheyaml.conditions import evaluate_when
+from readtheyaml.ui.form_helpers import (_normalize_path, evaluate_visibility_map, join_path, project_known_config, resolve_display_value, set_value_at_path)
+from readtheyaml.ui.constants import ROOT_PATH
 from readtheyaml.ui.widgets import INVALID_INPUT, BoolFieldWidget, EnumFieldWidget, FloatFieldWidget, IntFieldWidget, StringFieldWidget
-
-
-def get_value_at_path(data: Dict[str, Any], dotted_path: str, default: Any = None) -> Any:
-    dotted_path = _normalize_path(dotted_path)
-    if not dotted_path:
-        return default
-    current = data
-    for part in dotted_path.split("."):
-        if not isinstance(current, dict) or part not in current:
-            return default
-        current = current[part]
-    return current
-
-
-def set_value_at_path(data: Dict[str, Any], dotted_path: str, value: Any):
-    dotted_path = _normalize_path(dotted_path)
-    if not dotted_path:
-        return
-    parts = dotted_path.split(".")
-    current = data
-    for part in parts[:-1]:
-        if part not in current or not isinstance(current[part], dict):
-            current[part] = {}
-        current = current[part]
-    current[parts[-1]] = value
-
-
-def materialize_section_path(data: Dict[str, Any], dotted_path: str) -> Dict[str, Any]:
-    dotted_path = _normalize_path(dotted_path)
-    if not dotted_path:
-        return data
-    current = data
-    for part in dotted_path.split("."):
-        if part not in current or not isinstance(current[part], dict):
-            current[part] = {}
-        current = current[part]
-    return current
-
-
-def project_known_config(config: Dict[str, Any], section_model: Dict[str, Any]) -> Dict[str, Any]:
-    projected = {}
-    base_path = section_model.get("path", "")
-    for field in section_model.get("fields", []):
-        path = _join_path(base_path, field["key"])
-        value = get_value_at_path(config, path, default=None)
-        if value is not None:
-            set_value_at_path(projected, path, value)
-    for subsection in section_model.get("subsections", []):
-        nested = project_known_config(config, subsection)
-        _merge_dict(projected, nested)
-    return projected
-
-
-def _merge_dict(target: Dict[str, Any], source: Dict[str, Any]):
-    for key, value in source.items():
-        if key in target and isinstance(target[key], dict) and isinstance(value, dict):
-            _merge_dict(target[key], value)
-        else:
-            target[key] = deepcopy(value)
-
-
-def _join_path(prefix: str, key: str) -> str:
-    prefix = _normalize_path(prefix)
-    if not prefix:
-        return key
-    return f"{prefix}.{key}"
-
-
-def _normalize_path(path: str) -> str:
-    if not path or path == "<root>":
-        return ""
-    if path.startswith("<root>."):
-        return path[len("<root>."):]
-    return path
-
-
-def evaluate_visibility_map(section_model: Dict[str, Any], draft_config: Dict[str, Any]) -> Dict[str, bool]:
-    visibility: Dict[str, bool] = {}
-    _collect_visibility_recursive(section_model, draft_config, parent_active=True, visibility=visibility)
-    return visibility
-
-
-def resolve_display_value(field_model: Dict[str, Any], draft_config: Dict[str, Any], field_path: str) -> Any:
-    current = get_value_at_path(draft_config, field_path, default=None)
-    if current is not None:
-        return current
-    if field_model.get("has_default", False):
-        return deepcopy(field_model.get("default"))
-    return None
-
-
-def _collect_visibility_recursive(section_model: Dict[str, Any], draft_config: Dict[str, Any], parent_active: bool, visibility: Dict[str, bool]):
-    section_path = _normalize_path(section_model.get("path", ""))
-    section_active = parent_active and evaluate_when(section_model.get("when"), draft_config)
-    if section_path:
-        visibility[section_path] = section_active
-
-    for field in section_model.get("fields", []):
-        field_path = _join_path(section_path, field["key"])
-        visibility[field_path] = section_active and evaluate_when(field.get("when"), draft_config)
-
-    for subsection in section_model.get("subsections", []):
-        _collect_visibility_recursive(subsection, draft_config, parent_active=section_active, visibility=visibility)
 
 
 class FormRenderer(ttk.Frame):
@@ -130,7 +28,7 @@ class FormRenderer(ttk.Frame):
         self._refresh_when_visibility()
         self._initializing = False
 
-    def get_current_config_dict(self) -> Dict[str, Any]:
+    def get_current_config_dict(self):
         return deepcopy(self._draft_config)
 
     def set_on_change(self, callback: Optional[Callable[[Dict[str, Any]], None]]):
@@ -189,7 +87,7 @@ class FormRenderer(ttk.Frame):
 
     def _render_section(self, parent: ttk.Frame, section: Dict[str, Any]):
         section_path = section.get("path", "")
-        title = section_path.split(".")[-1] if section_path else "<root>"
+        title = section_path.split(".")[-1] if section_path else ROOT_PATH
 
         container = ttk.Frame(parent)
         container.pack(fill="x", expand=True, pady=4)
@@ -219,15 +117,10 @@ class FormRenderer(ttk.Frame):
         ttk.Button(header, textvariable=toggle_text, width=3, command=toggle).grid(row=0, column=0, sticky="w")
         ttk.Label(header, text=title).grid(row=0, column=1, sticky="w", padx=(4, 8))
 
-        self._section_views[section_path] = {
-            "container": container,
-            "body": body,
-            "collapsed": collapsed,
-            "toggle_text": toggle_text,
-        }
+        self._section_views[section_path] = {"container": container, "body": body, "collapsed": collapsed, "toggle_text": toggle_text}
 
         for field in section.get("fields", []):
-            field_path = _join_path(section_path, field["key"])
+            field_path = join_path(section_path, field["key"])
             widget = self._create_field_widget(body, field, field_path)
             widget.pack(fill="x", expand=True, pady=2)
             self._widgets[field_path] = widget
@@ -236,30 +129,22 @@ class FormRenderer(ttk.Frame):
             self._render_section(body, subsection)
 
     def _create_field_widget(self, parent: ttk.Frame, field: Dict[str, Any], field_path: str):
-        field_type = field.get("type")
+        field_type = field.get("field_type", field.get("type", "str"))
         label = field["key"]
         description = field.get("description", "")
         required = bool(field.get("required", True))
-        widget_cls, kwargs = self._resolve_widget_type(field_type, field)
+        widget_ctor = self._resolve_widget_type(field_type, field.get("widget_type"))
         on_change = lambda value, p=field_path: self._on_widget_change(p, value)
-        widget = widget_cls(parent, label=label, description=description, required=required, on_change=on_change, **kwargs)
+        widget = widget_ctor(parent, label=label, description=description, required=required, on_change=on_change)
         initial = resolve_display_value(field, self._draft_config, field_path)
         widget.set_value(initial)
         return widget
 
-    def _resolve_widget_type(self, field_type: str, field: Dict[str, Any]):
-        if field_type == "str":
-            return StringFieldWidget, {}
-        if field_type == "int":
-            return IntFieldWidget, {}
-        if field_type == "float":
-            return FloatFieldWidget, {}
-        if field_type == "bool":
-            return BoolFieldWidget, {}
-        if field_type == "enum":
-            constraints = field.get("constraints", {})
-            return EnumFieldWidget, {"choices": list(constraints.get("enum_values", []))}
-        return StringFieldWidget, {}
+    def _resolve_widget_type(self, field_type: str, widget_type: Any):
+        _ = field_type
+        if callable(widget_type):
+            return widget_type
+        return StringFieldWidget
 
     def _on_widget_change(self, field_path: str, value: Any):
         if self._initializing:
@@ -305,8 +190,6 @@ class FormRenderer(ttk.Frame):
             self._on_change(self.get_current_config_dict())
 
     def _refresh_when_visibility(self):
-        # Hidden-value policy: retain hidden values in the in-memory draft, but treat visibility as
-        # advisory UI state and exclude inactive branches from save payload construction.
         visibility = evaluate_visibility_map(self._introspection_model, self._draft_config)
         for path, widget in self._widgets.items():
             is_active = visibility.get(path, True)
@@ -376,7 +259,7 @@ class FormRenderer(ttk.Frame):
             toggle_text.set("[-]")
             body.grid()
 
-    def _resolve_widget_path(self, field_path: str) -> Optional[str]:
+    def _resolve_widget_path(self, field_path: str):
         normalized = _normalize_path(field_path)
         if normalized in self._widgets:
             return normalized
@@ -386,10 +269,7 @@ class FormRenderer(ttk.Frame):
         leaf = normalized.split(".")[-1] if normalized else ""
         if not leaf:
             return None
-        candidates = [
-            widget_path for widget_path in self._widgets
-            if widget_path == leaf or widget_path.endswith(f".{leaf}")
-        ]
+        candidates = [widget_path for widget_path in self._widgets if widget_path == leaf or widget_path.endswith(f".{leaf}")]
         if len(candidates) == 1:
             return candidates[0]
         if leaf in self._widgets:

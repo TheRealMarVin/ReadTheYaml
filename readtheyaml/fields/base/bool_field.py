@@ -1,10 +1,11 @@
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
+from readtheyaml.ui.widgets import BoolFieldWidget
 
 
 class BoolField(Field):
     def __init__(self, *, when=None, **kwargs):
-        super().__init__(when=when, **kwargs)
+        super().__init__(when=when, field_type="bool", **kwargs)
 
     def validate_and_build(self, value):
         if type(value) == str:
@@ -20,8 +21,11 @@ class BoolField(Field):
 
         return value
 
+    def ui_widget_type(self):
+        return BoolFieldWidget
+
     @staticmethod
-    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+    def from_type_string(type_str: str, name: str, factory, **kwargs):
         if type_str in {"Bool", "bool", "BOOL"}:
             return BoolField(name=name, **kwargs)
 

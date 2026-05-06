@@ -1,5 +1,6 @@
 from readtheyaml.schema import Schema
-from readtheyaml.ui.schema_introspect import flatten_field_paths, introspect_schema, introspect_schema_dict
+from readtheyaml.ui.schema_helpers import flatten_field_paths
+from readtheyaml.ui.schema_introspect import introspect_schema_dict
 
 
 def test_introspect_primitive_fields_constraints_and_defaults():
@@ -15,7 +16,7 @@ def test_introspect_primitive_fields_constraints_and_defaults():
     fields = {item["key"]: item for item in ui["fields"]}
 
     assert ui["path"] == "<root>"
-    assert fields["count"]["type"] == "int"
+    assert fields["count"]["field_type"] == "int"
     assert fields["count"]["constraints"] == {"min": 1, "max": 10}
 
     assert fields["service_name"]["required"] is False
@@ -38,8 +39,8 @@ def test_introspect_nested_sections_and_flatten_paths():
         }
     )
 
-    section = introspect_schema(schema)
-    paths = flatten_field_paths(section)
+    ui = introspect_schema_dict(schema)
+    paths = flatten_field_paths(ui)
 
     assert paths == ["<root>.enabled", "<root>.service.host", "<root>.service.port"]
 

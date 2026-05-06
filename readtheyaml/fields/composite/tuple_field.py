@@ -8,7 +8,8 @@ from readtheyaml.utils.type_utils import extract_types_for_composite, split_top_
 
 class TupleField(Field):
     def __init__(self, element_fields, *, when=None, **kwargs):
-        super().__init__(when=when, **kwargs)
+        tuple_inner = ", ".join(slot.field_type() for slot in element_fields)
+        super().__init__(when=when, field_type=f"tuple({tuple_inner})", **kwargs)
 
         self._slots = element_fields
 

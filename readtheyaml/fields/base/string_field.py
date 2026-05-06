@@ -1,6 +1,7 @@
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
+from readtheyaml.ui.widgets import StringFieldWidget
 
 
 class StringField(Field):
@@ -14,7 +15,7 @@ class StringField(Field):
             cast_to_string: If True, automatically convert non-string values to strings.
                            If False, only accept string values.
         """
-        super().__init__(when=when, **kwargs)
+        super().__init__(when=when, field_type="str", **kwargs)
         self.min_length = min_length
         self.max_length = max_length
         self.cast_to_string = cast_to_string
@@ -42,20 +43,19 @@ class StringField(Field):
             raise ValidationError(f"Field '{self.name}': Value must be at most {self.max_length} characters")
         return value
 
-    def doc_constraints(self) -> list[str]:
-        parts: list[str] = []
-        has_max = self.max_length != -1
-        if self.min_length > 0 and has_max:
-            parts.append(f"Length must be between {self.min_length} and {self.max_length} characters")
-            return parts
+    def ui_widget_type(self):
+        return StringFieldWidget
+
+    def constraint_specs(self):
+        constraints = {"length_unit": "characters"}
         if self.min_length > 0:
-            parts.append(f"Length must be at least {self.min_length} characters")
-        if has_max:
-            parts.append(f"Length must be at most {self.max_length} characters")
-        return parts
+            constraints["min_length"] = self.min_length
+        if self.max_length != -1:
+            constraints["max_length"] = self.max_length
+        return constraints
 
     @staticmethod
-    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+    def from_type_string(type_str: str, name: str, factory, **kwargs):
         if type_str in {"str", "Str", "STR"}:
             return StringField(name=name, **kwargs)
 

@@ -9,6 +9,8 @@ from tkinter import filedialog, messagebox, ttk
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.conditions import format_when_human, parse_when
+from readtheyaml.ui.constants import ROOT_PATH
+from readtheyaml.ui.path_helpers import get_path_value, normalize_path, path_exists
 from readtheyaml.schema import Schema
 from readtheyaml.schema_doc import format_field_constraints_for_display
 from readtheyaml.ui.form_renderer import FormRenderer, evaluate_visibility_map
@@ -174,17 +176,17 @@ class EditorApp:
         self._section_meta: Dict[str, Dict[str, Any]] = {}
         self._section_path_to_item: Dict[str, str] = {}
         self.tree.delete(*self.tree.get_children())
-        root_item = self.tree.insert("", "end", text=self.model.get("name") or "<root>", values=("section", ""), open=True)
+        root_item = self.tree.insert("", "end", text=self.model.get("name") or ROOT_PATH, values=("section", ""), open=True)
         self._tree_item_to_path[root_item] = ("section", "")
         self._section_path_to_item[""] = root_item
         self._section_meta[""] = self.model
         self._add_tree_nodes(root_item, self.model)
 
     def _add_tree_nodes(self, parent_item: str, section_model: Dict[str, Any]):
-        section_path = self._normalize_path(section_model.get("path", ""))
+        section_path = normalize_path(section_model.get("path", ""))
         for field in section_model.get("fields", []):
             field_path = f"{section_path}.{field['key']}" if section_path else field["key"]
-            type_name = field.get("type", "")
+            type_name = field.get("field_type", field.get("type", ""))
             node = self.tree.insert(parent_item, "end", text=field["key"], values=(type_name, ""))
             self._tree_item_to_path[node] = ("field", field_path)
             self._field_path_to_item[field_path] = node
@@ -193,8 +195,8 @@ class EditorApp:
             self._field_meta[field_path] = field
 
         for subsection in section_model.get("subsections", []):
-            subsection_path = self._normalize_path(subsection.get("path", ""))
-            label = subsection_path.split(".")[-1] if subsection_path else (subsection.get("name") or "<root>")
+            subsection_path = normalize_path(subsection.get("path", ""))
+            label = subsection_path.split(".")[-1] if subsection_path else (subsection.get("name") or ROOT_PATH)
             node = self.tree.insert(parent_item, "end", text=label, values=("section", ""), open=False)
             self._tree_item_to_path[node] = ("section", subsection_path)
             self._section_path_to_item[subsection_path] = node
@@ -221,9 +223,9 @@ class EditorApp:
         if section is None:
             return
 
-        display_name = section.get("name") or (section_path.split(".")[-1] if section_path else "<root>")
+        display_name = section.get("name") or (section_path.split(".")[-1] if section_path else ROOT_PATH)
         required_text = "required" if bool(section.get("required", True)) else "optional"
-        display_path = section_path or "<root>"
+        display_path = section_path or ROOT_PATH
 
         dialog = tk.Toplevel(self.root)
         dialog.title(f"Section: {display_name}")
@@ -257,14 +259,6 @@ class EditorApp:
         dialog.update_idletasks()
         dialog.geometry(f"720x{dialog.winfo_reqheight()}")
         dialog.wait_window()
-
-    @staticmethod
-    def _normalize_path(path: str) -> str:
-        if not path or path == "<root>":
-            return ""
-        if path.startswith("<root>."):
-            return path[len("<root>."):]
-        return path
 
     def _create_form(self, config_data: Dict[str, Any]):
         for child in self.form_host.winfo_children():
@@ -373,7 +367,7 @@ class EditorApp:
         visibility = evaluate_visibility_map(self.model, draft)
         normalized_errors: Dict[str, str] = {}
         for raw_path, message in self.validation_state.field_errors.items():
-            normalized = self._normalize_path(raw_path)
+            normalized = normalize_path(raw_path)
             resolved = self._resolve_tree_field_path(normalized)
             if resolved is None:
                 normalized_errors[normalized] = message
@@ -391,7 +385,7 @@ class EditorApp:
                 self.tree.item(item_id, tags=("inactive",))
                 continue
 
-            has_value = self._path_exists(draft, field_path)
+            has_value = path_exists(draft, field_path)
             error = normalized_errors.get(field_path, "")
             is_missing_required_error = error.strip().lower() == "missing required field."
 
@@ -422,9 +416,9 @@ class EditorApp:
     def _refresh_tree_values(self):
         draft = self.form_renderer.get_current_config_dict()
         for field_path, item_id in self._field_path_to_item.items():
-            has_value = self._path_exists(draft, field_path)
+            has_value = path_exists(draft, field_path)
             if has_value:
-                value = self._get_path_value(draft, field_path)
+                value = get_path_value(draft, field_path)
                 value_text = self._format_tree_value(value)
             else:
                 has_default, default_value = self._field_defaults.get(field_path, (False, None))
@@ -441,8 +435,8 @@ class EditorApp:
             return
 
         draft = self.form_renderer.get_current_config_dict()
-        has_explicit_value = self._path_exists(draft, field_path)
-        current_value = self._get_path_value(draft, field_path) if has_explicit_value else None
+        has_explicit_value = path_exists(draft, field_path)
+        current_value = get_path_value(draft, field_path) if has_explicit_value else None
         has_default, default_value = self._field_defaults.get(field_path, (False, None))
         start_value = current_value if has_explicit_value else (default_value if has_default else None)
 
@@ -459,7 +453,7 @@ class EditorApp:
 
         required_text = "required" if bool(field.get("required", True)) else "optional"
         ttk.Label(body, text=f"{field_path} ({required_text})").grid(row=0, column=0, sticky="w")
-        ttk.Label(body, text=f"Type: {field.get('type', '')}").grid(row=1, column=0, sticky="w", pady=(2, 0))
+        ttk.Label(body, text=f"Type: {field.get('field_type', field.get('type', ''))}").grid(row=1, column=0, sticky="w", pady=(2, 0))
 
         description = field.get("description", "") or "-"
         ttk.Label(body, text=f"Description: {description}", wraplength=520, justify="left").grid(row=2, column=0, sticky="w", pady=(8, 0))
@@ -483,7 +477,7 @@ class EditorApp:
         input_frame.grid(row=input_row, column=0, sticky="ew", pady=(10, 0))
         input_frame.columnconfigure(0, weight=1)
 
-        field_type = str(field.get("type", "str"))
+        field_type = str(field.get("field_type", field.get("type", "str")))
         required = bool(field.get("required", True))
         constraints = field.get("constraints", {})
         enum_choices = list(constraints.get("enum_values", []))
@@ -592,7 +586,7 @@ class EditorApp:
             return ""
 
     def _format_constraints_text(self, field: Dict[str, Any]) -> str:
-        type_name = str(field.get("type", ""))
+        type_name = str(field.get("field_type", field.get("type", "")))
         constraints = dict(field.get("constraints", {}) or {})
 
         doc_node: Dict[str, Any] = {
@@ -628,16 +622,7 @@ class EditorApp:
     def _format_default_text(field: Dict[str, Any]) -> str:
         if not field.get("has_default", False):
             return "-"
-        return repr(field.get("default"))
-
-    @staticmethod
-    def _get_path_value(data: Dict[str, Any], dotted_path: str) -> Any:
-        current: Any = data
-        for part in dotted_path.split("."):
-            if not isinstance(current, dict) or part not in current:
-                return None
-            current = current[part]
-        return current
+        return EditorApp._format_tree_value(field.get("default"))
 
     @staticmethod
     def _format_tree_value(value: Any) -> str:
@@ -648,17 +633,6 @@ class EditorApp:
         if isinstance(value, (int, float, str)):
             return str(value)
         return serialize_yaml(value).strip().replace("\n", " ")
-
-    @staticmethod
-    def _path_exists(data: Dict[str, Any], dotted_path: str) -> bool:
-        if not dotted_path:
-            return True
-        current: Any = data
-        for part in dotted_path.split("."):
-            if not isinstance(current, dict) or part not in current:
-                return False
-            current = current[part]
-        return True
 
     def _load_config_from_path(self, path: str):
         with open(path, "r", encoding="utf-8", newline="") as handle:

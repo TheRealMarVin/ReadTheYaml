@@ -13,7 +13,7 @@ class ConversionResult:
         self.error = error
 
 
-def normalize_str(value: str, required: bool = False) -> ConversionResult:
+def normalize_str(value: str, required: bool = False):
     if value.strip() == "":
         if required:
             return ConversionResult(value=None, error="Value is required.")
@@ -21,7 +21,7 @@ def normalize_str(value: str, required: bool = False) -> ConversionResult:
     return ConversionResult(value=value)
 
 
-def normalize_int(value: str, required: bool = False) -> ConversionResult:
+def normalize_int(value: str, required: bool = False):
     text = value.strip()
     if text == "":
         if required:
@@ -33,7 +33,7 @@ def normalize_int(value: str, required: bool = False) -> ConversionResult:
         return ConversionResult(value=None, error="Expected an integer.")
 
 
-def normalize_float(value: str, required: bool = False) -> ConversionResult:
+def normalize_float(value: str, required: bool = False):
     text = value.strip()
     if text == "":
         if required:
@@ -45,11 +45,11 @@ def normalize_float(value: str, required: bool = False) -> ConversionResult:
         return ConversionResult(value=None, error="Expected a float.")
 
 
-def normalize_bool(value: bool) -> ConversionResult:
+def normalize_bool(value: bool):
     return ConversionResult(value=bool(value))
 
 
-def normalize_enum(value: str, choices: list[str]) -> ConversionResult:
+def normalize_enum(value: str, choices: list[str]):
     if value not in choices:
         return ConversionResult(value=None, error="Expected one of the allowed values.")
     return ConversionResult(value=value)
@@ -98,7 +98,7 @@ class BaseFieldWidget(ttk.Frame):
     def set_value(self, value: Any):
         raise NotImplementedError
 
-    def get_value(self) -> Any:
+    def get_value(self):
         raise NotImplementedError
 
 
@@ -112,7 +112,7 @@ class StringFieldWidget(BaseFieldWidget):
         self._var.trace_add("write", self._on_var_change)
 
     @staticmethod
-    def convert(raw: str, required: bool = False) -> ConversionResult:
+    def convert(raw: str, required: bool = False):
         return normalize_str(raw, required=required)
 
     def _on_var_change(self, *_: Any):
@@ -127,7 +127,7 @@ class StringFieldWidget(BaseFieldWidget):
     def set_value(self, value: Any):
         self._var.set("" if value is None else str(value))
 
-    def get_value(self) -> str:
+    def get_value(self):
         return self.convert(self._var.get(), required=self.required).value
 
 
@@ -141,7 +141,7 @@ class IntFieldWidget(BaseFieldWidget):
         self._var.trace_add("write", self._on_var_change)
 
     @staticmethod
-    def convert(raw: str, required: bool = False) -> ConversionResult:
+    def convert(raw: str, required: bool = False):
         return normalize_int(raw, required=required)
 
     def _on_var_change(self, *_: Any):
@@ -156,7 +156,7 @@ class IntFieldWidget(BaseFieldWidget):
     def set_value(self, value: Any):
         self._var.set("" if value is None else str(value))
 
-    def get_value(self) -> Optional[int]:
+    def get_value(self):
         result = self.convert(self._var.get(), required=self.required)
         return result.value
 
@@ -171,7 +171,7 @@ class FloatFieldWidget(BaseFieldWidget):
         self._var.trace_add("write", self._on_var_change)
 
     @staticmethod
-    def convert(raw: str, required: bool = False) -> ConversionResult:
+    def convert(raw: str, required: bool = False):
         return normalize_float(raw, required=required)
 
     def _on_var_change(self, *_: Any):
@@ -186,7 +186,7 @@ class FloatFieldWidget(BaseFieldWidget):
     def set_value(self, value: Any):
         self._var.set("" if value is None else str(value))
 
-    def get_value(self) -> Optional[float]:
+    def get_value(self):
         result = self.convert(self._var.get(), required=self.required)
         return result.value
 
@@ -199,7 +199,7 @@ class BoolFieldWidget(BaseFieldWidget):
         self._input_widget.grid(row=0, column=0, sticky="w")
 
     @staticmethod
-    def convert(raw: bool) -> ConversionResult:
+    def convert(raw: bool):
         return normalize_bool(raw)
 
     def _on_toggle(self):
@@ -210,7 +210,7 @@ class BoolFieldWidget(BaseFieldWidget):
     def set_value(self, value: Any):
         self._var.set(bool(value))
 
-    def get_value(self) -> bool:
+    def get_value(self):
         return self.convert(self._var.get()).value
 
 
@@ -224,7 +224,7 @@ class EnumFieldWidget(BaseFieldWidget):
         self.input_frame.columnconfigure(0, weight=1)
 
     @staticmethod
-    def convert(raw: str, choices: list[str]) -> ConversionResult:
+    def convert(raw: str, choices: list[str]):
         return normalize_enum(raw, choices)
 
     def _on_select(self, _: str):
@@ -239,6 +239,6 @@ class EnumFieldWidget(BaseFieldWidget):
     def set_value(self, value: Any):
         self._var.set("" if value is None else str(value))
 
-    def get_value(self) -> Optional[str]:
+    def get_value(self):
         result = self.convert(self._var.get(), self._choices)
         return result.value

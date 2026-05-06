@@ -8,13 +8,13 @@ class AnyField(Field):
         if not required and "default" not in kwargs:
             field_name = kwargs.get("name", "<unknown>")
             raise FormatError(f"Field {field_name} optional AnyField must define an explicit default value.")
-        super().__init__(when=when, **kwargs)
+        super().__init__(when=when, field_type="any", **kwargs)
 
     def validate_and_build(self, value):
         return value
 
     @staticmethod
-    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+    def from_type_string(type_str: str, name: str, factory, **kwargs):
         if type_str in {"any", "Any", "ANY"}:
             return AnyField(name=name, **kwargs)
         return None

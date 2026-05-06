@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional, Union
 from .exceptions.format_error import FormatError
 from .exceptions.validation_error import ValidationError
 from .conditions import parse_when, evaluate_when
+from .ui.constants import ROOT_PATH
 from .fields.field import Field
 from .fields.field_factory import FIELD_FACTORY
 from .fields.field_helpers import get_reserved_keywords_by_loaded_fields
@@ -36,7 +37,7 @@ class Schema:
         self, data: Dict[str, Any], strict: bool = True, _condition_context: Optional[Dict[str, Any]] = None
     ) -> tuple[Dict[str, Any], Dict[str, Any]]:
         if not isinstance(data, dict):
-            raise ValidationError(f"Section '{self.name or '<root>'}' expects a mapping/dictionary, got {type(data).__name__}")
+            raise ValidationError(f"Section '{self.name or ROOT_PATH}' expects a mapping/dictionary, got {type(data).__name__}")
 
         if _condition_context is None:
             _condition_context = self._build_condition_context(data)
@@ -97,7 +98,7 @@ class Schema:
         if strict:
             unexpected_keys = set(data.keys()) - allowed_keys
             if unexpected_keys:
-                raise ValidationError(f"Unexpected key(s) in section '{self.name or '<root>'}': {', '.join(sorted(unexpected_keys))}")
+                raise ValidationError(f"Unexpected key(s) in section '{self.name or ROOT_PATH}': {', '.join(sorted(unexpected_keys))}")
         else:
             for key in data:
                 if key not in allowed_keys:
@@ -168,7 +169,7 @@ class Schema:
         )
         if has_section_when:
             try:
-                when = parse_when(raw_when, f"when for section '{name or '<root>'}'")
+                when = parse_when(raw_when, f"when for section '{name or ROOT_PATH}'")
             except FormatError as e:
                 raise ValidationError(str(e))
 

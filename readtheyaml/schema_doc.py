@@ -94,7 +94,45 @@ def _field_doc_constraints(name: str, node: dict[str, Any]) -> list[str]:
     except Exception:
         return []
 
-    return field.doc_constraints()
+    return _constraint_specs_to_doc_lines(field.constraint_specs())
+
+
+def _constraint_specs_to_doc_lines(specs: dict[str, Any], *, each_item: bool = False) -> list[str]:
+    lines: list[str] = []
+    prefix = "Each item: " if each_item else ""
+
+    min_value = specs.get("min")
+    max_value = specs.get("max")
+    min_length = specs.get("min_length")
+    max_length = specs.get("max_length")
+    length_unit = specs.get("length_unit", "characters")
+    enum_values = specs.get("enum_values")
+    item_constraints = specs.get("item_constraints")
+
+    if min_value is not None and max_value is not None:
+        lines.append(f"{prefix}Must be between {min_value} and {max_value}")
+    else:
+        if min_value is not None:
+            lines.append(f"{prefix}Must be at least {min_value}")
+        if max_value is not None:
+            lines.append(f"{prefix}Must be at most {max_value}")
+
+    if min_length is not None and max_length is not None:
+        lines.append(f"{prefix}Length must be between {min_length} and {max_length} {length_unit}")
+    else:
+        if min_length is not None:
+            lines.append(f"{prefix}Length must be at least {min_length} {length_unit}")
+        if max_length is not None:
+            lines.append(f"{prefix}Length must be at most {max_length} {length_unit}")
+
+    if isinstance(enum_values, list) and enum_values:
+        values = ", ".join(repr(choice) for choice in enum_values)
+        lines.append(f"{prefix}Allowed values: {values}")
+
+    if isinstance(item_constraints, dict) and item_constraints:
+        lines.extend(_constraint_specs_to_doc_lines(item_constraints, each_item=True))
+
+    return lines
 
 
 def format_field_constraints_for_display(name: str, node: dict[str, Any], *, hide_allowed_values: bool = False) -> str:

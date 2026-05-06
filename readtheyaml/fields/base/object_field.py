@@ -11,7 +11,8 @@ class ObjectField(Field):
     _sentinel = "_type_"  # key in config used to specify class name if not fixed
 
     def __init__(self, factory, class_path=None, *, when=None, **kwargs):
-        super().__init__(when=when, **kwargs)
+        object_field_type = f"object({class_path})" if class_path else "object"
+        super().__init__(when=when, field_type=object_field_type, **kwargs)
         self.class_path = class_path
         self.factory = factory
         self.subfields = {}
@@ -117,7 +118,7 @@ class ObjectField(Field):
             return False
 
     @staticmethod
-    def from_type_string(type_str: str, name: str, factory, **kwargs) -> "Field":
+    def from_type_string(type_str: str, name: str, factory, **kwargs):
         object_type = extract_types_for_composite(type_str=type_str, type_name="object")
         if object_type is not None:
             return ObjectField(name=name, factory=factory, class_path=object_type, **kwargs)

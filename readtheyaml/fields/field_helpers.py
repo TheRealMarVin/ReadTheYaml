@@ -28,7 +28,7 @@ def get_reserved_keywords_by_loaded_fields():
     return reserved_by_class
 
 
-def normalize_for_doc_dump(value: Any) -> Any:
+def normalize_for_doc_dump(value: Any):
     if isinstance(value, Enum):
         return value.value
     if isinstance(value, dict):
