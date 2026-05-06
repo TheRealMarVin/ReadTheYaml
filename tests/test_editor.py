@@ -121,3 +121,27 @@ def test_convert_tree_input_value_parses_and_validates_tuple_int():
     assert ok is True
     assert error == ""
     assert value == (1, 2)
+
+
+def test_convert_tree_input_value_parses_any_list_value():
+    field = {
+        "field_type": "any",
+        "required": False,
+        "constraints": {},
+    }
+    ok, value, error = EditorApp._convert_tree_input_value(field, "[1, 2, 3]")
+    assert ok is True
+    assert error == ""
+    assert value == [1, 2, 3]
+
+
+def test_convert_tree_input_value_parses_union_tuple_literal():
+    field = {
+        "field_type": "union(tuple(int, int), str)",
+        "required": False,
+        "constraints": {},
+    }
+    ok, value, error = EditorApp._convert_tree_input_value(field, "(9, 17)")
+    assert ok is True
+    assert error == ""
+    assert value == (9, 17)

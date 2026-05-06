@@ -1,4 +1,5 @@
 import argparse
+import ast
 import re
 import sys
 from pathlib import Path
@@ -260,7 +261,7 @@ class EditorApp:
         ttk.Button(button_bar, text="OK", command=dialog.destroy).pack(side="right")
 
         dialog.update_idletasks()
-        dialog.geometry(f"720x{dialog.winfo_reqheight()}")
+        dialog.minsize(720, dialog.winfo_reqheight())
         dialog.wait_window()
 
     def _create_form(self, config_data: Dict[str, Any]):
@@ -560,7 +561,7 @@ class EditorApp:
 
         control.focus_set()
         dialog.update_idletasks()
-        dialog.geometry(f"720x{dialog.winfo_reqheight()}")
+        dialog.minsize(720, dialog.winfo_reqheight())
         dialog.wait_window()
 
     @staticmethod
@@ -655,6 +656,27 @@ class EditorApp:
                     parsed_value = tuple(candidate)
                 else:
                     parsed_value = raw_text
+        elif type_name == "any" or type_name.startswith("union("):
+            try:
+                parsed_value = yaml.safe_load(raw_text)
+            except yaml.YAMLError:
+                parsed_value = raw_text
+
+            # Keep tuple-literal ergonomics consistent across editors.
+            if (
+                isinstance(parsed_value, str)
+                and text_value.startswith("(")
+                and text_value.endswith(")")
+            ):
+                try:
+                    literal = ast.literal_eval(text_value)
+                    if isinstance(literal, tuple):
+                        parsed_value = literal
+                except (ValueError, SyntaxError):
+                    pass
+            # Avoid rebuilding union/any validators from type strings in the editor.
+            # Full schema validation still runs through ValidationController.
+            return True, parsed_value, ""
 
         field_kwargs: Dict[str, Any] = {
             "description": "",
