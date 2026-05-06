@@ -1,4 +1,5 @@
 import argparse
+import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
@@ -674,8 +675,15 @@ class EditorApp:
             value = validator.validate_and_build(parsed_value)
             return True, value, ""
         except (ValidationError, ValueError, TypeError) as exc:
-            message = str(exc).removeprefix("Field '__ui__': ").strip()
+            message = EditorApp._clean_ui_validation_error(str(exc))
             return False, None, message or "Invalid value."
+
+    @staticmethod
+    def _clean_ui_validation_error(message: str) -> str:
+        cleaned = message.strip()
+        cleaned = re.sub(r"Field '__ui__':\s*", "", cleaned)
+        cleaned = re.sub(r"Field 'item':\s*", "", cleaned)
+        return cleaned.strip()
 
     def _load_config_from_path(self, path: str):
         with open(path, "r", encoding="utf-8", newline="") as handle:
