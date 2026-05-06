@@ -41,11 +41,7 @@ class NumericalField(Field):
         return value
 
     def ui_widget_type(self):
-        from readtheyaml.ui.widgets import FloatFieldWidget, IntFieldWidget, StringFieldWidget
-        if self.value_type is int:
-            return IntFieldWidget
-        if self.value_type is float:
-            return FloatFieldWidget
+        from readtheyaml.ui.widgets import StringFieldWidget
         return StringFieldWidget
 
     def constraint_specs(self):

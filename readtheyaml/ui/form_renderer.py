@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, Optional
 
 from readtheyaml.ui.form_helpers import (_normalize_path, evaluate_visibility_map, join_path, project_known_config, resolve_display_value, set_value_at_path)
 from readtheyaml.ui.constants import ROOT_PATH
-from readtheyaml.ui.widgets import INVALID_INPUT, BoolFieldWidget, EnumFieldWidget, FloatFieldWidget, IntFieldWidget, StringFieldWidget
+from readtheyaml.ui.widgets import INVALID_INPUT, StringFieldWidget
 
 
 class FormRenderer(ttk.Frame):

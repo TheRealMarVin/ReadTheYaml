@@ -17,7 +17,7 @@ from readtheyaml.ui.form_renderer import FormRenderer, evaluate_visibility_map
 from readtheyaml.ui.save_helpers import SAVE_MODE_EXPORT, SAVE_MODE_FULL, can_save, get_save_payload, serialize_yaml
 from readtheyaml.ui.schema_introspect import introspect_schema_dict
 from readtheyaml.ui.validation import ValidationController, ValidationState, build_fix_hints
-from readtheyaml.ui.widgets import EnumFieldWidget, FloatFieldWidget, IntFieldWidget, StringFieldWidget
+from readtheyaml.ui.widgets import EnumFieldWidget, StringFieldWidget
 
 
 def _parse_bool(value: str) -> bool:
