@@ -201,3 +201,56 @@ def test_schema_can_declare_base_object_type_and_build_derived_instance():
     assert isinstance(built["pet"], Dog)
     assert built["pet"].name == "Max"
     assert built["pet"].breed == "Husky"
+
+
+def test_object_widget_type_compatibility_accepts_subclass():
+    ok, error = ObjectFieldWidget._is_compatible_type_with_base(
+        "tests.fields.base.test_object_field.Dog",
+        "tests.fields.base.test_object_field.Animal",
+    )
+    assert ok is True
+    assert error == ""
+
+
+def test_object_widget_type_compatibility_rejects_non_subclass():
+    ok, error = ObjectFieldWidget._is_compatible_type_with_base(
+        "tests.fields.base.test_object_field.Car",
+        "tests.fields.base.test_object_field.Animal",
+    )
+    assert ok is False
+    assert "not a subclass" in error
+
+
+def test_object_widget_get_value_includes_type_sentinel_for_overridden_type():
+    widget = ObjectFieldWidget.__new__(ObjectFieldWidget)
+    widget._class_path = "tests.fields.base.test_object_field.Animal"
+    widget._selected_class_path = "tests.fields.base.test_object_field.Dog"
+    widget._parameters = [{"name": "name", "required": True}, {"name": "breed", "required": False}]
+    widget._values = {"name": "Rex", "breed": "Labrador"}
+
+    value = widget.get_value()
+    assert isinstance(value, dict)
+    assert value["_type_"] == "tests.fields.base.test_object_field.Dog"
+    assert value["name"] == "Rex"
+
+
+def test_object_widget_get_value_omits_type_sentinel_for_base_type():
+    widget = ObjectFieldWidget.__new__(ObjectFieldWidget)
+    widget._class_path = "tests.fields.base.test_object_field.Animal"
+    widget._selected_class_path = "tests.fields.base.test_object_field.Animal"
+    widget._parameters = [{"name": "name", "required": True}]
+    widget._values = {"name": "Rex"}
+
+    value = widget.get_value()
+    assert isinstance(value, dict)
+    assert "_type_" not in value
+
+
+def test_object_widget_inspection_includes_forwarded_parent_required_kwargs():
+    params = ObjectFieldWidget.inspect_constructor_parameters("readtheyaml.fields.base.numerical_field.NumericalField")
+    by_name = {str(param["name"]): param for param in params}
+
+    assert "name" in by_name
+    assert "description" in by_name
+    assert by_name["name"]["required"] is True
+    assert by_name["description"]["required"] is True

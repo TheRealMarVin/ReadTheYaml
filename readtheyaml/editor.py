@@ -531,8 +531,17 @@ class EditorApp:
             validate_enum()
         elif field_type.startswith("object"):
             constraints_model = field.get("constraints", {}) or {}
-            class_path = constraints_model.get("object_class_path") or self._extract_object_class_path_from_field_type(field_type)
+            base_class_path = constraints_model.get("object_class_path") or self._extract_object_class_path_from_field_type(field_type)
+            class_path = base_class_path or ""
             params = ObjectFieldWidget.inspect_constructor_parameters(class_path) if class_path else []
+
+            class_row = ttk.Frame(input_frame)
+            class_row.grid(row=0, column=0, sticky="ew")
+            class_row.columnconfigure(1, weight=1)
+            ttk.Label(class_row, text="Class").grid(row=0, column=0, sticky="w")
+            class_var = tk.StringVar(value=class_path)
+            class_entry = ttk.Entry(class_row, textvariable=class_var)
+            class_entry.grid(row=0, column=1, sticky="ew", padx=(8, 0))
 
             tree = ttk.Treeview(input_frame, columns=("type", "value"), show="tree headings", height=max(3, min(10, len(params) + 1)))
             tree.heading("#0", text="Parameter", anchor="w")
@@ -541,11 +550,11 @@ class EditorApp:
             tree.column("#0", width=180, stretch=True)
             tree.column("type", width=140, stretch=False)
             tree.column("value", width=180, stretch=True)
-            tree.grid(row=0, column=0, sticky="nsew")
-            input_frame.rowconfigure(0, weight=1)
+            tree.grid(row=1, column=0, sticky="nsew", pady=(8, 0))
+            input_frame.rowconfigure(1, weight=1)
 
             editor_row = ttk.Frame(input_frame)
-            editor_row.grid(row=1, column=0, sticky="ew", pady=(8, 0))
+            editor_row.grid(row=2, column=0, sticky="ew", pady=(8, 0))
             editor_row.columnconfigure(1, weight=1)
             ttk.Label(editor_row, text="Selected value").grid(row=0, column=0, sticky="w")
             selected_var = tk.StringVar(value="")
@@ -553,6 +562,12 @@ class EditorApp:
             selected_entry.grid(row=0, column=1, sticky="ew", padx=(8, 0))
 
             object_values = dict(start_value) if isinstance(start_value, dict) else {}
+            raw_selected_type = str(object_values.get("_type_", "")).strip() if isinstance(object_values, dict) else ""
+            if "_type_" in object_values:
+                object_values.pop("_type_", None)
+            if raw_selected_type:
+                class_var.set(raw_selected_type)
+                class_path = raw_selected_type
             known_param_names = {str(p.get("name", "")) for p in params}
             extra_kwargs = {k: v for k, v in object_values.items() if k not in known_param_names}
             for key in list(extra_kwargs.keys()):
@@ -572,13 +587,49 @@ class EditorApp:
                     tree.insert("", "end", iid=name, text=display_name, values=(type_display, value_display))
 
             def _validate_object():
+                selected_class_path = class_var.get().strip()
+                if selected_class_path == "":
+                    set_validation(False, "Class path is required.", None)
+                    return
                 merged = dict(extra_kwargs)
                 merged.update(object_values)
+                if selected_class_path != (base_class_path or ""):
+                    merged["_type_"] = selected_class_path
                 ok, parsed, error = self._convert_object_tree_value(field, merged)
                 if ok:
                     set_validation(True, "", parsed)
                 else:
                     set_validation(False, error or "Invalid object value.", None)
+
+            def _on_class_change(*_: Any):
+                nonlocal params, known_param_names
+                selected_class_path = class_var.get().strip()
+                if selected_class_path == "":
+                    params = []
+                    known_param_names = set()
+                    object_values.clear()
+                    _refresh_object_tree()
+                    set_validation(False, "Class path is required.", None)
+                    return
+
+                compatible, error = ObjectFieldWidget._is_compatible_type_with_base(selected_class_path, base_class_path)
+                if not compatible:
+                    set_validation(False, error or "Invalid class path.", None)
+                    return
+
+                params = ObjectFieldWidget.inspect_constructor_parameters(selected_class_path)
+                known_param_names = {str(p.get("name", "")) for p in params}
+                object_values_keys = list(object_values.keys())
+                for key in object_values_keys:
+                    if key not in known_param_names:
+                        extra_kwargs[key] = object_values.pop(key)
+
+                extra_keys = [k for k in list(extra_kwargs.keys()) if k in known_param_names]
+                for key in extra_keys:
+                    object_values[key] = extra_kwargs.pop(key)
+
+                _refresh_object_tree()
+                _validate_object()
 
             def _on_tree_select(*_: Any):
                 selected = tree.selection()
@@ -627,11 +678,12 @@ class EditorApp:
 
             tree.bind("<<TreeviewSelect>>", _on_tree_select)
             selected_var.trace_add("write", _on_selected_change)
+            class_var.trace_add("write", _on_class_change)
             _refresh_object_tree()
 
-            ttk.Label(input_frame, text="Extra kwargs (YAML mapping)").grid(row=2, column=0, sticky="w", pady=(8, 0))
+            ttk.Label(input_frame, text="Extra kwargs (YAML mapping)").grid(row=3, column=0, sticky="w", pady=(8, 0))
             kwargs_text = tk.Text(input_frame, height=4, wrap="none")
-            kwargs_text.grid(row=3, column=0, sticky="ew")
+            kwargs_text.grid(row=4, column=0, sticky="ew")
             if extra_kwargs:
                 kwargs_text.insert("1.0", serialize_yaml(extra_kwargs))
 
@@ -661,7 +713,7 @@ class EditorApp:
             kwargs_text.bind("<KeyRelease>", _on_kwargs_change)
             kwargs_text.bind("<FocusOut>", _on_kwargs_change)
             _validate_object()
-            control = selected_entry
+            control = class_entry
         else:
             var = tk.StringVar(value="" if start_value is None else str(start_value))
             control = ttk.Entry(input_frame, textvariable=var)
@@ -699,10 +751,7 @@ class EditorApp:
             result = EnumFieldWidget.convert(var.get(), enum_choices)
             set_validation(result.error is None, result.error or "", result.value if result.error is None else None)
         elif field_type.startswith("object"):
-            merged = dict(extra_kwargs)
-            merged.update(object_values)
-            ok, parsed_value, error = self._convert_object_tree_value(field, merged)
-            set_validation(ok, error or "", parsed_value if ok else None)
+            _validate_object()
         else:
             ok, parsed_value, error = self._convert_tree_input_value(field, var.get())
             set_validation(ok, error or "", parsed_value if ok else None)
