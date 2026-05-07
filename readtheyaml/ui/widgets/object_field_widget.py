@@ -30,7 +30,6 @@ class ObjectFieldWidget(BaseFieldWidget):
         self._tree.heading("#0", text="Parameter", anchor="w")
         self._tree.heading("type", text="Type", anchor="w")
         self._tree.heading("value", text="Value", anchor="w")
-        # TODO Do we need to do this all the time or only when we can't extract it?
         self._tree.column("#0", width=160, stretch=True)
         self._tree.column("type", width=130, stretch=False)
         self._tree.column("value", width=180, stretch=True)
@@ -224,7 +223,6 @@ class ObjectFieldWidget(BaseFieldWidget):
                     return name
             return "any"
         origin_name = getattr(origin, "__name__", str(origin))
-        # TODO I feel we already have something like that in the given fields
         if origin_name == "Union":
             joined = ", ".join(ObjectFieldWidget._type_name(arg) for arg in args)
             return f"union({joined})"
