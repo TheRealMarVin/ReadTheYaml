@@ -30,6 +30,7 @@ class ObjectFieldWidget(BaseFieldWidget):
         self._tree.heading("#0", text="Parameter", anchor="w")
         self._tree.heading("type", text="Type", anchor="w")
         self._tree.heading("value", text="Value", anchor="w")
+        # TODO Do we need to do this all the time or only when we can't extract it?
         self._tree.column("#0", width=160, stretch=True)
         self._tree.column("type", width=130, stretch=False)
         self._tree.column("value", width=180, stretch=True)
@@ -94,13 +95,7 @@ class ObjectFieldWidget(BaseFieldWidget):
             return
 
         try:
-            validator = FIELD_FACTORY.create_field(
-                type_name,
-                "__ui_object__",
-                description="",
-                required=required,
-                ignore_post=True,
-            )
+            validator = FIELD_FACTORY.create_field(type_name, "__ui_object__", description="", required=required, ignore_post=True)
             converted = validator.validate_and_build(raw)
         except (ValidationError, ValueError, TypeError) as exc:
             self.mark_invalid(str(exc).replace("Field '__ui_object__': ", "").strip())
@@ -113,10 +108,10 @@ class ObjectFieldWidget(BaseFieldWidget):
         self._emit_change(self.get_value())
 
     def set_value(self, value: Any):
+        self._values = {}
         if isinstance(value, dict):
             self._values = {str(k): v for k, v in value.items()}
-        else:
-            self._values = {}
+
         self._build_rows()
 
     def get_value(self):
@@ -177,24 +172,17 @@ class ObjectFieldWidget(BaseFieldWidget):
                     "required": not has_default,
                     "has_default": has_default,
                     "default": parameter.default if has_default else None,
-                    "type": type_name,
+                    "type": type_name
                 }
             )
         return parameters
 
     @staticmethod
     def _is_generic_signature(signature: inspect.Signature) -> bool:
-        parameters = [
-            parameter
-            for parameter in signature.parameters.values()
-            if parameter.name not in {"self", "cls"}
-        ]
+        parameters = [parameter for parameter in signature.parameters.values() if parameter.name not in {"self", "cls"}]
         if not parameters:
             return False
-        return all(
-            parameter.kind in {inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD}
-            for parameter in parameters
-        )
+        return all(parameter.kind in {inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD} for parameter in parameters)
 
     @staticmethod
     def _get_best_constructor_signature(cls: type[Any]) -> tuple[inspect.Signature | None, Any]:
@@ -231,16 +219,12 @@ class ObjectFieldWidget(BaseFieldWidget):
         if origin is None:
             if hasattr(type_hint, "__name__"):
                 name = str(type_hint.__name__)
-                if name == "str":
-                    return "str"
-                if name == "int":
-                    return "int"
-                if name == "float":
-                    return "float"
-                if name == "bool":
-                    return "bool"
+                possible_types = ["str", "int", "float", "bool"]
+                if name in possible_types:
+                    return name
             return "any"
         origin_name = getattr(origin, "__name__", str(origin))
+        # TODO I feel we already have something like that in the given fields
         if origin_name == "Union":
             joined = ", ".join(ObjectFieldWidget._type_name(arg) for arg in args)
             return f"union({joined})"
