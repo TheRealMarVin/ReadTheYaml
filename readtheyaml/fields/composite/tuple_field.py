@@ -1,6 +1,7 @@
 import ast
 import copy
 
+from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
 from readtheyaml.utils.type_utils import extract_types_for_composite, split_top_level
@@ -8,6 +9,8 @@ from readtheyaml.utils.type_utils import extract_types_for_composite, split_top_
 
 class TupleField(Field):
     def __init__(self, element_fields, *, when=None, **kwargs):
+        if not element_fields or any(not isinstance(slot, Field) for slot in element_fields):
+            raise FormatError("TupleField element_fields must be a non-empty list of Field instances.")
         tuple_inner = ", ".join(slot.field_type() for slot in element_fields)
         super().__init__(when=when, field_type=f"tuple({tuple_inner})", **kwargs)
 
@@ -40,8 +43,7 @@ class TupleField(Field):
 
         for idx, (v, field) in enumerate(zip(value, self._slots)):
             try:
-                field_instance = self._make_partial_field(field, "item")
-                field_instance.validate_and_build(v)
+                field.validate_and_build(v)
             except ValidationError as err:
                 raise ValidationError(f"Field '{self.name}': Tuple element {idx} invalid: {err}")
 

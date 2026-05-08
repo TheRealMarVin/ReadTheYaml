@@ -31,8 +31,11 @@ class UnionField(Field):
             field_types.append(field_type)
 
             if field_type is StringField:
-                partial_args = get_partial_keywords(option)
-                cast_to_string = partial_args.get("cast_to_string", False)
+                if isinstance(option, StringField):
+                    cast_to_string = bool(option.cast_to_string)
+                else:
+                    partial_args = get_partial_keywords(option)
+                    cast_to_string = partial_args.get("cast_to_string", False)
                 if cast_to_string:
                     raise FormatError(
                         f"Field '{self.name}': StringField with cast_to_string=True is not allowed in UnionField. "
