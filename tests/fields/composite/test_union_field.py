@@ -1,4 +1,4 @@
-from functools import partial
+
 
 import pytest
 
@@ -12,6 +12,12 @@ from readtheyaml.fields.base.string_field import StringField
 from readtheyaml.fields.field_factory import FIELD_FACTORY
 from readtheyaml.fields.composite.tuple_field import TupleField
 from readtheyaml.fields.composite.union_field import UnionField
+
+
+def make_field(field_cls, **kwargs):
+    kwargs.setdefault("name", "item")
+    kwargs.setdefault("description", "item")
+    return field_cls(**kwargs)
 
 
 class UnionPerson:
@@ -54,8 +60,8 @@ def test_union_field_initialization():
         description="Test union field",
         required=True,
         options=[
-            partial(StringField, name="string_option", description="String option", cast_to_string=False),
-            partial(NumericalField, value_type=int, name="int_option", description="Integer option")
+            make_field(StringField, name="string_option", description="String option", cast_to_string=False),
+            make_field(NumericalField, value_type=int, name="int_option", description="Integer option")
         ]
     )
     assert field.name == "test_union"
@@ -71,8 +77,8 @@ def test_union_field_initialization_no_cast_in_string():
         description="Test union field",
         required=True,
         options=[
-            partial(StringField, name="string_option", description="String option"),
-            partial(NumericalField, value_type=int, name="int_option", description="Integer option")
+            make_field(StringField, name="string_option", description="String option"),
+            make_field(NumericalField, value_type=int, name="int_option", description="Integer option")
         ]
     )
     assert field.name == "test_union"
@@ -88,8 +94,8 @@ def test_union_field_initialization_no_name():
         description="Test union field",
         required=True,
         options=[
-            partial(StringField),
-            partial(NumericalField, value_type=int)
+            make_field(StringField),
+            make_field(NumericalField, value_type=int)
         ]
     )
     assert field.name == "test_union"
@@ -104,8 +110,8 @@ def test_union_field_rejects_string_field_with_cast_to_string_true():
             name="test_union",
             description="Test invalid union field",
             options=[
-                partial(StringField, name="string_option", description="String option", cast_to_string=True),
-                partial(NumericalField, value_type=int, name="int_option", description="Integer option")
+                make_field(StringField, name="string_option", description="String option", cast_to_string=True),
+                make_field(NumericalField, value_type=int, name="int_option", description="Integer option")
             ]
         )
 
@@ -116,8 +122,8 @@ def test_union_field_accepts_string_field_with_cast_to_string_false():
         name="test_union",
         description="Test valid union field",
         options=[
-            partial(StringField, cast_to_string=False),
-            partial(NumericalField, value_type=int)
+            make_field(StringField, cast_to_string=False),
+            make_field(NumericalField, value_type=int)
         ]
     )
     assert len(field._options) == 2
@@ -130,8 +136,8 @@ def test_union_field_rejects_duplicate_list_field_types():
             name="test_union",
             description="Test duplicate list field types",
             options=[
-                partial(ListField, item_field=partial(NumericalField, value_type=int)),
-                partial(ListField, item_field=partial(StringField, cast_to_string=False))
+                make_field(ListField, item_field=make_field(NumericalField, value_type=int)),
+                make_field(ListField, item_field=make_field(StringField, cast_to_string=False))
             ]
         )
 
@@ -143,8 +149,8 @@ def test_union_field_rejects_duplicate_tuple_field_types():
             name="test_union",
             description="Test duplicate tuple field types",
             options=[
-                partial(TupleField, element_fields=[partial(StringField, cast_to_string=False)]),
-                partial(TupleField, element_fields=[partial(NumericalField, value_type=int)])
+                make_field(TupleField, element_fields=[make_field(StringField, cast_to_string=False)]),
+                make_field(TupleField, element_fields=[make_field(NumericalField, value_type=int)])
             ]
         )
 
@@ -156,12 +162,12 @@ def test_union_field_rejects_duplicate_object_field_types():
             name="test_union",
             description="Test duplicate object field types",
             options=[
-                partial(
+                make_field(
                     ObjectField,
                     factory=FIELD_FACTORY,
                     class_path="tests.fields.composite.test_union_field.UnionPerson"
                 ),
-                partial(
+                make_field(
                     ObjectField,
                     factory=FIELD_FACTORY,
                     class_path="tests.fields.composite.test_union_field.UnionPet"
@@ -177,9 +183,9 @@ def test_union_field_rejects_duplicate_field_types():
             name="test_union",
             description="Test duplicate field types",
             options=[
-                partial(NumericalField, value_type=int, name="int1", description="First int"),
-                partial(NumericalField, value_type=float, name="float1", description="Float field"),
-                partial(NumericalField, value_type=int, name="int2", description="Second int")
+                make_field(NumericalField, value_type=int, name="int1", description="First int"),
+                make_field(NumericalField, value_type=float, name="float1", description="Float field"),
+                make_field(NumericalField, value_type=int, name="int2", description="Second int")
             ]
         )
 
@@ -191,9 +197,9 @@ def test_duplicate_check_ignores_different_parameters():
             name="test_union",
             description="Test duplicate field types with different parameters",
             options=[
-                partial(StringField, name="str1", description="First string", min_length=1),
-                partial(NumericalField, value_type=int, name="int1", description="Integer field"),
-                partial(StringField, name="str2", description="Second string", max_length=10)  # Still a duplicate
+                make_field(StringField, name="str1", description="First string", min_length=1),
+                make_field(NumericalField, value_type=int, name="int1", description="Integer field"),
+                make_field(StringField, name="str2", description="Second string", max_length=10)  # Still a duplicate
             ]
         )
 
@@ -204,8 +210,8 @@ def create_simple_union_field():
         name="test_union",
         description="Test union field",
         options=[
-            partial(StringField),
-            partial(NumericalField, value_type=int)
+            make_field(StringField),
+            make_field(NumericalField, value_type=int)
         ]
     )
 
@@ -234,8 +240,8 @@ def create_test_union_field():
         name="test_union",
         description="Test union field",
         options=[
-            partial(StringField, min_length=3),
-            partial(NumericalField, value_type=int, min_value=0)
+            make_field(StringField, min_length=3),
+            make_field(NumericalField, value_type=int, min_value=0)
         ]
     )
 
@@ -267,11 +273,11 @@ def create_complex_union_field():
         name="complex_union",
         description="Union with complex types",
         options=[
-            partial(ListField, item_field=partial(NumericalField, value_type=int)),
-            partial(TupleField,
+            make_field(ListField, item_field=make_field(NumericalField, value_type=int)),
+            make_field(TupleField,
                     element_fields=[
-                        partial(StringField, name="name", description="Name"),
-                        partial(NumericalField, value_type=int, name="age", description="Age")
+                        make_field(StringField, name="name", description="Name"),
+                        make_field(NumericalField, value_type=int, name="age", description="Age")
                     ])
         ]
     )
@@ -283,9 +289,9 @@ def create_collection_and_object_union_field():
         name="mixed_complex_union",
         description="Union with list, tuple, and object options",
         options=[
-            partial(ListField, item_field=partial(NumericalField, value_type=int)),
-            partial(TupleField, element_fields=[partial(StringField, cast_to_string=False), partial(NumericalField, value_type=int)]),
-            partial(ObjectField, factory=FIELD_FACTORY, class_path="tests.fields.composite.test_union_field.UnionPerson")
+            make_field(ListField, item_field=make_field(NumericalField, value_type=int)),
+            make_field(TupleField, element_fields=[make_field(StringField, cast_to_string=False), make_field(NumericalField, value_type=int)]),
+            make_field(ObjectField, factory=FIELD_FACTORY, class_path="tests.fields.composite.test_union_field.UnionPerson")
         ]
     )
 
@@ -335,7 +341,7 @@ def test_union_field_required_rejects_none():
         name="test_required",
         description="Test required union",
         required=True,
-        options=[partial(StringField)]
+        options=[make_field(StringField)]
     )
     with pytest.raises(ValidationError):
         field.validate_and_build(None)
@@ -348,7 +354,7 @@ def test_union_field_optional_rejects_none_without_default():
         description="Test optional union",
         required=False,
         default="",
-        options=[partial(StringField)]
+        options=[make_field(StringField)]
     )
     with pytest.raises(ValidationError):
         field.validate_and_build(None)
@@ -360,8 +366,8 @@ def test_union_field_error_messages():
         name="test_errors",
         description="Test error messages",
         options=[
-            partial(StringField, min_length=3),
-            partial(NumericalField, value_type=int, min_value=0)
+            make_field(StringField, min_length=3),
+            make_field(NumericalField, value_type=int, min_value=0)
         ]
     )
 
@@ -375,7 +381,7 @@ def test_union_field_accepts_various_object_types_with_dynamic_object_option():
         name="object_union",
         description="Union with dynamic object option",
         options=[
-            partial(ObjectField, factory=FIELD_FACTORY),
+            make_field(ObjectField, factory=FIELD_FACTORY),
         ]
     )
 
@@ -399,8 +405,8 @@ def test_union_field_accepts_dynamic_object_types_and_none():
         name="object_or_none_union",
         description="Union with dynamic object type and none",
         options=[
-            partial(ObjectField, factory=FIELD_FACTORY),
-            partial(NoneField),
+            make_field(ObjectField, factory=FIELD_FACTORY),
+            make_field(NoneField),
         ]
     )
 
@@ -431,12 +437,12 @@ def test_union_field_accepts_object_and_none():
         name="person_or_none_union",
         description="Union with person object and none",
         options=[
-            partial(
+            make_field(
                 ObjectField,
                 factory=FIELD_FACTORY,
                 class_path="tests.fields.composite.test_union_field.UnionPerson"
             ),
-            partial(NoneField),
+            make_field(NoneField),
         ]
     )
 
@@ -455,7 +461,7 @@ def test_union_field_accepts_object_deriving_from_base_class():
         name="animal_union",
         description="Union with base animal object",
         options=[
-            partial(
+            make_field(
                 ObjectField,
                 factory=FIELD_FACTORY,
                 class_path="tests.fields.composite.test_union_field.BaseUnionAnimal"
@@ -484,7 +490,7 @@ def test_union_field_rejects_non_subclass_for_base_class_object_option():
         name="animal_union",
         description="Union with base animal object",
         options=[
-            partial(
+            make_field(
                 ObjectField,
                 factory=FIELD_FACTORY,
                 class_path="tests.fields.composite.test_union_field.BaseUnionAnimal"
