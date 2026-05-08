@@ -122,8 +122,8 @@ class EditorApp:
         ttk.Button(self.toolbar, text="Load config", command=self._on_load_config).pack(side="left", padx=(0, 6))
         self.save_button = ttk.Button(self.toolbar, text="Save", command=self._on_save)
         self.save_button.pack(side="left", padx=(0, 6))
-        self.save_as_button = ttk.Button(self.toolbar, text="Save As", command=self._on_save_as)
-        self.save_as_button.pack(side="left")
+        self.save_full_button = ttk.Button(self.toolbar, text="Save Full", command=self._on_save_full)
+        self.save_full_button.pack(side="left")
 
         ttk.Label(self.left, text="Schema").pack(anchor="w", pady=(0, 6))
         self.tree = ttk.Treeview(self.left, columns=("kind", "value"), show="tree headings", selectmode="browse")
@@ -312,13 +312,19 @@ class EditorApp:
                 self.validation_state.data_with_default,
                 schema_model=self.model,
             )
-            export_yaml = serialize_yaml(export_payload)
-            full_yaml = serialize_yaml(full_payload)
+            export_yaml = self._serialize_preview_yaml(export_payload)
+            full_yaml = self._serialize_preview_yaml(full_payload)
         else:
-            export_yaml = serialize_yaml(draft)
+            export_yaml = self._serialize_preview_yaml(draft)
             full_yaml = ""
         self._set_text(self.export_text, export_yaml)
         self._set_text(self.full_text, full_yaml)
+
+    @staticmethod
+    def _serialize_preview_yaml(payload: Any) -> str:
+        if isinstance(payload, dict) and not payload:
+            return ""
+        return serialize_yaml(payload)
 
     def _on_form_change(self, _: Dict[str, Any]):
         self.dirty = True
@@ -330,7 +336,7 @@ class EditorApp:
     def _refresh_save_controls(self):
         state = "normal" if self.validation_state.is_valid else "disabled"
         self.save_button.configure(state=state)
-        self.save_as_button.configure(state=state)
+        self.save_full_button.configure(state=state)
 
     def _show_save_blocked(self):
         ok, reason = can_save(self.validation_state.is_valid)
@@ -976,17 +982,9 @@ class EditorApp:
         except (FormatError, ValidationError, FileNotFoundError) as exc:
             messagebox.showerror("Load config", f"Failed to load config: {exc}")
 
-    def _save_to_path(self, path: str):
+    def _save_to_path(self, path: str, mode: str = SAVE_MODE_EXPORT):
         if self._show_save_blocked():
             return False
-
-        choice = messagebox.askyesnocancel(
-            "Save mode",
-            "Save full config with schema defaults?\n\nYes = full config\nNo = export config (default view)\nCancel = abort",
-        )
-        if choice is None:
-            return False
-        mode = SAVE_MODE_FULL if choice else SAVE_MODE_EXPORT
         payload = get_save_payload(
             mode,
             self.form_renderer.get_current_config_dict(),
@@ -1006,27 +1004,34 @@ class EditorApp:
             return
         path = self.config_path
         if not path:
-            self._on_save_as()
-            return
+            path = filedialog.asksaveasfilename(
+                title="Save YAML config",
+                defaultextension=".yaml",
+                filetypes=[("YAML files", "*.yaml *.yml"), ("All files", "*.*")],
+            )
+            if not path:
+                return
         try:
-            self._save_to_path(path)
+            self._save_to_path(path, mode=SAVE_MODE_EXPORT)
         except OSError as exc:
             messagebox.showerror("Save", f"Failed to save file: {exc}")
 
-    def _on_save_as(self):
+    def _on_save_full(self):
         if self._show_save_blocked():
             return
-        path = filedialog.asksaveasfilename(
-            title="Save YAML config",
-            defaultextension=".yaml",
-            filetypes=[("YAML files", "*.yaml *.yml"), ("All files", "*.*")],
-        )
+        path = self.config_path
         if not path:
-            return
+            path = filedialog.asksaveasfilename(
+                title="Save full YAML config",
+                defaultextension=".yaml",
+                filetypes=[("YAML files", "*.yaml *.yml"), ("All files", "*.*")],
+            )
+            if not path:
+                return
         try:
-            self._save_to_path(path)
+            self._save_to_path(path, mode=SAVE_MODE_FULL)
         except OSError as exc:
-            messagebox.showerror("Save As", f"Failed to save file: {exc}")
+            messagebox.showerror("Save Full", f"Failed to save file: {exc}")
 
     def _on_close(self):
         if not self.dirty:
