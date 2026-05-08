@@ -1,4 +1,4 @@
-from functools import partial
+
 
 import pytest
 
@@ -9,6 +9,12 @@ from readtheyaml.fields.base.string_field import StringField
 from readtheyaml.fields.base.bool_field import BoolField
 from readtheyaml.fields.base.object_field import ObjectField
 from readtheyaml.fields.field_factory import FIELD_FACTORY
+
+
+def make_field(field_cls, **kwargs):
+    kwargs.setdefault("name", "item")
+    kwargs.setdefault("description", "item")
+    return field_cls(**kwargs)
 
 
 class ListPerson:
@@ -50,7 +56,7 @@ def test_list_field_initialization():
         name="test_list",
         description="Test list",
         required=False,
-        item_field=partial(NumericalField, value_type=int),
+        item_field=make_field(NumericalField, value_type=int),
         min_length=1,
         max_length=5,
         default=[1]
@@ -67,7 +73,7 @@ def test_validate_list_of_integers():
     field = ListField(
         name="int_list",
         description="List of integers",
-        item_field=partial(NumericalField, value_type=int),
+        item_field=make_field(NumericalField, value_type=int),
         required=False,
         default=[0]
     )
@@ -81,7 +87,7 @@ def test_validate_list_converts_string_numbers():
     field = ListField(
         name="int_list",
         description="List of integers",
-        item_field=partial(NumericalField, value_type=int),
+        item_field=make_field(NumericalField, value_type=int),
         required=False,
         default=[0]
     )
@@ -96,7 +102,7 @@ def test_validate_list_rejects_non_numeric_strings():
     field = ListField(
         name="int_list",
         description="List of integers",
-        item_field=partial(NumericalField, value_type=int),
+        item_field=make_field(NumericalField, value_type=int),
         required=False,
         default=[0]
     )
@@ -109,7 +115,7 @@ def test_validate_list_rejects_mixed_types():
     field = ListField(
         name="int_list",
         description="List of integers",
-        item_field=partial(NumericalField, value_type=int),
+        item_field=make_field(NumericalField, value_type=int),
         required=False,
         default=[0]
     )
@@ -122,7 +128,7 @@ def test_validate_list_rejects_floats():
     field = ListField(
         name="int_list",
         description="List of integers",
-        item_field=partial(NumericalField, value_type=int),
+        item_field=make_field(NumericalField, value_type=int),
         required=False,
         default=[0]
     )
@@ -135,7 +141,7 @@ def test_validate_list_accepts_min_length():
     field = ListField(
         name="bounded_list",
         description="Bounded list",
-        item_field=partial(StringField),
+        item_field=make_field(StringField),
         min_length=2,
         max_length=4,
         required=False,
@@ -149,7 +155,7 @@ def test_validate_list_accepts_max_length():
     field = ListField(
         name="bounded_list",
         description="Bounded list",
-        item_field=partial(StringField),
+        item_field=make_field(StringField),
         min_length=2,
         max_length=4,
         required=False,
@@ -163,7 +169,7 @@ def test_validate_list_rejects_below_min_length():
     field = ListField(
         name="bounded_list",
         description="Bounded list",
-        item_field=partial(StringField),
+        item_field=make_field(StringField),
         min_length=2,
         max_length=4,
         required=False,
@@ -178,7 +184,7 @@ def test_validate_list_rejects_above_max_length():
     field = ListField(
         name="bounded_list",
         description="Bounded list",
-        item_field=partial(StringField),
+        item_field=make_field(StringField),
         min_length=2,
         max_length=4,
         required=False,
@@ -193,7 +199,7 @@ def test_validate_list_with_boolean_values():
     field = ListField(
         name="bool_list",
         description="List of booleans",
-        item_field=partial(BoolField),
+        item_field=make_field(BoolField),
         required=False,
         default=[True]
     )
@@ -205,7 +211,7 @@ def test_validate_list_converts_boolean_strings():
     field = ListField(
         name="bool_list",
         description="List of booleans",
-        item_field=partial(BoolField),
+        item_field=make_field(BoolField),
         required=False,
         default=[True]
     )
@@ -217,7 +223,7 @@ def test_validate_list_rejects_mixed_invalid_boolean():
     field = ListField(
         name="bool_list",
         description="List of booleans",
-        item_field=partial(BoolField),
+        item_field=make_field(BoolField),
         required=False,
         default=[True]
     )
@@ -230,7 +236,7 @@ def test_validate_list_rejects_single_invalid_boolean():
     field = ListField(
         name="bool_list",
         description="List of booleans",
-        item_field=partial(BoolField),
+        item_field=make_field(BoolField),
         required=False,
         default=[True]
     )
@@ -243,7 +249,7 @@ def test_validate_list_with_mixed_boolean_types():
     field = ListField(
         name="bool_list",
         description="List of booleans",
-        item_field=partial(BoolField),
+        item_field=make_field(BoolField),
         required=False,
         default=[True]
     )
@@ -256,7 +262,7 @@ def test_validate_list_accepts_valid_strings():
     field = ListField(
         name="string_list",
         description="List of strings with length constraints",
-        item_field=partial(StringField, min_length=2, max_length=5),
+        item_field=make_field(StringField, min_length=2, max_length=5),
         required=False,
         default=["abc"]
     )
@@ -268,7 +274,7 @@ def test_validate_list_rejects_short_strings():
     field = ListField(
         name="string_list",
         description="List of strings with length constraints",
-        item_field=partial(StringField, min_length=2, max_length=5),
+        item_field=make_field(StringField, min_length=2, max_length=5),
         required=False,
         default=["abc"]
     )
@@ -281,7 +287,7 @@ def test_validate_list_rejects_long_strings():
     field = ListField(
         name="string_list",
         description="List of strings with length constraints",
-        item_field=partial(StringField, min_length=2, max_length=5),
+        item_field=make_field(StringField, min_length=2, max_length=5),
         required=False,
         default=["abc"]
     )
@@ -294,7 +300,7 @@ def test_validate_list_with_exact_length_strings():
     field = ListField(
         name="string_list",
         description="List of strings with length constraints",
-        item_field=partial(StringField, min_length=2, max_length=5),
+        item_field=make_field(StringField, min_length=2, max_length=5),
         required=False,
         default=["abc"]
     )
@@ -307,7 +313,7 @@ def test_validate_empty_list_default_min_length():
     field = ListField(
         name="empty_ok_list",
         description="List that can be empty",
-        item_field=partial(StringField),
+        item_field=make_field(StringField),
         required=False,
         default=[]
     )
@@ -319,7 +325,7 @@ def test_validate_empty_list_explicit_min_length_zero():
     field = ListField(
         name="empty_ok_list2",
         description="List that can be empty",
-        item_field=partial(StringField),
+        item_field=make_field(StringField),
         min_length=0,
         required=False,
         default=[]
@@ -332,7 +338,7 @@ def test_validate_empty_list_rejects_when_min_length_one():
     field = ListField(
         name="non_empty_list",
         description="List that cannot be empty",
-        item_field=partial(StringField),
+        item_field=make_field(StringField),
         min_length=1,
         required=False,
         default=["valid"]
@@ -346,7 +352,7 @@ def test_validate_empty_list_with_non_empty_default():
     field = ListField(
         name="non_empty_list",
         description="List that cannot be empty",
-        item_field=partial(StringField),
+        item_field=make_field(StringField),
         min_length=1,
         required=False,
         default=["valid"]
@@ -359,7 +365,7 @@ def test_list_field_accepts_min_length_range():
     field = ListField(
         name="ranged_list",
         description="List with length range",
-        item_field=partial(NumericalField, value_type=int),
+        item_field=make_field(NumericalField, value_type=int),
         length_range=(2, 4),
         required=False,
         default=[1, 2]
@@ -372,7 +378,7 @@ def test_list_field_accepts_max_length_range():
     field = ListField(
         name="ranged_list",
         description="List with length range",
-        item_field=partial(NumericalField, value_type=int),
+        item_field=make_field(NumericalField, value_type=int),
         length_range=(2, 4),
         required=False,
         default=[1, 2, 3, 4]
@@ -385,7 +391,7 @@ def test_list_field_rejects_below_min_length_range():
     field = ListField(
         name="ranged_list",
         description="List with length range",
-        item_field=partial(NumericalField, value_type=int),
+        item_field=make_field(NumericalField, value_type=int),
         length_range=(2, 4),
         required=False,
         default=[1, 2]
@@ -399,7 +405,7 @@ def test_list_field_rejects_above_max_length_range():
     field = ListField(
         name="ranged_list",
         description="List with length range",
-        item_field=partial(NumericalField, value_type=int),
+        item_field=make_field(NumericalField, value_type=int),
         length_range=(2, 4),
         required=False,
         default=[1, 2, 3, 4]
@@ -413,7 +419,7 @@ def test_list_field_with_length_range_accepts_middle_length():
     field = ListField(
         name="ranged_list",
         description="List with length range",
-        item_field=partial(NumericalField, value_type=int),
+        item_field=make_field(NumericalField, value_type=int),
         length_range=(2, 4),
         required=False,
         default=[1, 2, 3]
@@ -426,7 +432,7 @@ def test_list_field_uses_default_when_no_value_provided():
     field = ListField(
         name="default_list",
         description="List with default value",
-        item_field=partial(StringField),
+        item_field=make_field(StringField),
         required=False,
         default=["default1", "default2"]
     )
@@ -441,7 +447,7 @@ def test_list_field_validates_provided_values():
     field = ListField(
         name="test_list",
         description="Test list",
-        item_field=partial(StringField),
+        item_field=make_field(StringField),
         required=False,
         default=["default"]
     )
@@ -456,7 +462,7 @@ def test_list_field_rejects_none():
     field = ListField(
         name="test_list",
         description="Test list",
-        item_field=partial(StringField),
+        item_field=make_field(StringField),
         required=False,
         default=[]
     )
@@ -467,11 +473,11 @@ def test_list_field_rejects_none():
 def test_nested_list_of_integers():
     """Test that ListField can validate a list of lists of integers."""
     # Create the inner field (list of integers)
-    inner_field = partial(
+    inner_field = make_field(
         ListField,
         name="inner_list",
         description="Inner list of integers",
-        item_field=partial(NumericalField, value_type=int)
+        item_field=make_field(NumericalField, value_type=int)
     )
 
     # Create the outer field (list of lists)
@@ -493,11 +499,11 @@ def create_constrained_nested_list_field():
     return ListField(
         name="constrained_nested_lists",
         description="List of constrained lists",
-        item_field=partial(
+        item_field=make_field(
             ListField,
             name="inner_list",
             description="Inner list with constraints",
-            item_field=partial(NumericalField, value_type=int),
+            item_field=make_field(NumericalField, value_type=int),
             min_length=1,
             max_length=3
         ),
@@ -542,15 +548,15 @@ def test_nested_list_rejects_mixed_valid_and_invalid():
 def test_deeply_nested_lists():
     """Test that ListField can handle deeply nested lists."""
     # Create a field for a list of lists of integers
-    innermost_field = partial(NumericalField, name="num", description="Number", value_type=int)
+    innermost_field = make_field(NumericalField, name="num", description="Number", value_type=int)
 
-    middle_field = partial(ListField,
+    middle_field = make_field(ListField,
                            name="middle_list",
                            description="Middle list",
                            item_field=innermost_field
                            )
 
-    outer_field = partial(ListField,
+    outer_field = make_field(ListField,
                           name="outer_list",
                           description="Outer list",
                           item_field=middle_field
@@ -577,7 +583,7 @@ def test_validate_list_of_various_objects():
     field = ListField(
         name="mixed_objects",
         description="List of various objects",
-        item_field=partial(ObjectField, factory=FIELD_FACTORY),
+        item_field=make_field(ObjectField, factory=FIELD_FACTORY),
         required=False,
         default=[]
     )
@@ -601,7 +607,7 @@ def test_validate_list_of_objects_deriving_from_base_class():
     field = ListField(
         name="animals",
         description="List of animals",
-        item_field=partial(
+        item_field=make_field(
             ObjectField,
             factory=FIELD_FACTORY,
             class_path="tests.fields.composite.test_list_field.BaseListAnimal",
@@ -630,7 +636,7 @@ def test_validate_list_rejects_non_subclass_for_base_class_object_field():
     field = ListField(
         name="animals",
         description="List of animals",
-        item_field=partial(
+        item_field=make_field(
             ObjectField,
             factory=FIELD_FACTORY,
             class_path="tests.fields.composite.test_list_field.BaseListAnimal",

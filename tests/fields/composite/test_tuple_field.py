@@ -1,4 +1,4 @@
-from functools import partial
+
 
 import pytest
 
@@ -12,6 +12,12 @@ from readtheyaml.fields.field_factory import FIELD_FACTORY
 from readtheyaml.fields.composite.tuple_field import TupleField
 
 
+def make_field(field_cls, **kwargs):
+    kwargs.setdefault("name", "item")
+    kwargs.setdefault("description", "item")
+    return field_cls(**kwargs)
+
+
 def test_required_tuple_field():
     """Test that a required TupleField is properly initialized without a default."""
     field = TupleField(
@@ -19,8 +25,8 @@ def test_required_tuple_field():
         description="Test tuple",
         required=True,
         element_fields=[
-            partial(StringField),
-            partial(NumericalField, value_type=int)
+            make_field(StringField),
+            make_field(NumericalField, value_type=int)
         ]
     )
     assert field.name == "test_tuple"
@@ -39,8 +45,8 @@ def test_optional_tuple_field_with_default():
         required=False,
         default=default_value,
         element_fields=[
-            partial(StringField),
-            partial(NumericalField, value_type=int)
+            make_field(StringField),
+            make_field(NumericalField, value_type=int)
         ]
     )
     assert field.name == "test_tuple"
@@ -56,9 +62,9 @@ def test_validate_tuple_with_correct_types():
         name="person",
         description="Test tuple",
         element_fields=[
-            partial(StringField),
-            partial(NumericalField, value_type=int),
-            partial(BoolField)
+            make_field(StringField),
+            make_field(NumericalField, value_type=int),
+            make_field(BoolField)
         ]
     )
 
@@ -73,8 +79,8 @@ def test_validate_tuple_with_string_representation():
         name="coordinates",
         description="Test tuple",
         element_fields=[
-            partial(NumericalField, value_type=float, name="x", description="X coordinate"),
-            partial(NumericalField, value_type=float, name="y", description="Y coordinate")
+            make_field(NumericalField, value_type=float, name="x", description="X coordinate"),
+            make_field(NumericalField, value_type=float, name="y", description="Y coordinate")
         ]
     )
 
@@ -89,8 +95,8 @@ def test_validate_tuple_rejects_wrong_length():
         name="coordinates",
         description="Test tuple",
         element_fields=[
-            partial(NumericalField, value_type=float, name="x", description="X coordinate"),
-            partial(NumericalField, value_type=float, name="y", description="Y coordinate")
+            make_field(NumericalField, value_type=float, name="x", description="X coordinate"),
+            make_field(NumericalField, value_type=float, name="y", description="Y coordinate")
         ]
     )
 
@@ -109,8 +115,8 @@ def test_validate_tuple_rejects_invalid_types():
         name="person",
         description="Test tuple",
         element_fields=[
-            partial(StringField, name="name", description="Name"),
-            partial(NumericalField, value_type=int, name="age", description="Age")
+            make_field(StringField, name="name", description="Name"),
+            make_field(NumericalField, value_type=int, name="age", description="Age")
         ]
     )
 
@@ -125,9 +131,9 @@ def test_validate_tuple_with_nested_structures():
         name="nested",
         description="Test tuple",
         element_fields=[
-            partial(ListField, name="numbers", description="numbers",
-                    item_field=partial(NumericalField, value_type=int, name="num", description="Val")),
-            partial(StringField, name="name", description="Name", cast_to_string=False)
+            make_field(ListField, name="numbers", description="numbers",
+                    item_field=make_field(NumericalField, value_type=int, name="num", description="Val")),
+            make_field(StringField, name="name", description="Name", cast_to_string=False)
         ]
     )
 
@@ -146,7 +152,7 @@ def test_validate_tuple_rejects_none():
         name="test",
         description="Test tuple",
         element_fields=[
-            partial(StringField, name="name", description="Name")
+            make_field(StringField, name="name", description="Name")
         ]
     )
 
@@ -160,7 +166,7 @@ def test_validate_tuple_rejects_non_string_non_tuple_input():
         name="test",
         description="Test tuple",
         element_fields=[
-            partial(StringField, name="name", description="Name")
+            make_field(StringField, name="name", description="Name")
         ]
     )
 
@@ -207,8 +213,8 @@ def test_validate_tuple_of_various_objects():
         name="mixed_objects_tuple",
         description="Tuple of various objects",
         element_fields=[
-            partial(ObjectField, factory=FIELD_FACTORY),
-            partial(ObjectField, factory=FIELD_FACTORY),
+            make_field(ObjectField, factory=FIELD_FACTORY),
+            make_field(ObjectField, factory=FIELD_FACTORY),
         ],
     )
 
@@ -225,12 +231,12 @@ def test_validate_tuple_of_objects_deriving_from_base_class():
         name="animals_tuple",
         description="Tuple of animals",
         element_fields=[
-            partial(
+            make_field(
                 ObjectField,
                 factory=FIELD_FACTORY,
                 class_path="tests.fields.composite.test_tuple_field.BaseTupleAnimal",
             ),
-            partial(
+            make_field(
                 ObjectField,
                 factory=FIELD_FACTORY,
                 class_path="tests.fields.composite.test_tuple_field.BaseTupleAnimal",
@@ -251,12 +257,12 @@ def test_validate_tuple_rejects_non_subclass_for_base_class_object_field():
         name="animals_tuple",
         description="Tuple of animals",
         element_fields=[
-            partial(
+            make_field(
                 ObjectField,
                 factory=FIELD_FACTORY,
                 class_path="tests.fields.composite.test_tuple_field.BaseTupleAnimal",
             ),
-            partial(
+            make_field(
                 ObjectField,
                 factory=FIELD_FACTORY,
                 class_path="tests.fields.composite.test_tuple_field.BaseTupleAnimal",

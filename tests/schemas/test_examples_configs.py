@@ -11,11 +11,28 @@ def _examples_dir() -> Path:
     return Path(__file__).resolve().parents[2] / "examples"
 
 
+@pytest.mark.parametrize(
+    ("schema_file", "config_file"),
+    [
+        ("schema.yaml", "config.yaml"),
+        ("schema_composed.yaml", "config_composed.yaml"),
+        ("schema_all_types.yaml", "config_all_types.yaml"),
+    ],
+)
+def test_all_examples_configs_validate(schema_file: str, config_file: str):
+    examples_dir = _examples_dir()
+    schema = Schema.from_yaml(str(examples_dir / schema_file))
+    built, data_with_default = schema.validate_file(examples_dir / config_file, strict=True)
+
+    assert isinstance(built, dict)
+    assert isinstance(data_with_default, dict)
+
+
 def test_composed_example_config_is_valid_and_defaults_are_applied():
     examples_dir = _examples_dir()
     schema = Schema.from_yaml(str(examples_dir / "schema_composed.yaml"))
 
-    built, data_with_default = schema.validate_file(examples_dir / "config.yaml", strict=True)
+    built, data_with_default = schema.validate_file(examples_dir / "config_composed.yaml", strict=True)
 
     assert built["service_name"] == "api-gateway"
     assert built["environment"] == "prod"
@@ -28,7 +45,7 @@ def test_composed_example_schema_requires_deployment_when_environment_is_prod(tm
     examples_dir = _examples_dir()
     schema = Schema.from_yaml(str(examples_dir / "schema_composed.yaml"))
 
-    config = yaml.safe_load((examples_dir / "config.yaml").read_text(encoding="utf-8"))
+    config = yaml.safe_load((examples_dir / "config_composed.yaml").read_text(encoding="utf-8"))
     config.pop("deployment", None)
 
     invalid_path = tmp_path / "config_missing_deployment.yaml"
