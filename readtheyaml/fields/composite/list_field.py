@@ -1,18 +1,18 @@
 import copy
-import inspect
 
 from readtheyaml.exceptions.format_error import FormatError
 from readtheyaml.exceptions.validation_error import ValidationError
 from readtheyaml.fields.field import Field
-from readtheyaml.fields.field_validation_helpers import find_and_validate_bounds, get_target_class
+from readtheyaml.fields.field_validation_helpers import find_and_validate_bounds
 from readtheyaml.utils.type_utils import extract_types_for_composite
 
 
 class ListField(Field):
     def __init__(self, item_field, min_length=None, max_length=None, length_range=None, *, when=None, **kwargs):
-        sig = inspect.signature(get_target_class(item_field).__init__)
+        if not isinstance(item_field, Field):
+            raise FormatError("ListField item_field must be a Field instance.")
         list_field_type = f"list({item_field.field_type()})"
-        super().__init__(when=when, field_type=list_field_type, additional_allowed_kwargs=set(sig.parameters), **kwargs)
+        super().__init__(when=when, field_type=list_field_type, additional_allowed_kwargs={"min_length", "max_length", "length_range"}, **kwargs)
 
         self.item_field = item_field
 
@@ -34,8 +34,7 @@ class ListField(Field):
         validated = []
         for i, item in enumerate(value):
             try:
-                field = self._make_partial_field(self.item_field, "item")
-                validated.append(field.validate_and_build(item))
+                validated.append(self.item_field.validate_and_build(item))
             except ValidationError as e:
                 raise ValidationError(f"Field '{self.name}': Invalid item at index {i}: {e}")
 
