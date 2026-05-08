@@ -9,9 +9,11 @@ def get_value_at_path(data: Dict[str, Any], dotted_path: str, default: Any = Non
     parts = _path_parts(dotted_path)
     if not parts:
         return default
-    found, current = _walk_path(data, parts, create_missing=False)
-    if not found:
-        return default
+    current: Any = data
+    for part in parts:
+        if not isinstance(current, dict) or part not in current:
+            return default
+        current = current[part]
     return current
 
 

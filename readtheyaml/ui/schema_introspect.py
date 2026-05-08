@@ -58,6 +58,9 @@ def _introspect_section(schema: Schema, path: str):
 def _introspect_field(key: str, field: Any):
     has_default = (not field.required) and (field.raw_default is not None or field.default is not None)
     default_value = deepcopy(field.default) if has_default else None
+    constraints = deepcopy(field.constraint_specs())
+    if field.field_type() == "str" and constraints.get("length_unit") == "characters":
+        constraints.pop("length_unit", None)
     return FieldIntrospection(
         key=key,
         field_type=field.field_type(),
@@ -66,7 +69,7 @@ def _introspect_field(key: str, field: Any):
         has_default=has_default,
         default=default_value,
         description=field.description,
-        constraints=deepcopy(field.constraint_specs()),
+        constraints=constraints,
         when=deepcopy(field.when)
     )
 
