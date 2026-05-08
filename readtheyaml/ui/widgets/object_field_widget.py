@@ -88,7 +88,14 @@ class ObjectFieldWidget(BaseFieldWidget):
     def _build_rows(self):
         for item in self._tree.get_children():
             self._tree.delete(item)
-        for param in self._parameters:
+        ordered_params = sorted(
+            self._parameters,
+            key=lambda p: (
+                0 if str(p.get("name", "")) == "name" else 1 if str(p.get("name", "")) == "description" else 2,
+                not bool(p.get("required", True)),
+            ),
+        )
+        for param in ordered_params:
             name = str(param.get("name", ""))
             type_name = str(param.get("type", "any"))
             required = bool(param.get("required", True))

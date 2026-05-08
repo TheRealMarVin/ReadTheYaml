@@ -577,7 +577,14 @@ class EditorApp:
             def _refresh_object_tree():
                 for item in tree.get_children():
                     tree.delete(item)
-                for param in params:
+                ordered_params = sorted(
+                    params,
+                    key=lambda p: (
+                        0 if str(p.get("name", "")) == "name" else 1 if str(p.get("name", "")) == "description" else 2,
+                        not bool(p.get("required", True)),
+                    ),
+                )
+                for param in ordered_params:
                     name = str(param.get("name", ""))
                     required_flag = bool(param.get("required", True))
                     display_name = f"{name} *" if required_flag else name
