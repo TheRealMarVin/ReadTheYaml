@@ -7,7 +7,7 @@ metadata:
   owner: sre
   source: release
 deprecated_since: null
-regions: [ca-central-1, us-east-1]
+region_ids: [101, 205]
 window: "(8, 18)"
 owner_id: team-platform
 delay:

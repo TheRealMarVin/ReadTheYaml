@@ -43,9 +43,9 @@ deprecated_since:
   required: false
   default: null
 
-regions:
+region_ids:
   type: list[int]
-  description: Target regions
+  description: Target region ids
   required: false
   default: [1, 2]
 
