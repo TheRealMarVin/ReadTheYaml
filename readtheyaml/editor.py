@@ -154,6 +154,7 @@ class EditorApp:
         self.error_text.pack(fill="x", pady=(0, 8))
         self.error_text.bind("<Button-1>", self._on_error_text_click)
         self.error_text.bind("<Double-Button-1>", self._on_error_text_double_click)
+        self.error_text.tag_configure("active_error_line", background="#fde8e8")
 
         ttk.Label(self.right, text="How to fix", anchor="w").pack(fill="x")
         self.hint_text = tk.Text(self.right, height=6, wrap="word")
@@ -299,6 +300,7 @@ class EditorApp:
         self.error_text.delete("1.0", "end")
         if lines:
             self.error_text.insert("1.0", "\n".join(lines))
+        self.error_text.tag_remove("active_error_line", "1.0", "end")
         self.error_text.configure(state="disabled")
 
     def _on_error_text_click(self, event: tk.Event):
@@ -311,10 +313,17 @@ class EditorApp:
 
     def _activate_error_text_line(self, event: tk.Event, open_editor: bool):
         line_idx = int(str(self.error_text.index(f"@{event.x},{event.y}")).split(".", 1)[0])
+        self._highlight_error_text_line(line_idx)
         field_path = self._error_line_to_field_path.get(line_idx)
         if not field_path:
             return
         self._focus_tree_field(field_path, open_editor=open_editor)
+
+    def _highlight_error_text_line(self, line_idx: int):
+        line_start = f"{line_idx}.0"
+        line_end = f"{line_idx}.end"
+        self.error_text.tag_remove("active_error_line", "1.0", "end")
+        self.error_text.tag_add("active_error_line", line_start, line_end)
 
     def _focus_tree_field(self, field_path: str, open_editor: bool = False):
         resolved = self._resolve_tree_field_path(normalize_path(field_path))
