@@ -77,6 +77,14 @@ python main.py --schema schema.yaml --config config.yaml
 python main.py --schema schema.yaml --generate-doc --output schema-doc.html
 ```
 
+The repository also includes a Tkinter-based config editor:
+
+```bash
+python main_editor.py --schema schema.yaml --config config.yaml --strict true
+```
+
+For editor behavior and UI details, see [docs/editor.md](docs/editor.md).
+
 ## Type syntax overview
 
 Primitive types:
@@ -166,7 +174,15 @@ Full reference (operators, aliases, combinators): [docs/conditions.md](docs/cond
 
 ## Documentation
 
-See [docs/index.md](docs/index.md) for a full type reference and behavior notes.
+See [docs/index.md](docs/index.md) for the full reference, including type behavior and the editor guide.
+
+## Examples In This Repo
+
+Use matching schema/config pairs from `examples/`:
+
+- `schema.yaml` + `config.yaml`
+- `schema_composed.yaml` + `config_composed.yaml`
+- `schema_all_types.yaml` + `config_all_types.yaml`
 
 ## Running tests
 
