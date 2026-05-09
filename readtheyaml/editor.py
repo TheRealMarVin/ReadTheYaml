@@ -94,6 +94,7 @@ class EditorApp:
             field_errors={},
             global_errors=["Validation pending..."],
         )
+        self._error_line_to_field_path: Dict[int, str] = {}
 
         self.root = tk.Tk()
         self.root.geometry("1200x760")
@@ -151,6 +152,8 @@ class EditorApp:
         ttk.Label(self.right, text="Global Errors", anchor="w").pack(fill="x")
         self.error_text = tk.Text(self.right, height=8, wrap="word")
         self.error_text.pack(fill="x", pady=(0, 8))
+        self.error_text.bind("<Button-1>", self._on_error_text_click)
+        self.error_text.bind("<Double-Button-1>", self._on_error_text_double_click)
 
         ttk.Label(self.right, text="How to fix", anchor="w").pack(fill="x")
         self.hint_text = tk.Text(self.right, height=6, wrap="word")
@@ -290,6 +293,48 @@ class EditorApp:
         widget.insert("1.0", value)
         widget.configure(state="disabled")
 
+    def _set_error_text(self, lines: list[str], line_to_field_path: Dict[int, str]):
+        self._error_line_to_field_path = line_to_field_path
+        self.error_text.configure(state="normal")
+        self.error_text.delete("1.0", "end")
+        if lines:
+            self.error_text.insert("1.0", "\n".join(lines))
+        self.error_text.configure(state="disabled")
+
+    def _on_error_text_click(self, event: tk.Event):
+        self._activate_error_text_line(event, open_editor=False)
+        return "break"
+
+    def _on_error_text_double_click(self, event: tk.Event):
+        self._activate_error_text_line(event, open_editor=True)
+        return "break"
+
+    def _activate_error_text_line(self, event: tk.Event, open_editor: bool):
+        line_idx = int(str(self.error_text.index(f"@{event.x},{event.y}")).split(".", 1)[0])
+        field_path = self._error_line_to_field_path.get(line_idx)
+        if not field_path:
+            return
+        self._focus_tree_field(field_path, open_editor=open_editor)
+
+    def _focus_tree_field(self, field_path: str, open_editor: bool = False):
+        resolved = self._resolve_tree_field_path(normalize_path(field_path))
+        if not resolved:
+            return
+        item_id = self._field_path_to_item.get(resolved)
+        if not item_id:
+            return
+        current = item_id
+        while current:
+            parent = self.tree.parent(current)
+            if parent:
+                self.tree.item(parent, open=True)
+            current = parent
+        self.tree.selection_set(item_id)
+        self.tree.focus(item_id)
+        self.tree.see(item_id)
+        if open_editor:
+            self._open_tree_edit_dialog(resolved)
+
     def _refresh_title_status(self):
         schema_name = Path(self.schema_path).name
         config_name = Path(self.config_path).name if self.config_path else "<none>"
@@ -362,14 +407,18 @@ class EditorApp:
 
         if state.is_valid:
             self.badge.configure(text="VALID", bg="#1f7a1f")
-            self._set_text(self.error_text, "")
+            self._set_error_text([], {})
             self._set_text(self.hint_text, "")
         else:
             self.badge.configure(text="INVALID", bg="#a32121")
-            errors = list(state.global_errors)
+            error_lines = list(state.global_errors)
+            line_to_field_path: Dict[int, str] = {}
+            line_num = len(error_lines)
             for path, msg in sorted(state.field_errors.items()):
-                errors.append(f"{path}: {msg}")
-            self._set_text(self.error_text, "\n".join(errors))
+                line_num += 1
+                error_lines.append(f"{path}: {msg}")
+                line_to_field_path[line_num] = path
+            self._set_error_text(error_lines, line_to_field_path)
             self._set_text(self.hint_text, "\n".join(build_fix_hints(state.field_errors, state.global_errors)))
         self._refresh_previews()
 
